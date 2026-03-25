@@ -1,0 +1,6 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Plexovia">
+  <!-- Vertex chevron — light strokes for dark backgrounds (footer, dark sections) -->
+  <path d="M 18 8 L 64 40 L 18 72" stroke="#F7F5F0" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter" fill="none"/>
+  <!-- Gold vertex dot — consistent across both versions -->
+  <circle cx="64" cy="40" r="5.5" fill="#C9A84C"/>
+</svg>
