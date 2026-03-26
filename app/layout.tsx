@@ -205,10 +205,6 @@ export default function RootLayout({
       <body className="min-h-dvh flex flex-col bg-[#F7F5F0] text-[#1C1917] font-sans antialiased"
         style={{ fontFamily: 'var(--font-inter), system-ui, -apple-system, sans-serif' }}
       >
-        {/* Skip to content — accessibility */}
-        <a href="#main-content" className="skip-link">
-          Skip to content
-        </a>
         <Providers>
           <ConditionalLayout>
             {children}
