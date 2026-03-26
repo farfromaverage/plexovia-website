@@ -362,7 +362,6 @@ h4, h5, h6 {
   height: 64px;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
   position: relative;
 }
 
@@ -395,6 +394,7 @@ h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
 .nav-cta {
