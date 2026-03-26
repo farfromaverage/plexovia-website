@@ -237,22 +237,53 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.replace("/auth/login"); return; }
+    async function loadProfile(userId: string) {
       const { data } = await supabase
         .from("profiles")
         .select("id, email, company_name, plan, trial_ends_at, onboarding_complete, naics_codes, states, keywords, set_aside_preferences")
-        .eq("id", session.user.id).single();
+        .eq("id", userId)
+        .single();
       setProfile(data);
       setLoading(false);
     }
-    load();
-  }, [router]);
+
+    // Primary: listen for auth state — fires immediately if session exists,
+    // or fires SIGNED_IN after a redirect/refresh. Reliable with @supabase/ssr.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_OUT" || !session) {
+          router.replace("/auth/login");
+          return;
+        }
+        if (session) {
+          loadProfile(session.user.id);
+        }
+      }
+    );
+
+    // Fallback: if onAuthStateChange doesn't fire within 3s
+    // (e.g. no state change because user was already logged in)
+    // check session directly.
+    const fallback = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace("/auth/login");
+      } else if (loading) {
+        // Still loading — session exists but event didn't fire yet
+        loadProfile(session.user.id);
+      }
+    }, 800);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallback);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.push("/");
+    router.replace("/auth/login");
   }
 
   if (loading) {
