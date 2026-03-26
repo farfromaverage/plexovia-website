@@ -1,83 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
 /**
- * /auth/callback — Client-side OAuth callback handler.
+ * /auth/callback — OAuth callback page.
  *
- * Why client-side (not a Route Handler):
- * The Supabase client uses PKCE during signInWithOAuth. The code verifier is
- * stored in the BROWSER (localStorage). A server-side Route Handler creates a
- * fresh Supabase client with no access to the verifier, so exchangeCodeForSession
- * always fails with "invalid grant" or similar.
+ * Because the Supabase client uses @supabase/ssr (createBrowserClient),
+ * it automatically detects the `code` in the URL and exchanges it on mount.
+ * We must NOT call exchangeCodeForSession manually — doing so consumes/clears
+ * the PKCE verifier from cookie storage, causing "verifier not found" errors.
  *
- * Running this page in the browser gives the Supabase client access to its own
- * stored verifier, so the exchange succeeds and the session is persisted locally.
+ * Instead, we simply listen for the auth state change event that fires after
+ * the client completes the exchange on its own, then redirect to /dashboard.
  */
 function CallbackInner() {
   const router = useRouter();
-  const params = useSearchParams();
-  const [status, setStatus] = useState<"loading" | "error">("loading");
-  const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
-    async function exchange() {
-      const code = params.get("code");
-
-      if (!code) {
-        // No code — might be a hash-based implicit flow, let Supabase handle it
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          router.replace("/dashboard");
-        } else {
-          setErrMsg("No authorization code received from Google.");
-          setStatus("error");
-        }
-        return;
+    // @supabase/ssr createBrowserClient auto-processes the ?code= param on mount.
+    // Just listen for the session to be established and redirect.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        router.replace("/dashboard");
       }
+    });
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (error) {
-        console.error("[auth/callback] exchangeCodeForSession error:", error.message);
-        setErrMsg(error.message);
-        setStatus("error");
-        // Redirect to login after 2s so the user isn't stuck
-        setTimeout(() => router.replace("/auth/login?error=oauth_failed"), 2000);
-        return;
+    // Also check if a session already exists (e.g., code was already exchanged)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace("/dashboard");
       }
+    });
 
-      // Success — redirect to dashboard
-      router.replace("/dashboard");
-    }
-
-    exchange();
+    return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  if (status === "error") {
-    return (
-      <div style={page}>
-        <div style={card}>
-          <p style={{ color: "#F87171", fontWeight: 600, fontSize: "0.9375rem", margin: 0 }}>
-            Sign-in failed
-          </p>
-          <p style={{ color: "#6B6560", fontSize: "0.8125rem", marginTop: "0.5rem" }}>
-            {errMsg || "Something went wrong. Redirecting you back…"}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={page}>
       <div style={card}>
-        <Loader2 size={28} color="#C9A84C" style={{ animation: "spin 0.8s linear infinite" }} />
+        <Loader2
+          size={28}
+          color="#C9A84C"
+          style={{ animation: "spin 0.8s linear infinite" }}
+        />
         <p style={{ color: "#A8A29E", fontSize: "0.9375rem", margin: "1rem 0 0" }}>
           Completing sign-in…
         </p>
@@ -89,14 +59,20 @@ function CallbackInner() {
 
 export default function CallbackPage() {
   return (
-    <Suspense fallback={
-      <div style={page}>
-        <div style={card}>
-          <Loader2 size={28} color="#C9A84C" style={{ animation: "spin 0.8s linear infinite" }} />
+    <Suspense
+      fallback={
+        <div style={page}>
+          <div style={card}>
+            <Loader2
+              size={28}
+              color="#C9A84C"
+              style={{ animation: "spin 0.8s linear infinite" }}
+            />
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    }>
+      }
+    >
       <CallbackInner />
     </Suspense>
   );
