@@ -127,7 +127,7 @@ const S = {
 
 /* ─── Progress bar ────────────────────────────────────────────────── */
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["NAICS Codes", "States", "Keywords"];
+  const labels = ["NAICS Codes", "States", "Keywords and set-asides"];
   return (
     <div style={{ marginBottom: "1.75rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
@@ -275,7 +275,7 @@ function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setS
 
       {selected.length >= LIMIT && (
         <p style={{ fontSize: "0.78125rem", color: "#D97706", marginTop: "0.5rem" }}>
-          Limit reached (10/10). Remove a code to add another.
+          Limit reached ({selected.length}/{naicsLimit === 999 ? "∞" : naicsLimit}). Remove a code to add another.
         </p>
       )}
     </div>

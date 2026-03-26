@@ -134,7 +134,7 @@ function LoginForm() {
             <label htmlFor="password" style={lbl}>Password</label>
             <Link href="/auth/forgot-password" tabIndex={-1}
               style={{ fontSize: "0.78125rem", color: "#6B6560", textDecoration: "none" }}>
-              Forgot?
+              Forgot password
             </Link>
           </div>
           <div style={{ position: "relative" }}>
@@ -167,6 +167,9 @@ function LoginForm() {
 
       <p style={{ textAlign: "center", fontSize: "0.8125rem", color: "#6B6560", marginTop: "1.25rem", marginBottom: 0 }}>
         No account? <Link href="/auth/signup" style={gold}>Start free trial →</Link>
+      </p>
+      <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#4B4844", marginTop: "0.75rem", marginBottom: 0 }}>
+        Need help? <a href="mailto:support@plexovia.com" style={{ color: "#6B6560", textDecoration: "none" }}>support@plexovia.com</a>
       </p>
     </div>
   );

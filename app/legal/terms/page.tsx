@@ -18,7 +18,7 @@ export default function TermsPage() {
         <Link href="/" style={{ textDecoration: "none" }}>
           <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.05em", fontFamily: "var(--font-inter), sans-serif" }}>
             <span style={{ color: "#C9A84C" }}>P</span>
-            <span style={{ color: "#F7F5F0" }}>lexovia</span>
+            <span style={{ color: "var(--pub-text)" }}>lexovia</span>
           </span>
         </Link>
         <Link href="/" style={navLink}>Back to Home</Link>
@@ -85,7 +85,7 @@ export default function TermsPage() {
           <p>Questions about these Terms? Email us at <a href={`mailto:${EMAIL}`} style={link}>{EMAIL}</a>.</p>
         </Section>
 
-        <div style={{ marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px solid #252320", display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+      <div style={{ marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px solid var(--pub-border)", display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
           <Link href="/legal/privacy" style={link}>Privacy Policy</Link>
           <Link href="/legal/refund" style={link}>Refund Policy</Link>
           <Link href="/" style={link}>Back to {COMPANY}</Link>
@@ -106,7 +106,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 const page: React.CSSProperties = {
   minHeight: "100vh",
-  background: "#1C1917",
+  background: "var(--pub-bg)",
   fontFamily: "var(--font-inter), sans-serif",
 };
 const header: React.CSSProperties = {
@@ -114,10 +114,10 @@ const header: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "1.25rem 2rem",
-  borderBottom: "1px solid #252320",
+  borderBottom: "1px solid var(--pub-border)",
   position: "sticky",
   top: 0,
-  background: "#1C1917",
+  background: "var(--pub-bg)",
   zIndex: 50,
 };
 const main: React.CSSProperties = {
@@ -128,7 +128,7 @@ const main: React.CSSProperties = {
 const label: React.CSSProperties = {
   fontSize: "0.72rem",
   fontWeight: 600,
-  color: "#C9A84C",
+  color: "var(--accent)",
   textTransform: "uppercase",
   letterSpacing: "0.1em",
   margin: "0 0 0.5rem",
@@ -136,39 +136,39 @@ const label: React.CSSProperties = {
 const h1: React.CSSProperties = {
   fontWeight: 800,
   fontSize: "2rem",
-  color: "#F7F5F0",
+  color: "var(--pub-text)",
   letterSpacing: "-0.04em",
   margin: "0 0 0.5rem",
 };
 const meta: React.CSSProperties = {
   fontSize: "0.875rem",
-  color: "#6B6560",
+  color: "var(--pub-muted)",
   margin: "0 0 2.5rem",
 };
 const h2: React.CSSProperties = {
   fontWeight: 700,
   fontSize: "1rem",
-  color: "#F7F5F0",
+  color: "var(--pub-text)",
   margin: "0 0 0.5rem",
 };
 const body: React.CSSProperties = {
   fontSize: "0.9375rem",
-  color: "#A8A29E",
+  color: "var(--pub-muted)",
   lineHeight: 1.7,
 };
 const list: React.CSSProperties = {
   paddingLeft: "1.25rem",
   margin: "0.5rem 0",
-  color: "#A8A29E",
+  color: "var(--pub-muted)",
   lineHeight: 1.8,
 };
 const link: React.CSSProperties = {
-  color: "#C9A84C",
+  color: "var(--accent)",
   textDecoration: "none",
   fontWeight: 500,
 };
 const navLink: React.CSSProperties = {
   fontSize: "0.875rem",
-  color: "#6B6560",
+  color: "var(--pub-muted)",
   textDecoration: "none",
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   LogOut, FileText, Bell, Settings, ChevronRight,
@@ -281,10 +281,11 @@ export default function DashboardPage() {
   const isPaid      = isEssential || isPro;
   const hour        = new Date().getHours();
   const greeting    = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const pathname    = usePathname();
 
   // Dynamic subtitle — shows what's actually being monitored
   const subtitle = setupDone
-    ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""} · ${naicsCount} NAICS code${naicsCount !== 1 ? "s" : ""}${keywordCount > 0 ? ` · ${keywordCount} keyword${keywordCount !== 1 ? "s" : ""}` : ""} · Next digest: 6 AM tomorrow`
+    ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""} · ${naicsCount} NAICS code${naicsCount !== 1 ? "s" : ""}${keywordCount > 0 ? ` · ${keywordCount} keyword${keywordCount !== 1 ? "s" : ""}` : ""} · Next digest: 6 AM EST`
     : "Complete your setup below to activate contract monitoring";
 
   return (
@@ -294,6 +295,7 @@ export default function DashboardPage() {
         .db-nav      { display: flex; align-items: center; gap: 0.25rem; flex: 1; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
         .db-nav::-webkit-scrollbar { display: none; }
         .db-nav-link { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; font-size: 0.8125rem; color: #6B6560; text-decoration: none; white-space: nowrap; transition: color 0.15s, background 0.15s; }
+        .db-nav-link.active { color: #C9A84C !important; background: #2A2318 !important; }
         .db-actions  { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
         .db-main     { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
         .db-2col     { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; align-items: start; }
@@ -325,9 +327,10 @@ export default function DashboardPage() {
             { href: "/dashboard/settings/profile", label: "Profile",   icon: <Settings size={14} /> },
             ...(isPro ? [{ href: "/dashboard/team", label: "Team", icon: <Users size={14} /> }] : []),
           ].map(({ href, label, icon }) => (
-            <Link key={href} href={href} className="db-nav-link"
-              onMouseEnter={e => { e.currentTarget.style.color = "#F7F5F0"; e.currentTarget.style.background = "#252320"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "#6B6560"; e.currentTarget.style.background = "transparent"; }}>
+            <Link key={href} href={href}
+              className={`db-nav-link${pathname === href ? " active" : ""}`}
+              onMouseEnter={e => { if (pathname !== href) { e.currentTarget.style.color = "#F7F5F0"; e.currentTarget.style.background = "#252320"; } }}
+              onMouseLeave={e => { if (pathname !== href) { e.currentTarget.style.color = "#6B6560"; e.currentTarget.style.background = "transparent"; } }}>
               {icon}<span>{label}</span>
             </Link>
           ))}

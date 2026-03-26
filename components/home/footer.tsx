@@ -104,7 +104,7 @@ export default function Footer() {
       >
 
         {/* Column 1 — Brand */}
-        <div style={{ gridColumn: "1 / -1", maxWidth: "280px" }}>
+        <div style={{ maxWidth: "280px" }}>
           <Link
             href="/"
             aria-label="Plexovia homepage"

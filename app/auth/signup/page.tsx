@@ -192,6 +192,9 @@ export default function SignupPage() {
         <p style={{ textAlign: "center", fontSize: "0.8125rem", color: "#6B6560", marginTop: "1.25rem", marginBottom: 0 }}>
           Already have an account? <Link href="/auth/login" style={gold}>Sign in →</Link>
         </p>
+        <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#4B4844", marginTop: "0.75rem", marginBottom: 0 }}>
+          Need help? <a href="mailto:support@plexovia.com" style={{ color: "#6B6560", textDecoration: "none" }}>support@plexovia.com</a>
+        </p>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <Link href="/" style={{ textDecoration: "none" }}>
           <span style={{ fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.05em", fontFamily: "var(--font-inter), sans-serif" }}>
             <span style={{ color: "#C9A84C" }}>P</span>
-            <span style={{ color: "#F7F5F0" }}>lexovia</span>
+            <span style={{ color: "var(--pub-text)" }}>lexovia</span>
           </span>
         </Link>
         <Link href="/" style={navLink}>Back to Home</Link>
@@ -118,14 +118,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const page: React.CSSProperties        = { minHeight: "100vh", background: "#1C1917", fontFamily: "var(--font-inter), sans-serif" };
-const header: React.CSSProperties      = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 2rem", borderBottom: "1px solid #252320", position: "sticky", top: 0, background: "#1C1917", zIndex: 50 };
+const page: React.CSSProperties        = { minHeight: "100vh", background: "var(--pub-bg)", fontFamily: "var(--font-inter), sans-serif" };
+const header: React.CSSProperties      = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 2rem", borderBottom: "1px solid var(--pub-border)", position: "sticky", top: 0, background: "var(--pub-bg)", zIndex: 50 };
 const main: React.CSSProperties        = { maxWidth: "720px", margin: "0 auto", padding: "3rem 2rem 5rem" };
-const labelStyle: React.CSSProperties  = { fontSize: "0.72rem", fontWeight: 600, color: "#C9A84C", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 0.5rem" };
-const h1: React.CSSProperties          = { fontWeight: 800, fontSize: "2rem", color: "#F7F5F0", letterSpacing: "-0.04em", margin: "0 0 0.5rem" };
-const meta: React.CSSProperties        = { fontSize: "0.875rem", color: "#6B6560", margin: "0 0 2.5rem" };
-const h2: React.CSSProperties          = { fontWeight: 700, fontSize: "1rem", color: "#F7F5F0", margin: "0 0 0.5rem" };
-const body: React.CSSProperties        = { fontSize: "0.9375rem", color: "#A8A29E", lineHeight: 1.7 };
-const list: React.CSSProperties        = { paddingLeft: "1.25rem", margin: "0.5rem 0", color: "#A8A29E", lineHeight: 1.8 };
-const linkStyle: React.CSSProperties   = { color: "#C9A84C", textDecoration: "none", fontWeight: 500 };
-const navLink: React.CSSProperties     = { fontSize: "0.875rem", color: "#6B6560", textDecoration: "none" };
+const labelStyle: React.CSSProperties  = { fontSize: "0.72rem", fontWeight: 600, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 0.5rem" };
+const h1: React.CSSProperties          = { fontWeight: 800, fontSize: "2rem", color: "var(--pub-text)", letterSpacing: "-0.04em", margin: "0 0 0.5rem" };
+const meta: React.CSSProperties        = { fontSize: "0.875rem", color: "var(--pub-muted)", margin: "0 0 2.5rem" };
+const h2: React.CSSProperties          = { fontWeight: 700, fontSize: "1rem", color: "var(--pub-text)", margin: "0 0 0.5rem" };
+const body: React.CSSProperties        = { fontSize: "0.9375rem", color: "var(--pub-muted)", lineHeight: 1.7 };
+const list: React.CSSProperties        = { paddingLeft: "1.25rem", margin: "0.5rem 0", color: "var(--pub-muted)", lineHeight: 1.8 };
+const linkStyle: React.CSSProperties   = { color: "var(--accent)", textDecoration: "none", fontWeight: 500 };
+const navLink: React.CSSProperties     = { fontSize: "0.875rem", color: "var(--pub-muted)", textDecoration: "none" };

@@ -78,7 +78,7 @@
 
   /* Font families (populated by next/font/local in layout.tsx) */
   --font-serif: var(--font-instrument-serif);
-  --font-sans:  var(--font-geist-sans);
+  --font-sans:  var(--font-inter);
   --font-mono:  var(--font-geist-mono);
 
   /* Custom border radii */
@@ -363,6 +363,7 @@ h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  position: relative;
 }
 
 .nav-links {
@@ -370,8 +371,11 @@ h4, h5, h6 {
   align-items: center;
   gap: 0.25rem;
   list-style: none;
-  margin: 0 0 0 auto;
   padding: 0;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .nav-link {
@@ -683,21 +687,4 @@ h4, h5, h6 {
   }
 }
 
-/* Skip to content */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 1rem;
-  padding: 0.5rem 1rem;
-  background: var(--accent);
-  color: var(--pub-text);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  z-index: 9999;
-  text-decoration: none;
-  transition: top 0.2s ease;
-}
 
-.skip-link:focus {
-  top: 1rem;
-}
