@@ -14,20 +14,18 @@ const NAV_PRODUCT = [
   { label: "How It Works", href: "/how-it-works" },
   { label: "Pricing",      href: "/pricing" },
   { label: "FAQ",          href: "/#faq" },
-  { label: "Changelog",    href: "/changelog" },
 ];
 
 const NAV_LEGAL = [
-  { label: "Privacy Policy",    href: "/privacy" },
-  { label: "Terms of Service",  href: "/terms" },
-  { label: "Cookie Policy",     href: "/cookies" },
-  { label: "Refund Policy",     href: "/refunds" },
+  { label: "Privacy Policy",    href: "/legal/privacy" },
+  { label: "Terms of Service",  href: "/legal/terms" },
+  { label: "Cookie Policy",     href: "/legal/cookies" },
+  { label: "Refund Policy",     href: "/legal/refund" },
 ];
 
 const NAV_CONTACT = [
-  { label: "support@plexovia.com", href: "mailto:support@plexovia.com" },
-  { label: "Request a Feature",    href: "https://plexovia.canny.io" },
-  { label: "System Status",        href: "https://status.plexovia.com" },
+  { label: "support@plexovia.com",  href: "mailto:support@plexovia.com" },
+  { label: "Request a Feature",     href: "mailto:support@plexovia.com?subject=Feature%20Request" },
 ];
 
 /* Shared link styles */
@@ -155,7 +153,7 @@ export default function Footer() {
             onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.75"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
           >
-            Start free trial →
+            Start free trial
           </Link>
         </div>
 
