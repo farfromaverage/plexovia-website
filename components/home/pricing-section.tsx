@@ -142,7 +142,7 @@ export default function PricingSection() {
               marginBottom: "0.5rem",
             }}
           >
-            7-day free trial on both plans. Credit card required. No charge until Day 8.
+            Essential plan includes a 7-day free trial. No charge until Day 8. Pro plan charges on day 1.
           </p>
           <p
             style={{
@@ -405,7 +405,7 @@ export default function PricingSection() {
                   id={`pricing-cta-${plan.id}`}
                   style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", width: "100%" }}
                 >
-                  {plan.name === "Pro" ? "Start Pro Free Trial" : "Start Free Trial"}
+                  {plan.id === "pro" ? "Start with Pro" : "Start Free Trial"}
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
 
@@ -418,7 +418,9 @@ export default function PricingSection() {
                     marginTop:  "0.625rem",
                   }}
                 >
-                  Credit card required. No charge until Day 8.
+                  {plan.id === "pro"
+                    ? "Credit card required. Cancel anytime."
+                    : "Credit card required. No charge until Day 8."}
                 </p>
               </div>
             </motion.div>

@@ -228,10 +228,10 @@ export default function PricingPage() {
               </div>
 
               {/* Pro CTA — dark per spec, price does the selling */}
-              <Link href="/auth/signup" style={ctaBtn}>
-                Start Free Trial
+              <Link href="/auth/signup?plan=pro" style={ctaBtn}>
+                Start with Pro
               </Link>
-              <p style={{ fontSize: "0.75rem", color: "#8A7F74", textAlign: "center", margin: "-0.75rem 0 0" }}>No charge until Day 8</p>
+              <p style={{ fontSize: "0.75rem", color: "#8A7F74", textAlign: "center", margin: "-0.75rem 0 0" }}>Credit card required. Cancel anytime.</p>
 
               <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
                 <GroupLabel gold>Everything in Essential, plus</GroupLabel>
@@ -326,7 +326,7 @@ export default function PricingPage() {
                     ["User seats",                  "1",    "3",      "1",           "5",      "Per seat"],
                     // "Cancel anytime" — green = good (you CAN cancel), red = locked in
                     ["Cancel anytime",              "yes",  "yes",    "no",          "no",     "no"],
-                    ["Free trial",                  "7 days","7 days","no",          "no",     "Demo only"],
+                    ["Free trial",                  "7 days","No",     "no",          "no",     "Demo only"],
                     ["Starting price",              "$119/mo","$299/mo","~$150/mo",  "$458/mo","$1,000+/seat"],
                   ] as [string, string, string, string, string, string][]).map(([feature, ...vals]) => (
                     <tr key={feature} style={{ borderBottom: "1px solid #F0EDE8" }}>
