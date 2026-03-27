@@ -53,28 +53,28 @@ export default function StatsBar() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const engineUrl = process.env.NEXT_PUBLIC_RAILWAY_API_URL || "https://plexovia-engine-production.up.railway.app";
-        const res = await fetch(`${engineUrl}/api/stats`);
-        if (!res.ok) return;
-        const data = await res.json();
-        
-        let hrs = 6;
+        // Use the same-origin Next.js proxy — avoids CORS and env var dependency
+        const res = await fetch('/api/engine-stats')
+        if (!res.ok) return
+        const data = await res.json()
+
+        let hrs = 6
         if (data.last_run_at) {
-          const hoursAgo = Math.round((Date.now() - new Date(data.last_run_at).getTime()) / 3600000);
-          hrs = Math.max(1, hoursAgo);
+          const hoursAgo = Math.round((Date.now() - new Date(data.last_run_at).getTime()) / 3600000)
+          hrs = Math.max(1, hoursAgo)
         }
 
         setLiveStats([
-          { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: "contracts scanned this week", suffix: "" },
-          { value: data.states_covered > 0 ? data.states_covered : 50,      label: "state portals monitored",     suffix: "" },
-          { value: hrs,                                                     label: "hours since last update",     suffix: "h ago" },
-        ]);
-      } catch (e) {
-        // Fallback to initialStats on error (silent block so UI doesn't break)
+          { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: 'contracts scanned this week', suffix: '' },
+          { value: data.states_covered  > 0 ? data.states_covered  : 50,    label: 'state portals monitored',     suffix: '' },
+          { value: hrs,                                                       label: 'hours since last update',     suffix: 'h ago' },
+        ])
+      } catch {
+        // Silently keep initialStats on error
       }
     }
-    loadStats();
-  }, []);
+    loadStats()
+  }, [])
 
   return (
     <section
