@@ -11,10 +11,10 @@ interface StatItem {
   prefix?: string;
 }
 
-const stats: StatItem[] = [
+const initialStats: StatItem[] = [
   { value: 15847, label: "contracts scanned this week",  suffix: "" },
   { value: 50,    label: "state portals monitored",      suffix: "" },
-  { value: 6,     label: "hours since last update",      suffix: "h ago" },
+  { value: 6,     label: "hours since last update",      suffix: "h" },
 ];
 
 function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; suffix?: string; prefix?: string }) {
@@ -48,6 +48,33 @@ function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; su
 export default function StatsBar() {
   const ref    = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, viewportConfig);
+  const [liveStats, setLiveStats] = useState<StatItem[]>(initialStats);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const engineUrl = process.env.NEXT_PUBLIC_RAILWAY_API_URL || "https://plexovia-engine-production.up.railway.app";
+        const res = await fetch(`${engineUrl}/api/stats`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        let hrs = 6;
+        if (data.last_run_at) {
+          const hoursAgo = Math.round((Date.now() - new Date(data.last_run_at).getTime()) / 3600000);
+          hrs = Math.max(1, hoursAgo);
+        }
+
+        setLiveStats([
+          { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: "contracts scanned this week", suffix: "" },
+          { value: data.states_covered > 0 ? data.states_covered : 50,      label: "state portals monitored",     suffix: "" },
+          { value: hrs,                                                     label: "hours since last update",     suffix: "h ago" },
+        ]);
+      } catch (e) {
+        // Fallback to initialStats on error (silent block so UI doesn't break)
+      }
+    }
+    loadStats();
+  }, []);
 
   return (
     <section
@@ -64,7 +91,7 @@ export default function StatsBar() {
             gap-6 sm:gap-10 lg:gap-16
           "
         >
-          {stats.map((stat, i) => (
+          {liveStats.map((stat, i) => (
             <motion.div
               key={stat.label}
               variants={counterReveal}
@@ -85,7 +112,7 @@ export default function StatsBar() {
               </dd>
 
               {/* Separator dot — hidden on last item */}
-              {i < stats.length - 1 && (
+              {i < liveStats.length - 1 && (
                 <span
                   className="hidden sm:block text-[#2E2C2A] text-lg select-none ml-4"
                   aria-hidden="true"
