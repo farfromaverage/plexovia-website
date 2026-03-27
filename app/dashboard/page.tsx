@@ -326,18 +326,11 @@ export default function DashboardPage() {
   const [matchError,     setMatchError]     = useState(false);
   const [hasRealData,    setHasRealData]    = useState(false);
 
-  /* ── Fetch real matches from engine ────────────────────────────── */
+  /* ── Fetch real matches from engine via server-side proxy ──────── */
   async function fetchMatches() {
-    const engineUrl = process.env.NEXT_PUBLIC_RAILWAY_API_URL;
-    if (!engineUrl) { setMatchesLoading(false); return; }
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setMatchesLoading(false); return; }
-
     try {
-      const res = await fetch(`${engineUrl}/api/user/matches?per_page=10`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      // Same-origin proxy — no CORS, no NEXT_PUBLIC env needed
+      const res = await fetch('/api/user-matches?per_page=10');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const mapped = (json.matches || []).map(mapMatch);
