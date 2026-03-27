@@ -16,11 +16,20 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-// ── Supabase admin client (service key — server-side only) ───────────────────
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // service key, not anon key
-)
+// ── Supabase admin client — lazy singleton (avoids build-time init) ───────────
+// Must NOT be instantiated at module level: env vars not available during build.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _supabase: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getSupabase(): any {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+  }
+  return _supabase
+}
 
 // ── HMAC Signature Verification ──────────────────────────────────────────────
 function verifySignature(rawBody: string, signature: string | null): boolean {
@@ -87,7 +96,7 @@ export async function POST(req: NextRequest) {
         const plan = getPlanFromVariantName(variantName)
         const trialEndsAt = data?.trial_ends_at ?? null
 
-        await supabase
+        await getSupabase()
           .from('profiles')
           .update({
             plan,
@@ -109,7 +118,7 @@ export async function POST(req: NextRequest) {
         const plan = getPlanFromVariantName(variantName)
         const status: string = data?.status ?? 'active'
 
-        await supabase
+        await getSupabase()
           .from('profiles')
           .update({
             plan,
@@ -126,7 +135,7 @@ export async function POST(req: NextRequest) {
       // ── Subscription cancelled ────────────────────────────────────────────
       case 'subscription_cancelled': {
         // Keep plan active until plan_expires_at — don't hard-delete
-        await supabase
+        await getSupabase()
           .from('profiles')
           .update({
             plan: 'cancelled',
@@ -142,7 +151,7 @@ export async function POST(req: NextRequest) {
       // ── Payment failed ────────────────────────────────────────────────────
       case 'subscription_payment_failed': {
         // Mark the profile — middleware can enforce grace period
-        await supabase
+        await getSupabase()
           .from('profiles')
           .update({
             payment_failed: true,

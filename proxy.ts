@@ -1,63 +1,78 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
+/**
+ * Plexovia — Server-Side Route Protection Middleware
+ *
+ * Protects all /dashboard routes at the Edge, before any page renders.
+ * No client-side flash of protected content. No race conditions.
+ *
+ * Rules:
+ *   /dashboard/* → requires valid session → redirect to /auth/login if not authenticated
+ *   /auth/*      → if already logged in, redirect to /dashboard (no re-login)
+ *   everything else → pass through
+ */
 export async function proxy(request: NextRequest) {
-  /* ── 1. Build a mutable response we can attach cookies to ── */
-  let supabaseResponse = NextResponse.next({ request });
+  const { pathname } = request.nextUrl
 
-  /* ── 2. Create SSR Supabase client with cookie read/write ── */
+  // Create a response we can modify headers on
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  })
+
+  // Build Supabase SSR client using cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Write cookies to both the request and the response
-          cookiesToSet.forEach(({ name, value }) =>
+          cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
-  );
+  )
 
-  /* ── 3. Refresh session (MUST come right after createServerClient) ── */
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Refresh session — this also rotates the session cookie if expired
+  const { data: { session } } = await supabase.auth.getSession()
 
-  const { pathname } = request.nextUrl;
-
-  /* ── 4. Guard: /dashboard/* requires an active session ── */
-  if (pathname.startsWith("/dashboard") && !user) {
-    const loginUrl = new URL("/auth/login", request.url);
-    // Preserve intended destination so we can redirect back after login
-    loginUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(loginUrl);
+  // ── Protect /dashboard routes ────────────────────────────────────────────────
+  if (pathname.startsWith('/dashboard')) {
+    if (!session) {
+      // Not logged in → redirect to login, preserve intended URL as next param
+      const loginUrl = new URL('/auth/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    // Logged in → continue to dashboard
+    return response
   }
 
-  /* ── 5. Convenience: already logged in → skip auth pages ── */
-  if (user && (pathname === "/auth/login" || pathname === "/auth/signup")) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // ── Redirect logged-in users away from auth pages ────────────────────────────
+  if (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup')) {
+    if (session) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
   }
 
-  /* ── 6. Return the response (with refreshed session cookies) ── */
-  return supabaseResponse;
+  return response
 }
 
-/* Only run middleware on these paths — skip static assets + API routes */
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/auth/login",
-    "/auth/signup",
+    /*
+     * Run on dashboard and auth routes only.
+     * Exclude: _next/static, _next/image, favicon, public files
+     */
+    '/dashboard/:path*',
+    '/auth/login',
+    '/auth/signup',
   ],
-};
+}
