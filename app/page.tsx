@@ -4,6 +4,7 @@ import SocialProofBar from "@/components/home/social-proof-bar";
 import StatsBar from "@/components/home/stats-bar";
 import ProblemSection from "@/components/home/problem-section";
 import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
+import CoverageMap from "@/components/home/coverage-map";
 import FAQSection from "@/components/home/faq-section";
 import FinalCTA from "@/components/home/final-cta";
 import Footer from "@/components/home/footer";
@@ -31,6 +32,7 @@ export default function LandingPage() {
       <StatsBar />
       <ProblemSection />
       <MissedOpportunityCalc />
+      <CoverageMap />
       <FAQSection />
       <FinalCTA />
       <Footer />
