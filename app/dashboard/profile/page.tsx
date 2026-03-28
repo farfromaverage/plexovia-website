@@ -8,9 +8,8 @@ import Link from "next/link";
 
 /* ── Plan limits ──────────────────────────────────────────────────────────── */
 const LIMITS = {
-  essential: { naics: 10, states: 7 },
-  pro:       { naics: 999, states: 50 },
-  enterprise:{ naics: 999, states: 50 },
+  naics: 999,
+  states: 50,
 } as const;
 
 const US_STATES = [
@@ -87,15 +86,14 @@ export default function ProfilePage() {
     load();
   }, [router]);
 
-  const plan = (profile?.plan ?? "essential") as keyof typeof LIMITS;
-  const limits = LIMITS[plan] ?? LIMITS.essential;
+  const limits = LIMITS;
 
   /* ── NAICS helpers ────────────────────────────────────────────────────── */
   function addNaics() {
     const code = naicsInput.trim().replace(/\D/g, "");
     if (!code || naicsCodes.includes(code)) { setNaicsInput(""); return; }
     if (naicsCodes.length >= limits.naics) {
-      setError(`${plan === "essential" ? "Essential" : "Pro"} plan allows up to ${limits.naics} NAICS codes. ${plan === "essential" ? "Upgrade to Pro for unlimited." : ""}`);
+      setError(`Plan allows up to ${limits.naics} NAICS codes.`);
       return;
     }
     setNaicsCodes([...naicsCodes, code]);
@@ -113,7 +111,7 @@ export default function ProfilePage() {
       setSelectedStates(selectedStates.filter(s => s !== st));
     } else {
       if (selectedStates.length >= limits.states) {
-        setError(`${plan === "essential" ? "Essential" : "Pro"} plan allows up to ${limits.states} states. ${plan === "essential" ? "Upgrade to Pro for all 50 states." : ""}`);
+        setError(`Plan allows up to ${limits.states} states.`);
         return;
       }
       setSelectedStates([...selectedStates, st]);
@@ -193,9 +191,6 @@ export default function ProfilePage() {
         {error && (
           <div style={{ background: "#2A1515", border: "1px solid #5A2020", borderRadius: "var(--radius-sm)", padding: "0.75rem 1rem", marginBottom: "1rem", color: "#F87171", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 8 }}>
             <AlertCircle size={15} /> {error}
-            {plan === "essential" && (
-              <Link href="/dashboard/billing" style={{ marginLeft: "auto", color: "var(--accent)", textDecoration: "none", fontWeight: 600, fontSize: "0.82rem" }}>Upgrade →</Link>
-            )}
           </div>
         )}
 
@@ -210,7 +205,7 @@ export default function ProfilePage() {
         <div style={s.section}>
           <div style={s.sectionH}>
             <span>NAICS Codes</span>
-            <span style={s.meter}>{naicsCodes.length} / {limits.naics === 999 ? "∞" : limits.naics}</span>
+            <span style={s.meter}>{naicsCodes.length} codes added</span>
           </div>
           <div style={s.addRow}>
             <input

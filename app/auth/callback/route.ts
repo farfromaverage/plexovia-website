@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -8,20 +9,25 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return request.headers.get('cookie')?.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1]
+          getAll() {
+            return cookieStore.getAll()
           },
-          set(name: string, value: string, options: CookieOptions) {
-            // we leave the response cookie setting to the middleware/response handlers downstream
-            // but the serverClient requires this to be defined.
-            // In App Router, we actually return the NextResponse with the cookies set.
-          },
-          remove(name: string, options: CookieOptions) {
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                cookieStore.set(name, value, options)
+              })
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
           },
         },
       }
@@ -41,14 +47,10 @@ export async function GET(request: Request) {
           
           await supabase.from('profiles').update({
             trial_ends_at: trialEndsAt.toISOString(),
-            // Ensure they're marked active
             active: true
           }).eq('id', user.id)
         }
       }
-    }
-    
-    if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

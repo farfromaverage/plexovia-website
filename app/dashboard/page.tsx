@@ -187,7 +187,7 @@ function MonitoringPanel({ profile }: { profile: Profile }) {
   const states    = profile.states                ?? [];
   const keywords  = profile.keywords              ?? [];
   const setAsides = profile.set_aside_preferences ?? [];
-  const isPro     = profile.plan === "pro";
+  const hasPlan   = profile.plan === "pro" || profile.plan === "premium" || profile.plan === "active" || profile.plan === "professional";
   const isEmpty   = naics.length === 0 && states.length === 0 && keywords.length === 0;
 
   return (
@@ -280,16 +280,9 @@ function MonitoringPanel({ profile }: { profile: Profile }) {
       </div>
       <div style={{ padding:"0.75rem 1.25rem", borderTop:"1px solid #2D2A26", display:"flex", alignItems:"center", gap:"7px" }}>
         <RefreshCw size={11} color="#4ADE80" />
-        {isPro ? (
-          <span style={{ fontSize:"0.72rem", color:"#6B6560" }}>
-            Engine syncs <strong style={{ color:"#A8A29E" }}>4x daily</strong>
-            <span style={{ color:"#4A4540" }}> &middot; 6 AM, 12 PM, 6 PM, midnight EST</span>
-          </span>
-        ) : (
-          <span style={{ fontSize:"0.72rem", color:"#6B6560" }}>
-            Engine syncs daily at <strong style={{ color:"#A8A29E" }}>6:00 AM EST</strong>
-          </span>
-        )}
+        <span style={{ fontSize:"0.72rem", color:"#6B6560" }}>
+          Engine syncs daily at <strong style={{ color:"#A8A29E" }}>6:00 AM EST</strong>
+        </span>
       </div>
     </div>
   );
@@ -406,9 +399,8 @@ export default function DashboardPage() {
     ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
     : null;
   const isTrial    = !profile?.plan || profile.plan === "trial";
-  const isEssential = profile?.plan === "essential";
-  const isPro       = profile?.plan === "pro";
-  const isPaid      = isEssential || isPro;
+  const hasPlan     = profile?.plan === "pro" || profile?.plan === "premium" || profile?.plan === "active" || profile?.plan === "professional";
+  const isPaid      = hasPlan;
   const hour        = new Date().getHours();
   const greeting    = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -455,8 +447,7 @@ export default function DashboardPage() {
               { href:"/dashboard",                label:"Overview",  icon:<TrendingUp size={14} /> },
               { href:"/dashboard/contracts",       label:"Contracts", icon:<FileText size={14} /> },
               { href:"/dashboard/profile",         label:"Profile",   icon:<Settings size={14} /> },
-              { href:"/dashboard/billing",         label:"Billing",   icon:<Zap size={14} /> },
-              ...(isPro ? [{ href:"/dashboard/team", label:"Team", icon:<Users size={14} /> }] : []),
+              { href:"/dashboard/team", label:"Team", icon:<Users size={14} /> },
             ].map(({ href, label, icon }) => (
               <Link key={href} href={href}
                 className={`db-nav-link${pathname === href ? " active" : ""}`}
@@ -533,7 +524,7 @@ export default function DashboardPage() {
             <StatCard icon={<FileText size={14} />}   label="Contract Matches" value={matchCountVal}  sub={hasRealData ? `${matchTotal} total matches found` : setupDone ? "Pending first scan" : "Set up profile first"} />
             <StatCard icon={<TrendingUp size={14} />} label="New This Week"    value={newThisWeekVal} sub={hasRealData ? "From last 7 days" : setupDone ? "Check back after 6 AM" : "Set up profile first"} />
             <StatCard icon={<MapPin size={14} />}     label="States Active"    value={stateCount > 0 ? String(stateCount) : "—"} sub={stateCount > 0 ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""}` : "Not configured"} />
-            <StatCard icon={<Zap size={14} />}        label="NAICS Codes"      value={naicsCount > 0 ? String(naicsCount) : "—"} sub={naicsCount > 0 ? `of ${isPro ? "unlimited" : "10"} slots used` : "Not configured"} accent />
+            <StatCard icon={<Zap size={14} />}        label="NAICS Codes"      value={naicsCount > 0 ? String(naicsCount) : "—"} sub={naicsCount > 0 ? `of unlimited slots used` : "Not configured"} accent />
             <StatCard icon={<Tag size={14} />}        label="Keywords"         value={keywordCount > 0 ? String(keywordCount) : "—"} sub={keywordCount > 0 ? "Active keyword matching" : "None added yet"} />
           </div>
 
@@ -585,34 +576,23 @@ export default function DashboardPage() {
           </div>
 
           {/* Upgrade CTA */}
-          {!isPro && (
+          {!hasPlan && (
             <div style={{ marginTop:"1.5rem", background:"linear-gradient(135deg, #1E1C1A 0%, #252320 100%)", border:"1px solid #2D2A26", borderRadius:"14px", padding:"1.375rem 2rem", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"1rem" }}>
               <div style={{ display:"flex", alignItems:"flex-start", gap:"1rem" }}>
                 <div style={{ width:"38px", height:"38px", borderRadius:"10px", background:"#C9A84C18", border:"1px solid #C9A84C30", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                   <Zap size={17} color="#C9A84C" />
                 </div>
                 <div>
-                  {isTrial ? (
-                    <>
-                      <p style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>
-                        {daysLeft !== null ? `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : "Start your subscription today"}
-                      </p>
-                      <p style={{ fontSize:"0.8125rem", color:"#6B6560", margin:"4px 0 0" }}>
-                        A bid posted today is in your competitor's inbox by 6 AM tomorrow. Essential is $119/mo. Cancel anytime.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>Upgrade to Pro — $299/mo</p>
-                      <p style={{ fontSize:"0.8125rem", color:"#6B6560", margin:"4px 0 0" }}>
-                        All 50 states · Unlimited NAICS and keywords · 4x daily alerts · Competitor tracking · 3 team seats · Priority support
-                      </p>
-                    </>
-                  )}
+                  <p style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>
+                    {daysLeft !== null ? `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : "Start your subscription today"}
+                  </p>
+                  <p style={{ fontSize:"0.8125rem", color:"#6B6560", margin:"4px 0 0" }}>
+                    Activate your Premium Professional plan. $299/mo. Cancel anytime.
+                  </p>
                 </div>
               </div>
               <Link href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"10px 22px", background:"#C9A84C", color:"#1C1917", borderRadius:"9px", fontWeight:700, fontSize:"0.875rem", textDecoration:"none", whiteSpace:"nowrap" }}>
-                See plans <ChevronRight size={15} />
+                Subscribe Now <ChevronRight size={15} />
               </Link>
             </div>
           )}

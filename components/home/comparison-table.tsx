@@ -23,77 +23,50 @@ type CellValue =
 
 interface Row {
   feature:     string;
-  essential:   CellValue;
-  pro:         CellValue;
+  plexovia:    CellValue;
   alternative: CellValue;
 }
 
 const ROWS: Row[] = [
   {
     feature:     "Time required per day",
-    essential:   { type: "text", value: "Under 5 min (read your email)" },
-    pro:         { type: "text", value: "Under 5 min (read your email)", highlight: true },
+    plexovia:    { type: "text", value: "Under 5 min (read your email)", highlight: true },
     alternative: { type: "text", value: "2 to 4 hours of manual searching" },
   },
   {
-    feature:     "Federal monitoring (SAM.gov)",
-    essential:   { type: "check" },
-    pro:         { type: "check" },
-    alternative: { type: "text", value: "Paid add-on" },
+    feature:     "Monitoring & Coverage",
+    plexovia:    { type: "text", value: "SAM.gov + 50 states + county + DC & PR", highlight: true },
+    alternative: { type: "text", value: "Often requires paid add-ons per state" },
   },
   {
-    feature:     "State portal coverage",
-    essential:   { type: "text", value: "7 states" },
-    pro:         { type: "text", value: "All 50 states" },
-    alternative: { type: "text", value: "1 state or federal only" },
+    feature:     "NAICS codes & Custom Keywords",
+    plexovia:    { type: "text", value: "Unlimited" },
+    alternative: { type: "text", value: "Keywords only / strict limits" },
   },
   {
-    feature:     "AI match score (0–100)",
-    essential:   { type: "check" },
-    pro:         { type: "check" },
+    feature:     "AI match score (0–100) and reasoning",
+    plexovia:    { type: "check" },
     alternative: { type: "minus" },
   },
   {
     feature:     "Email delivery. No login required.",
-    essential:   { type: "check" },
-    pro:         { type: "check" },
+    plexovia:    { type: "check" },
     alternative: { type: "minus" },
   },
   {
-    feature:     "Alert frequency",
-    essential:   { type: "text", value: "Once per morning" },
-    pro:         { type: "text", value: "4 times per day" },
-    alternative: { type: "text", value: "Log in to check" },
-  },
-  {
-    feature:     "NAICS code matching",
-    essential:   { type: "text", value: "Up to 10 codes" },
-    pro:         { type: "text", value: "Unlimited" },
-    alternative: { type: "text", value: "Keywords only" },
-  },
-  {
     feature:     "Competitor award tracking",
-    essential:   { type: "minus" },
-    pro:         { type: "check" },
+    plexovia:    { type: "check" },
     alternative: { type: "text", value: "Partial / extra cost" },
   },
   {
     feature:     "Annual contract required",
-    essential:   { type: "text", value: "Month-to-month", highlight: true },
-    pro:         { type: "text", value: "Month-to-month", highlight: true },
+    plexovia:    { type: "text", value: "Month-to-month, cancel anytime", highlight: true },
     alternative: { type: "text", value: "Yes, most require 1 year" },
   },
   {
     feature:     "Free trial",
-    essential:   { type: "text", value: "7 days" },
-    pro:         { type: "text", value: "7 days" },
+    plexovia:    { type: "text", value: "7 days, fully featured" },
     alternative: { type: "text", value: "Demo call only" },
-  },
-  {
-    feature:     "Starting price",
-    essential:   { type: "text", value: "$119/mo", highlight: true },
-    pro:         { type: "text", value: "$299/mo", highlight: true },
-    alternative: { type: "text", value: "$150–$1,000+/seat" },
   },
 ];
 
@@ -204,7 +177,7 @@ export default function ComparisonTable() {
               maxWidth:      "520px",
             }}
           >
-            What both plans get you that nothing else does.
+            What Plexovia gives you that nothing else does.
           </h2>
           <p
             style={{
@@ -214,7 +187,7 @@ export default function ComparisonTable() {
               lineHeight: 1.6,
             }}
           >
-            No annual contract. No per-seat fees. No login required to use the product.
+            No annual contract. No confusing tiers. No login required to use the product.
           </p>
         </motion.div>
 
@@ -245,10 +218,10 @@ export default function ComparisonTable() {
                   style={{
                     ...COL_HEADER,
                     textAlign:   "left",
-                    color:       "var(--pub-muted)",
-                    fontWeight:  400,
-                    fontSize:    "0.8125rem",
-                    width:       "34%",
+                    color:       "var(--pub-text)",
+                    fontWeight:  600,
+                    fontSize:    "0.875rem",
+                    width:       "33%",
                     paddingLeft: "1.25rem",
                     borderBottom:"1px solid var(--pub-border)",
                   }}
@@ -256,70 +229,19 @@ export default function ComparisonTable() {
                   Feature
                 </th>
 
-                {/* Plexovia Pro — primary column */}
+                {/* Plexovia column */}
                 <th
                   scope="col"
                   style={{
                     ...COL_HEADER,
+                    color:           "var(--accent)",
+                    width:           "33%",
                     backgroundColor: PLEXOVIA_BG,
                     borderLeft:      "2px solid var(--accent)",
                     borderBottom:    "1px solid var(--pub-border)",
-                    position:        "relative",
                   }}
                 >
-                  <span
-                    style={{
-                      display:         "inline-block",
-                      fontFamily:      "var(--font-geist-mono), monospace",
-                      fontSize:        "0.5625rem",
-                      fontWeight:      600,
-                      letterSpacing:   "0.07em",
-                      textTransform:   "uppercase",
-                      backgroundColor: "var(--accent-bg-pub)",
-                      color:           "var(--accent)",
-                      padding:         "0.1rem 0.4rem",
-                      borderRadius:    "var(--radius-pill)",
-                      marginBottom:    "0.3rem",
-                    }}
-                  >
-                    Most popular
-                  </span>
-                  <div style={{ fontWeight: 700 }}>Pro</div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-geist-mono), monospace",
-                      fontSize:   "0.6875rem",
-                      fontWeight: 400,
-                      color:      "var(--accent)",
-                      marginTop:  "0.2rem",
-                    }}
-                  >
-                    $299/mo
-                  </div>
-                </th>
-
-                {/* Plexovia Essential — secondary column */}
-                <th
-                  scope="col"
-                  style={{
-                    ...COL_HEADER,
-                    backgroundColor: PLEXOVIA_BG,
-                    borderLeft:      "1px solid rgba(201,168,76,0.25)",
-                    borderBottom:    "1px solid var(--pub-border)",
-                  }}
-                >
-                  Essential
-                  <div
-                    style={{
-                      fontFamily: "var(--font-geist-mono), monospace",
-                      fontSize:   "0.6875rem",
-                      fontWeight: 400,
-                      color:      "var(--pub-muted)",
-                      marginTop:  "0.2rem",
-                    }}
-                  >
-                    $119/mo
-                  </div>
+                  <div style={{ fontWeight: 700 }}>Plexovia</div>
                 </th>
 
                 {/* Alternative */}
@@ -327,6 +249,7 @@ export default function ComparisonTable() {
                   scope="col"
                   style={{
                     ...COL_HEADER,
+                    width:       "33%",
                     color:       "var(--pub-muted)",
                     fontWeight:  500,
                     borderLeft:  "1px solid var(--pub-border)",
@@ -334,17 +257,6 @@ export default function ComparisonTable() {
                   }}
                 >
                   Typical Alternative
-                  <div
-                    style={{
-                      fontFamily: "var(--font-geist-mono), monospace",
-                      fontSize:   "0.6875rem",
-                      fontWeight: 400,
-                      color:      "var(--pub-faint)",
-                      marginTop:  "0.2rem",
-                    }}
-                  >
-                    $150 to $1,000+/seat
-                  </div>
                 </th>
               </tr>
             </thead>
@@ -376,7 +288,7 @@ export default function ComparisonTable() {
                     {row.feature}
                   </td>
 
-                  {/* Pro — primary, strong gold border */}
+                  {/* Plexovia */}
                   <td
                     style={{
                       backgroundColor: PLEXOVIA_BG,
@@ -385,19 +297,7 @@ export default function ComparisonTable() {
                       padding:         "0.875rem 1rem",
                     }}
                   >
-                    <Cell value={row.pro} />
-                  </td>
-
-                  {/* Essential — secondary */}
-                  <td
-                    style={{
-                      backgroundColor: PLEXOVIA_BG,
-                      borderLeft:      "1px solid rgba(201,168,76,0.2)",
-                      textAlign:       "center",
-                      padding:         "0.875rem 1rem",
-                    }}
-                  >
-                    <Cell value={row.essential} />
+                    <Cell value={row.plexovia} />
                   </td>
 
                   {/* Alternative */}

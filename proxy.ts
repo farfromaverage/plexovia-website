@@ -13,8 +13,9 @@ import type { NextRequest } from 'next/server'
  *   /auth/*      → if already logged in, redirect to /dashboard (no re-login)
  *   everything else → pass through
  */
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  console.log("==== PROXY.TS INTERCEPTED: ", pathname, "====");
 
   // Create a response we can modify headers on
   let response = NextResponse.next({
@@ -67,12 +68,16 @@ export async function proxy(request: NextRequest) {
         }
 
         // 2. Check if trial expired and no plan mapping to an active subscription
+        // TEMPORARILY DISABLED: Phase 2D (Billing) is skipped for now, so we do not want to hard-block 
+        // users from the dashboard if they can't upgrade.
+        /*
         if (!profile.plan || profile.plan === 'cancelled' || profile.plan === 'trial') {
           const trialEnds = profile.trial_ends_at ? new Date(profile.trial_ends_at) : null;
           if (!trialEnds || trialEnds < new Date()) {
             return NextResponse.redirect(new URL('/pricing', request.url))
           }
         }
+        */
       }
     }
     

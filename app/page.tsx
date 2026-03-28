@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Hero from "@/components/home/hero";
 import SocialProofBar from "@/components/home/social-proof-bar";
 import StatsBar from "@/components/home/stats-bar";
-import ProblemSection from "@/components/home/problem-section";
 import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
 import CoverageMap from "@/components/home/coverage-map";
 import FAQSection from "@/components/home/faq-section";
@@ -30,7 +29,6 @@ export default function LandingPage() {
       <Hero />
       <SocialProofBar />
       <StatsBar />
-      <ProblemSection />
       <MissedOpportunityCalc />
       <CoverageMap />
       <FAQSection />

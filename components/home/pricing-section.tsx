@@ -20,53 +20,30 @@ type BillingCycle = "monthly" | "yearly";
 
 const PLANS = [
   {
-    id:           "pro",
-    name:         "Pro",
+    id:           "professional",
+    name:         "All-in-One Professional",
     monthly:      299,
     yearly:       2490,
     perMonthYr:   208,
     savePercent:  31,
-    tagline:      "All 50 states. 4 alerts per day. Competitor tracking. 3-seat team.",
-    audience:     "Active BD teams (2-10 people) with $500K-$10M in government revenue.",
+    tagline:      "Everything included. No hidden upgrades. Built for individuals and teams.",
+    audience:     "Individuals and teams. Scale by adding more seats as your team grows.",
     features: [
-      "Everything in Essential",
+      "SAM.gov federal monitoring, updated daily",
       "All 50 states + county portals + DC, Puerto Rico, Guam",
       "Unlimited NAICS codes and custom keywords",
-      "4 alert batches: 6 AM · 12 PM · 6 PM · midnight",
-      "AI match explanation with reasons why each contract matched",
+      "Daily email digest by 6 AM. No login required.",
+      "AI match score and explanation per contract",
       "Set-aside filtering (8(a) · WOSB · SDVOSB · HUBZone)",
-      "Competitor tracking by NAICS code and vendor name",
+      "Competitor tracking by vendor name",
       "Weekly bid calendar digest (Sundays) + performance digest",
-      "90-day match history",
-      "Up to 3 user seats with individual profiles",
+      "90-day match history & Unlimited CSV exports",
+      "1 user seat (Add more accounts as your team grows)",
       "Priority support with 8hr response SLA",
     ],
     highlighted:  true,
     ctaHref:      "/auth/signup?plan=pro",
-  },
-  {
-    id:           "essential",
-    name:         "Essential",
-    monthly:      119,
-    yearly:       990,
-    perMonthYr:   83,
-    savePercent:  31,
-    tagline:      "SAM.gov and 7 state portals of your choice. One scored digest per morning.",
-    audience:     "Solo operators and small firms (1-5 people) manually checking SAM.gov.",
-    features: [
-      "SAM.gov federal monitoring, updated daily",
-      "7 state portals of your choice",
-      "Up to 10 NAICS codes",
-      "AI match score (0-100) per contract",
-      "Daily email digest by 6 AM. No login required.",
-      "Bid deadline reminders: 3 days and 1 day before close",
-      "30-day match history · Unlimited CSV exports",
-      "1 user seat",
-      "Month-to-month. Cancel anytime.",
-    ],
-    highlighted:  false,
-    ctaHref:      "/auth/signup?plan=essential",
-  },
+  }
 ] as const;
 
 /* Yearly savings banner for toggle */
@@ -129,7 +106,7 @@ export default function PricingSection() {
               marginBottom:  "0.875rem",
             }}
           >
-            Two plans. No per-seat traps. Cancel anytime.
+            One powerful plan. No hidden upgrades.
           </h1>
 
           <p
@@ -142,7 +119,7 @@ export default function PricingSection() {
               marginBottom: "0.5rem",
             }}
           >
-            Essential plan includes a 7-day free trial. No charge until Day 8. Pro plan charges on day 1.
+            A simple, all-in-one system for serious contractors. Includes a 7-day free trial. No charge until Day 8.
           </p>
           <p
             style={{
@@ -153,7 +130,7 @@ export default function PricingSection() {
               letterSpacing: "0.01em",
             }}
           >
-            Manual monitoring costs 10+ hours per week. Plexovia starts at $119 per month.
+            Manual monitoring costs 10+ hours per week. Plexovia does it automatically while you sleep.
           </p>
         </motion.div>
 
@@ -227,11 +204,9 @@ export default function PricingSection() {
           animate={inView ? "visible" : "hidden"}
           variants={stagger}
           style={{
-            display:             "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))",
-            gap:                 "1.25rem",
+            maxWidth:            "580px",
+            margin:              "0 auto",
             marginBottom:        "2.5rem",
-            alignItems:          "start",
           }}
         >
           {PLANS.map((plan) => (
@@ -255,7 +230,7 @@ export default function PricingSection() {
               {/* Card header */}
               <div
                 style={{
-                  padding:      "1.75rem 1.75rem 1.25rem",
+                  padding:      "2rem 2.5rem 1.5rem",
                   borderBottom: "1px solid var(--pub-border)",
                 }}
               >
@@ -275,7 +250,7 @@ export default function PricingSection() {
                       marginBottom:    "0.75rem",
                     }}
                   >
-                    Most popular
+                    The Premium System
                   </span>
                 )}
 
@@ -322,7 +297,7 @@ export default function PricingSection() {
                       color:      "var(--pub-muted)",
                     }}
                   >
-                    /mo
+                    /user /mo
                   </span>
                 </div>
 
@@ -352,7 +327,7 @@ export default function PricingSection() {
               </div>
 
               {/* Feature list */}
-              <div style={{ padding: "1.5rem 1.75rem 1.75rem" }}>
+              <div style={{ padding: "1.5rem 2.5rem 2.5rem" }}>
                 <ul
                   role="list"
                   style={{
@@ -386,8 +361,8 @@ export default function PricingSection() {
                       <span
                         style={{
                           fontFamily: "var(--font-inter), sans-serif",
-                          fontSize:   "0.875rem",
-                          fontWeight: i === 0 && plan.id === "pro" ? 600 : 400,
+                          fontSize:   "0.9375rem",
+                          fontWeight: 400,
                           color:      "var(--pub-text)",
                           lineHeight: 1.5,
                         }}
@@ -405,7 +380,7 @@ export default function PricingSection() {
                   id={`pricing-cta-${plan.id}`}
                   style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", width: "100%" }}
                 >
-                  {plan.id === "pro" ? "Start with Pro" : "Start Free Trial"}
+                  Start Free 7-Day Trial
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
 
@@ -418,9 +393,7 @@ export default function PricingSection() {
                     marginTop:  "0.625rem",
                   }}
                 >
-                  {plan.id === "pro"
-                    ? "Credit card required. Cancel anytime."
-                    : "Credit card required. No charge until Day 8."}
+                  Credit card required for trial. No charge until Day 8. Cancel anytime.
                 </p>
               </div>
             </motion.div>

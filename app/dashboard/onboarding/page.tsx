@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2,
-  Search, Plus, Tag, MapPin, FileText,
+  Search, Plus, Tag, MapPin, FileText, Mail,
 } from "lucide-react";
 
 /* ─── Shared data and logic ───────────────────────────────────────── */
@@ -77,7 +77,7 @@ const REGIONS: Record<string, string[]> = {
 /* ─── Components ──────────────────────────────────────────────────── */
 
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["NAICS Codes", "States", "Keywords & Set-asides"];
+  const labels = ["Notification Email", "NAICS Codes", "Keywords & Set-asides", "States"];
   return (
     <div className="mb-7">
       <div className="flex justify-between items-center mb-2">
@@ -94,7 +94,34 @@ function StepBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setSelected: (v: string[]) => void; naicsLimit: number }) {
+function Step1_Email({ email, setEmail }: { email: string; setEmail: (v: string) => void }) {
+  return (
+    <div className="flex flex-col h-full fade-in">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Where should we send your matches?</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
+        Every morning by 6 AM, we will deliver your scored federal and state contract matches to this address.
+      </p>
+
+      <div>
+        <label htmlFor="pref-email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Notification Email</label>
+        <div className="relative">
+          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
+          <input
+            id="pref-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            required
+            className="w-full pl-[38px] pr-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Step2({ selected, setSelected, naicsLimit }: { selected: string[]; setSelected: (v: string[]) => void; naicsLimit: number }) {
   const [query, setQuery] = useState("");
   const LIMIT = naicsLimit;
 
@@ -236,7 +263,7 @@ function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setS
   );
 }
 
-function Step2({ selected, setSelected, stateLimit }: { selected: string[]; setSelected: (v: string[]) => void; stateLimit: number }) {
+function Step4({ selected, setSelected, stateLimit }: { selected: string[]; setSelected: (v: string[]) => void; stateLimit: number }) {
   const LIMIT = stateLimit;
 
   function toggleState(state: string) {
@@ -460,6 +487,7 @@ export default function OnboardingPage() {
   const [setAsides, setSetAsides] = useState<string[]>([]);
   const [company,  setCompany]  = useState("");
   const [plan,     setPlan]     = useState<string>("trial");
+  const [email,    setEmail]    = useState("");
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
 
@@ -474,10 +502,12 @@ export default function OnboardingPage() {
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("naics_codes, states, keywords, company_name, plan, set_aside_preferences")
+        .select("naics_codes, states, keywords, company_name, plan, set_aside_preferences, email")
         .eq("id", user.id)
         .single();
       if (!data) return;
+      if (data.email)                setEmail(data.email);
+      else if (user.email)           setEmail(user.email);
       if (data.naics_codes?.length)  setNaics(data.naics_codes);
       if (data.states?.length)       setStates(data.states);
       if (data.company_name)         setCompany(data.company_name);
@@ -509,6 +539,7 @@ export default function OnboardingPage() {
       keywords:                keywords,
       set_aside_preferences:   setAsides,
       company_name:            company.trim() || null,
+      email:                   email.trim() || user.email,
       onboarding_complete:     true,
     }).eq("id", user.id);
 
@@ -517,7 +548,8 @@ export default function OnboardingPage() {
     router.push("/dashboard");
   }
 
-  const canNext = step === 1 ? naics.length > 0 : step === 2 ? states.length > 0 : true;
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  const canNext = step === 1 ? isValidEmail(email) : step === 2 ? naics.length > 0 : step === 4 ? states.length > 0 : true;
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative">
@@ -528,12 +560,13 @@ export default function OnboardingPage() {
       </div>
 
       <div className="w-full max-w-[580px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl min-h-[580px] flex flex-col">
-        <StepBar current={step} total={3} />
+        <StepBar current={step} total={4} />
 
         <div className="flex-1 mb-8 overflow-hidden">
-          {step === 1 && <Step1 selected={naics}    setSelected={setNaics}   naicsLimit={naicsLimit} />}
-          {step === 2 && <Step2 selected={states}   setSelected={setStates}  stateLimit={stateLimit} />}
+          {step === 1 && <Step1_Email email={email}  setEmail={setEmail} />}
+          {step === 2 && <Step2 selected={naics}    setSelected={setNaics}   naicsLimit={naicsLimit} />}
           {step === 3 && <Step3 keywords={keywords} setKeywords={setKeywords} company={company} setCompany={setCompany} keywordLimit={keywordLimit} setAsides={setAsides} setSetAsides={setSetAsides} />}
+          {step === 4 && <Step4 selected={states}   setSelected={setStates}  stateLimit={stateLimit} />}
         </div>
 
         {error && (
@@ -554,7 +587,7 @@ export default function OnboardingPage() {
             </button>
           )}
 
-          {step < 3 ? (
+          {step < 4 ? (
             <button
               type="button"
               onClick={() => setStep((s) => s + 1)}

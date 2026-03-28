@@ -88,7 +88,7 @@ function ProGate() {
       border: "1px solid #3A3020", borderRadius: "8px",
     }}>
       <Lock size={13} color="#C9A84C" />
-      <span style={{ fontSize: "0.78125rem", color: "#8A7F74" }}>Pro only</span>
+      <strong style={{ fontSize: "0.78125rem", color: "#8A7F74" }}>Requires Active Plan</strong>
     </div>
   );
 }
@@ -155,7 +155,7 @@ export default function AlertSettingsPage() {
     }
   }
 
-  const isPro = prefs.plan === "pro";
+  const hasPlan = prefs.plan === "pro" || prefs.plan === "premium" || prefs.plan === "active" || prefs.plan === "professional";
 
   if (loading) {
     return (
@@ -208,8 +208,8 @@ export default function AlertSettingsPage() {
             icon={<Mail size={16} />}
             label="Daily Contract Digest"
             description={
-              isPro
-                ? "Your matched contracts, ranked by AI score. Sent 4 times per day: 6 AM, 12 PM, 6 PM, and midnight EST."
+              hasPlan
+                ? "Your matched contracts, ranked by AI score. Sent once per day at 6 AM EST."
                 : "Your matched contracts, ranked by AI score. Sent once per day at 6 AM EST."
             }
           >
@@ -223,8 +223,8 @@ export default function AlertSettingsPage() {
             icon={<Bell size={16} />}
             label="Deadline Reminders"
             description={
-              isPro
-                ? "Alerts at 7 days, 3 days, and 1 day before a bid closes."
+              hasPlan
+                ? "Alerts at 3 days and 1 day before a bid closes."
                 : "Alerts at 3 days and 1 day before a bid closes."
             }
           >
@@ -243,9 +243,9 @@ export default function AlertSettingsPage() {
             <p style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#6B6560", margin: 0 }}>
               Weekly Digests
             </p>
-            {!isPro && (
+            {!hasPlan && (
               <Link href="/pricing" style={{ fontSize: "0.75rem", color: "#C9A84C", textDecoration: "none", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                <Lock size={11} /> Upgrade to Pro
+                <Lock size={11} /> Upgrade Plan
               </Link>
             )}
           </div>
@@ -255,7 +255,7 @@ export default function AlertSettingsPage() {
             label="Bid Calendar Weekly Digest"
             description="Every Sunday: a summary of all open bids in your NAICS codes with their closing dates. Plan your week before Monday."
           >
-            {isPro ? (
+            {hasPlan ? (
               <Toggle
                 id="bid-calendar-digest"
                 checked={prefs.bid_calendar_digest}
@@ -271,7 +271,7 @@ export default function AlertSettingsPage() {
             label="Weekly Performance Digest"
             description="Every Monday: total matches last week, match rate trend, and your top keywords by match volume."
           >
-            {isPro ? (
+            {hasPlan ? (
               <Toggle
                 id="performance-digest"
                 checked={prefs.performance_digest}
@@ -288,13 +288,13 @@ export default function AlertSettingsPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <button
             onClick={handleSave}
-            disabled={saving || !isPro}
+            disabled={saving || !hasPlan}
             style={{
-              padding: "11px 28px", background: isPro ? "#C9A84C" : "#252320",
-              color: isPro ? "#1C1917" : "#4A4540",
-              border: `1px solid ${isPro ? "#C9A84C" : "#2D2A26"}`,
+              padding: "11px 28px", background: hasPlan ? "#C9A84C" : "#252320",
+              color: hasPlan ? "#1C1917" : "#4A4540",
+              border: `1px solid ${hasPlan ? "#C9A84C" : "#2D2A26"}`,
               borderRadius: "9px", fontWeight: 700, fontSize: "0.9375rem",
-              cursor: isPro ? "pointer" : "not-allowed",
+              cursor: hasPlan ? "pointer" : "not-allowed",
               fontFamily: "var(--font-inter), sans-serif",
               minWidth: "140px", transition: "opacity 0.15s",
               opacity: saving ? 0.6 : 1,
@@ -309,9 +309,9 @@ export default function AlertSettingsPage() {
             </span>
           )}
 
-          {!isPro && (
+          {!hasPlan && (
             <span style={{ fontSize: "0.8125rem", color: "#6B6560" }}>
-              <Link href="/pricing" style={{ color: "#C9A84C", textDecoration: "none", fontWeight: 600 }}>Upgrade to Pro</Link>
+              <Link href="/pricing" style={{ color: "#C9A84C", textDecoration: "none", fontWeight: 600 }}>Upgrade</Link>
               {" "}to enable weekly digests.
             </span>
           )}
