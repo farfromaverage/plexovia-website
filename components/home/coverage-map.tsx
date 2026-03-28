@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usaMapDimensions } from "@/lib/usa-map-dimensions";
-import { MapPin } from "lucide-react";
+import { MapPin, Crosshair, Radar } from "lucide-react";
 
+// Live proxy data (to be replaced with live Supabase stats when Engine is deployed)
 const STATE_CONTRACT_DATA: Record<string, number> = {
   CA: 3140, NY: 2845, TX: 2600, FL: 2150, VA: 1850, PA: 1720, IL: 1650,
   OH: 1540, GA: 1480, NC: 1420, MI: 1390, NJ: 1320, WA: 1250, MA: 1110,
@@ -18,117 +19,161 @@ const STATE_CONTRACT_DATA: Record<string, number> = {
 
 const ESSENTIAL_PLAN_STATES = ["CA", "NY", "TX", "FL", "VA", "MA", "MD"];
 
+// Coordinates for radar pings (rough SVG viewbox translation)
+const RADAR_NODES = [
+  { id: "CA", x: 100, y: 300 },
+  { id: "TX", x: 420, y: 410 },
+  { id: "NY", x: 800, y: 155 },
+  { id: "FL", x: 740, y: 470 },
+  { id: "IL", x: 590, y: 220 },
+  { id: "WA", x: 130, y: 65 },
+  { id: "VA", x: 780, y: 245 }
+];
+
 export default function CoverageMap() {
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const mapRef = useRef<SVGSVGElement>(null);
+  const [scanActive, setScanActive] = useState(false);
+
+  useEffect(() => {
+    // Subtle auto-scan ping every 4 seconds
+    const interval = setInterval(() => {
+      setScanActive(true);
+      setTimeout(() => setScanActive(false), 1500);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     setMousePos({ x: e.clientX, y: e.clientY });
   };
 
   return (
-    <section className="relative py-24 sm:py-32 overflow-hidden border-t" style={{ borderColor: "rgba(201, 168, 76, 0.15)", backgroundColor: "var(--pub-bg)" }}>
-      <div className="mx-auto max-w-[1440px] px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
+    <section className="relative py-24 sm:py-32 overflow-hidden bg-[#0A0A0A] border-y border-[#222120]">
+      {/* Dynamic Background Effects */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#111110_1px,transparent_1px),linear-gradient(to_bottom,#111110_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-20" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] blur-[150px] opacity-[0.15] pointer-events-none rounded-full" style={{ backgroundColor: "var(--pub-gold)" }} />
+      </div>
+
+      <div className="mx-auto max-w-[1440px] px-6 lg:px-12 grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-12 items-center relative z-10">
         
-        {/* Left Side: Elegant Copy */}
-        <div className="flex flex-col gap-8 max-w-lg z-10 lg:pl-12">
+        {/* Left Side: Advanced Telemetry Copy */}
+        <div className="flex flex-col gap-8 max-w-lg z-10 w-full xl:pl-12">
           <div className="flex flex-col gap-4">
-            <h2 className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium" style={{ color: "var(--pub-ink)" }}>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1917] border border-[#2E2C2A] w-fit shadow-[0_0_15px_rgba(201,168,76,0.05)]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C9A84C] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C9A84C]"></span>
+              </span>
+              <span className="text-[12px] uppercase tracking-widest text-[#E8C06A] font-semibold" style={{ fontFamily: "'Geist Mono', monospace" }}>
+                Live SAM.gov Telemetry
+              </span>
+            </div>
+            
+            <h2 className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium text-white">
               Monitor <br />
               <span style={{ color: "var(--pub-gold)" }}>All 50 States.</span><br />
-              Or start with what matters.
+              Zero Blind Spots.
             </h2>
-            <p className="text-lg leading-relaxed mt-4" style={{ color: "var(--pub-ink-muted)" }}>
-              Plexovia deeply integrates with standalone state procurement portals and <strong className="font-medium" style={{ color: "var(--pub-ink)" }}>SAM.gov</strong> to build a comprehensive opportunity pipeline.
+            <p className="text-lg leading-relaxed mt-4 text-[#8A8580]">
+              Plexovia deeply integrates with standalone state procurement portals and <strong className="font-medium text-white">SAM.gov</strong> to build a comprehensive, high-velocity opportunity pipeline.
             </p>
           </div>
 
-          <div className="mt-4 p-8 border rounded-2xl flex flex-col gap-3 relative overflow-hidden bg-white shadow-sm" style={{ borderColor: "rgba(201, 168, 76, 0.2)" }}>
+          <div className="mt-4 p-8 border border-[#2E2C2A] rounded-2xl flex flex-col gap-4 relative overflow-hidden bg-[#111110] shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all hover:border-[#3A3835]">
             <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: "var(--pub-gold)" }} />
-            <h3 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--pub-gold)", fontFamily: "'Geist Mono', monospace" }}>
-              The Essential Plan Limit
-            </h3>
-            <p className="text-base leading-relaxed" style={{ color: "var(--pub-ink)" }}>
-              Pick up to <strong className="font-semibold" style={{ color: "var(--pub-ink)" }}>7 active states</strong> for your primary area of operations. Need a massive footprint? Upgrade to Pro for full-nation coverage without limits.
+            <div className="flex items-center gap-3">
+              <Radar className="w-5 h-5 text-[#C9A84C]" />
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-[#C9A84C]" style={{ fontFamily: "'Geist Mono', monospace" }}>
+                Coverage Allocation
+              </h3>
+            </div>
+            <p className="text-base leading-relaxed text-[#D6D3CD]">
+              Pick up to <strong className="font-semibold text-white">7 active states</strong> on the Essential tier. Need a massive footprint? Upgrade to Pro for unrestricted nationwide coverage.
             </p>
           </div>
         </div>
 
-        {/* Right Side: Elegant Map */}
-        <div className="relative w-full h-auto select-none pointer-events-auto mt-8 lg:mt-0 flex justify-center lg:justify-end pr-0 lg:pr-8" onMouseMove={handleMouseMove}>
-          
-          {/* Subtle luxurious backlight glow behind map */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[70%] blur-[120px] pointer-events-none rounded-full" style={{ backgroundColor: "rgba(201, 168, 76, 0.15)" }} />
+        {/* Right Side: High-Contrast HUD Map */}
+        <div className="relative w-full h-auto select-none pointer-events-auto flex justify-center xl:justify-end" onMouseMove={handleMouseMove}>
+          <div className="relative w-full max-w-[900px]">
+            <svg 
+              ref={mapRef}
+              viewBox="0 0 959 593" 
+              className="w-full h-auto relative z-10"
+              style={{ filter: "drop-shadow(0px 25px 45px rgba(0, 0, 0, 0.5))" }}
+            >
+              {Object.keys(usaMapDimensions).map((stateKey) => {
+                const stateInfo = usaMapDimensions[stateKey as keyof typeof usaMapDimensions];
+                const isEssential = ESSENTIAL_PLAN_STATES.includes(stateKey);
+                const isHovered = hoveredState === stateKey;
+                
+                // Advanced Dark Theme Styling
+                const fillBase = isEssential ? "#1A1917" : "#0A0A0A";
+                const fillHover = "#C9A84C";
+                const strokeBase = "#2E2C2A";
+                const strokeHover = "#E8C06A";
 
-          <svg 
-            ref={mapRef}
-            viewBox="0 0 959 593" 
-            className="w-full h-auto max-w-[800px] relative z-10"
-            style={{ 
-              filter: "drop-shadow(0px 15px 35px rgba(26, 26, 26, 0.04))"
-            }}
-          >
-            {Object.keys(usaMapDimensions).map((stateKey) => {
-              const stateInfo = usaMapDimensions[stateKey as keyof typeof usaMapDimensions];
-              const isEssential = ESSENTIAL_PLAN_STATES.includes(stateKey);
-              const isHovered = hoveredState === stateKey;
-              
-              // Pristine elegant contrast
-              const fillBase = isEssential ? "var(--pub-ink)" : "rgba(201, 168, 76, 0.12)";
-              const fillHover = "var(--pub-gold)";
-              
-              const strokeBase = "var(--pub-bg)"; // Cuts perfectly into the background
-              const strokeHover = "var(--pub-bg)";
+                return (
+                  <path
+                    key={stateKey}
+                    d={stateInfo.dimensions}
+                    data-name={stateKey}
+                    onMouseEnter={() => setHoveredState(stateKey)}
+                    onMouseLeave={() => setHoveredState(null)}
+                    className="transition-all duration-300 ease-out cursor-pointer outline-none"
+                    fill={isHovered ? fillHover : fillBase}
+                    stroke={isHovered ? strokeHover : (isEssential ? "#3A3835" : strokeBase)}
+                    strokeWidth={isHovered ? 2 : (isEssential ? 1.5 : 1)}
+                  />
+                );
+              })}
 
-              return (
-                <path
-                  key={stateKey}
-                  d={stateInfo.dimensions}
-                  data-name={stateKey}
-                  onMouseEnter={() => setHoveredState(stateKey)}
-                  onMouseLeave={() => setHoveredState(null)}
-                  className="transition-all duration-300 ease-out cursor-pointer outline-none"
-                  fill={isHovered ? fillHover : fillBase}
-                  stroke={isHovered ? strokeHover : strokeBase}
-                  strokeWidth={isHovered ? 2.5 : 1.5}
-                  style={{
-                    position: "relative",
-                  }}
-                />
-              );
-            })}
-          </svg>
+              {/* Radar Pings on Major Nodes */}
+              {RADAR_NODES.map((node, i) => (
+                <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+                  {scanActive && (
+                    <circle cx="0" cy="0" r="40" fill="none" stroke="#C9A84C" strokeWidth="1" className="animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-30" />
+                  )}
+                  <circle cx="0" cy="0" r="4" fill={hoveredState === node.id ? "#1A1917" : "#C9A84C"} />
+                  <circle cx="0" cy="0" r="1.5" fill={hoveredState === node.id ? "#C9A84C" : "#0A0A0A"} />
+                </g>
+              ))}
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Pristine Modern SaaS Tooltip */}
+      {/* Advanced Dark HUD Tooltip */}
       <AnimatePresence>
         {hoveredState && (
           <motion.div
             initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed pointer-events-none z-[100] px-5 py-3.5 rounded-2xl shadow-[0_20px_40px_rgba(26,26,26,0.08)] backdrop-blur-xl flex items-center gap-4"
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="fixed pointer-events-none z-[100] px-5 py-4 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center gap-4 border border-[#3A3835] bg-[#111110]/95"
             style={{
-              backgroundColor: "rgba(255, 255, 255, 0.95)",
-              border: "1px solid rgba(26, 26, 26, 0.05)",
               left: mousePos.x + 24,
               top: mousePos.y + 24,
             }}
           >
-            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(201, 168, 76, 0.1)" }}>
-              <MapPin className="w-4 h-4" style={{ color: "var(--pub-gold)" }} />
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-[#C9A84C]/30 bg-[#C9A84C]/10">
+              <Crosshair className="w-4 h-4 text-[#C9A84C]" />
             </div>
             
             <div className="flex flex-col pr-2">
-              <span className="text-[15px] font-semibold leading-tight" style={{ color: "var(--pub-ink)" }}>
+              <span className="text-[15px] font-semibold leading-tight text-white mb-1">
                 {usaMapDimensions[hoveredState as keyof typeof usaMapDimensions].name}
               </span>
-              <span className="text-[13px] leading-tight mt-0.5" style={{ color: "var(--pub-ink-muted)" }}>
-                <strong className="font-semibold" style={{ color: "var(--pub-ink)" }}>{STATE_CONTRACT_DATA[hoveredState].toLocaleString()}</strong> active contracts
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-[#16A34A] animate-pulse"></span>
+                <span className="text-[13px] leading-tight text-[#8A8580] tracking-wide" style={{ fontFamily: "'Geist Mono', monospace" }}>
+                  <strong className="font-semibold text-[#E8C06A]">{STATE_CONTRACT_DATA[hoveredState].toLocaleString()}</strong> contracts detected
+                </span>
+              </div>
             </div>
           </motion.div>
         )}
@@ -136,3 +181,4 @@ export default function CoverageMap() {
     </section>
   );
 }
+
