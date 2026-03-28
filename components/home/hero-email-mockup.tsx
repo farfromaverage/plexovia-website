@@ -146,22 +146,22 @@ export default function HeroEmailMockup() {
     >
        {/* Ambient Backglow */}
        <motion.div 
-         className="absolute -inset-10 -z-20 rounded-3xl opacity-0 group-hover:opacity-50 transition-opacity duration-700 blur-3xl pointer-events-none"
+         className="absolute -inset-10 -z-20 rounded-3xl opacity-0 group-hover:opacity-30 transition-opacity duration-700 blur-2xl pointer-events-none will-change-transform"
          style={{
-           background: useMotionTemplate`radial-gradient(circle at ${useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"])} ${useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"])}, rgba(201,168,76,0.3) 0%, transparent 60%)`
+           background: useMotionTemplate`radial-gradient(circle at ${useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"])} ${useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"])}, rgba(201,168,76,0.2) 0%, transparent 60%)`
          }}
        />
 
        {/* Outer Frame with Glassmorphism */}
        <motion.div 
          layout
-         className="relative rounded-2xl overflow-hidden bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_32px_80px_-16px_rgba(28,25,23,0.1),0_0_0_1px_rgba(28,25,23,0.02)] transition-shadow duration-700 group-hover:shadow-[0_40px_100px_-20px_rgba(201,168,76,0.25),0_0_0_1px_rgba(201,168,76,0.2)]"
+         className="relative rounded-2xl overflow-hidden bg-white/80 backdrop-blur-xl border border-[#E2DDD6]/80 shadow-[0_32px_80px_-16px_rgba(28,25,23,0.1),0_0_0_1px_rgba(28,25,23,0.02)] transition-shadow duration-700 group-hover:shadow-[0_40px_100px_-20px_rgba(201,168,76,0.25),0_0_0_1px_rgba(201,168,76,0.2)]"
        >
-         {/* Inner Hover Spotlight */}
+         {/* Inner Hover Spotlight - NO MIX BLEND to prevent text blur */}
          <motion.div
-            className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 mix-blend-overlay"
+            className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 will-change-transform"
             style={{
-              background: useMotionTemplate`radial-gradient(400px circle at ${mouseXpx}px ${mouseYpx}px, rgba(201,168,76,0.3), transparent 80%)`
+              background: useMotionTemplate`radial-gradient(500px circle at ${mouseXpx}px ${mouseYpx}px, rgba(201,168,76,0.04), transparent 80%)`
             }}
          />
 
