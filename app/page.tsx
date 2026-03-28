@@ -5,6 +5,8 @@ import StatsBar from "@/components/home/stats-bar";
 import ProblemSection from "@/components/home/problem-section";
 import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
 import CoverageMap from "@/components/home/coverage-map";
+import ComparisonTable from "@/components/home/comparison-table";
+import PricingSection from "@/components/home/pricing-section";
 import FAQSection from "@/components/home/faq-section";
 import FinalCTA from "@/components/home/final-cta";
 import Footer from "@/components/home/footer";
@@ -33,6 +35,8 @@ export default function LandingPage() {
       <ProblemSection />
       <MissedOpportunityCalc />
       <CoverageMap />
+      <ComparisonTable />
+      <PricingSection />
       <FAQSection />
       <FinalCTA />
       <Footer />
