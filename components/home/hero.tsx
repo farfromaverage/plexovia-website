@@ -2,156 +2,10 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
-import { fadeInUp, stagger, viewportConfig } from "@/lib/motion";
-import MatchScoreBadge from "@/components/ui/match-score-badge";
-
-/* ── Simulated email digest preview data ── */
-const mockMatches = [
-  {
-    id:     "fdic-001",
-    score:  94,
-    title:  "Network Infrastructure Modernization",
-    agency: "FDIC (Federal Deposit Insurance Corp)",
-    state:  "VA",
-    due:    "Apr 30, 2026",
-    naics:  "541511",
-  },
-  {
-    id:     "navy-002",
-    score:  71,
-    title:  "Facilities Management Services",
-    agency: "Naval Surface Warfare Center",
-    state:  "MD",
-    due:    "May 12, 2026",
-    naics:  "561210",
-  },
-  {
-    id:     "gsa-003",
-    score:  58,
-    title:  "IT Security Assessment Support",
-    agency: "GSA (Federal Acquisition Service)",
-    state:  "DC",
-    due:    "May 24, 2026",
-    naics:  "541519",
-  },
-];
-
-function EmailMockup() {
-  const mockupRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: mockupRef,
-    offset:  ["start end", "end start"],
-  });
-
-  /* Parallax: floats up as page scrolls down */
-  const rawY  = useTransform(scrollYProgress, [0, 1], [0, -55]);
-  const floatY = useSpring(rawY, { stiffness: 80, damping: 22 });
-
-  const badgeVariants = {
-    hidden:  { opacity: 0, scale: 0.85, y: 6 },
-    visible: (i: number) => ({
-      opacity: 1,
-      scale:   1,
-      y:       0,
-      transition: {
-        delay:    0.45 + i * 0.1,
-        duration: 0.4,
-        ease:     [0.25, 0.46, 0.45, 0.94] as [number, number, number, number],
-      },
-    }),
-  };
-
-  return (
-    <motion.div
-      ref={mockupRef}
-      style={{ y: floatY }}
-      className="relative w-full max-w-md select-none"
-      aria-hidden="true"
-    >
-      {/* Email client chrome */}
-      <div
-        className="
-          rounded-2xl overflow-hidden
-          shadow-[0_24px_80px_-12px_rgba(28,25,23,0.20),0_4px_16px_-4px_rgba(28,25,23,0.08)]
-          border border-[#E2DDD6]
-          bg-white
-        "
-      >
-        {/* Email header bar */}
-        <div className="bg-[#F0EDE7] px-5 py-3.5 border-b border-[#E2DDD6]">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]/40" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]/40" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A]/40" />
-          </div>
-          <div className="text-xs text-[#6B6560]">
-            <span className="font-medium text-[#1C1917]">From:</span>{" "}
-            alerts@plexovia.com
-          </div>
-          <div className="mt-0.5 text-xs text-[#6B6560]">
-            <span className="font-medium text-[#1C1917]">Subject:</span>{" "}
-            3 contracts match your profile | Thu, Mar 27
-          </div>
-        </div>
-
-        {/* Email body */}
-        <div className="px-5 py-4 space-y-3">
-          <p className="text-sm text-[#6B6560] font-medium">
-            Good morning. Here are today&apos;s matches for NAICS 541511, 561210, 541519.
-          </p>
-
-          {mockMatches.map((match, i) => (
-            <motion.div
-              key={match.id}
-              custom={i}
-              initial="hidden"
-              animate="visible"
-              variants={badgeVariants}
-              className="
-                rounded-xl border border-[#E2DDD6] bg-[#F7F5F0]
-                px-4 py-3 flex items-start gap-3
-              "
-            >
-              <MatchScoreBadge score={match.score} className="mt-0.5 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[#1C1917] leading-snug truncate">
-                  {match.title}
-                </p>
-                <p className="text-xs text-[#6B6560] mt-0.5 truncate">{match.agency}</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-xs font-mono text-[#A8A29E]">{match.state}</span>
-                  <span className="text-[#E2DDD6]">·</span>
-                  <span className="text-xs text-[#A8A29E]">Due {match.due}</span>
-                  <span className="text-[#E2DDD6]">·</span>
-                  <span className="text-xs font-mono text-[#A8A29E]">{match.naics}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-
-          <p className="text-xs text-[#A8A29E] pt-1">
-            Alerts sent daily by 6 AM.{" "}
-            <span className="text-[#C9A84C] font-medium underline decoration-dotted cursor-pointer">
-              View all matches
-            </span>
-          </p>
-        </div>
-      </div>
-
-      {/* Decorative glow behind card */}
-      <div
-        className="absolute -inset-8 -z-10 rounded-3xl opacity-25"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 50%, #C9A84C22 0%, transparent 70%)",
-        }}
-        aria-hidden="true"
-      />
-    </motion.div>
-  );
-}
+import { fadeInUp, stagger } from "@/lib/motion";
+import HeroEmailMockup from "./hero-email-mockup";
 
 export default function Hero() {
   const trustPoints = [
@@ -296,7 +150,7 @@ export default function Hero() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <EmailMockup />
+            <HeroEmailMockup />
           </motion.div>
         </div>
       </div>
