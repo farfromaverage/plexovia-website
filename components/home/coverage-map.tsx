@@ -71,8 +71,11 @@ export default function CoverageMap() {
               const isEssential = ESSENTIAL_PLAN_STATES.includes(stateKey);
               const isHovered = hoveredState === stateKey;
               
-              const fillBase = isEssential ? "rgba(201, 168, 76, 0.75)" : "rgba(201, 168, 76, 0.15)";
-              const fillHover = isEssential ? "rgba(201, 168, 76, 0.95)" : "rgba(201, 168, 76, 0.35)";
+              const fillBase = isEssential ? "var(--pub-ink)" : "rgba(26, 26, 26, 0.06)";
+              const fillHover = "var(--pub-gold)";
+              
+              const strokeBase = isEssential ? "var(--pub-bg)" : "rgba(26, 26, 26, 0.15)";
+              const strokeHover = "var(--pub-ink)";
 
               return (
                 <path
@@ -82,10 +85,14 @@ export default function CoverageMap() {
                   onMouseEnter={() => setHoveredState(stateKey)}
                   onMouseLeave={() => setHoveredState(null)}
                   onMouseMove={handleMouseMove}
-                  className="transition-all duration-300 ease-in-out cursor-pointer"
+                  className="transition-all duration-300 ease-out cursor-pointer"
                   fill={isHovered ? fillHover : fillBase}
-                  stroke={isHovered ? "var(--pub-ink)" : "rgba(201, 168, 76, 0.3)"}
-                  strokeWidth={isHovered ? 2.5 : 0.5}
+                  stroke={isHovered ? strokeHover : strokeBase}
+                  strokeWidth={isHovered ? 2 : (isEssential ? 1.5 : 1)}
+                  style={{
+                    position: "relative",
+                    zIndex: isHovered ? 50 : 1
+                  }}
                 />
               );
             })}
