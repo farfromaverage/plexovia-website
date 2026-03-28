@@ -118,7 +118,7 @@ export default function PricingSection() {
             Pricing
           </span>
 
-          <h2
+          <h1
             style={{
               fontFamily:    "var(--font-inter), sans-serif",
               fontWeight:    700,
@@ -130,7 +130,7 @@ export default function PricingSection() {
             }}
           >
             Two plans. No per-seat traps. Cancel anytime.
-          </h2>
+          </h1>
 
           <p
             style={{
