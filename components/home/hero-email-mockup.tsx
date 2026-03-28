@@ -101,29 +101,21 @@ export default function HeroEmailMockup() {
   const rawY = useTransform(scrollYProgress, [0, 1], [0, -120]);
   const floatY = useSpring(rawY, { stiffness: 60, damping: 20 });
   
-  // 3D Tilt & Lighting
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+  // Lighting
   const mouseXpx = useMotionValue(0);
   const mouseYpx = useMotionValue(0);
-  
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], ["3deg", "-3deg"]), { stiffness: 150, damping: 20 });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], ["-3deg", "3deg"]), { stiffness: 150, damping: 20 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    mouseX.set(x / rect.width - 0.5);
-    mouseY.set(y / rect.height - 0.5);
     mouseXpx.set(x);
     mouseYpx.set(y);
   };
   
   const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
+    // optional: fade out spotlight
   };
 
   const [phase, setPhase] = useState(0);
@@ -140,7 +132,7 @@ export default function HeroEmailMockup() {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ y: floatY, rotateX, rotateY, transformPerspective: 1200 }}
+      style={{ y: floatY }}
       className="relative w-full max-w-[500px] select-none mx-auto lg:mx-0 group z-10"
       aria-hidden="true"
     >
@@ -148,7 +140,7 @@ export default function HeroEmailMockup() {
        <motion.div 
          className="absolute -inset-10 -z-20 rounded-3xl opacity-0 group-hover:opacity-30 transition-opacity duration-700 blur-2xl pointer-events-none will-change-transform"
          style={{
-           background: useMotionTemplate`radial-gradient(circle at ${useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"])} ${useTransform(mouseY, [-0.5, 0.5], ["0%", "100%"])}, rgba(201,168,76,0.2) 0%, transparent 60%)`
+           background: useMotionTemplate`radial-gradient(circle at ${mouseXpx}px ${mouseYpx}px, rgba(201,168,76,0.15) 0%, transparent 60%)`
          }}
        />
 

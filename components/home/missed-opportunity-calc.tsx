@@ -129,11 +129,11 @@ export default function MissedOpportunityCalc() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
           
           {/* Controls Side */}
-          <div className="lg:col-span-7 space-y-12">
+          <div className="lg:col-span-6 flex flex-col justify-center space-y-12">
             
             {/* Average Contract Value Slider */}
             <div>
-              <div className="flex justify-between items-baseline mb-6">
+              <div className="flex justify-between items-end mb-4 sm:mb-6">
                 <label htmlFor="comp-value" className="text-base sm:text-lg font-medium text-[var(--pub-text)]">
                   Average contract value
                 </label>
@@ -163,7 +163,7 @@ export default function MissedOpportunityCalc() {
 
             {/* Bids Missed Slider */}
             <div>
-              <div className="flex justify-between items-baseline mb-6">
+              <div className="flex justify-between items-end mb-4 sm:mb-6">
                 <label htmlFor="missed-bids" className="text-base sm:text-lg font-medium text-[var(--pub-text)]">
                   Bids missed per month
                 </label>
@@ -171,7 +171,7 @@ export default function MissedOpportunityCalc() {
                   {missedPerMonth}
                 </span>
               </div>
-              <div className="relative pt-2 pb-2 mb-2">
+              <div className="relative pt-2 pb-2 mb-4">
                 <div className="track-bg" />
                 <div 
                   className="track-fill" 
@@ -197,23 +197,23 @@ export default function MissedOpportunityCalc() {
           </div>
 
           {/* Value Display Side */}
-          <div className="lg:col-span-5 flex flex-col justify-center">
-            <div className="bg-[#FFFFFF] border border-[#E2DDD6] rounded-3xl p-8 sm:p-10 shadow-sm relative overflow-hidden">
+          <div className="lg:col-span-6 flex flex-col justify-center">
+            <div className="bg-[#FFFFFF] border border-[#E2DDD6] rounded-3xl p-8 sm:p-10 shadow-sm relative z-10">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--accent)]/5 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
               
-              <h3 className="text-[var(--pub-muted)] font-medium text-sm tracking-widest uppercase mb-4 relative z-10">
+              <h3 className="text-[var(--pub-muted)] font-medium text-xs sm:text-sm tracking-widest uppercase mb-4 relative z-10">
                 Annual Lost Revenue
               </h3>
               
-              <div className="flex items-baseline gap-1 relative z-10">
-                <span className="text-[var(--pub-text)] text-4xl sm:text-5xl font-semibold">
+              <div className="flex items-baseline gap-1 relative z-10 overflow-visible whitespace-nowrap">
+                <span className="text-[var(--pub-text)] text-3xl sm:text-4xl lg:text-5xl font-semibold">
                   $
                 </span>
                 <motion.span 
                   key={displayLoss}
                   initial={{ opacity: 0.8, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-[var(--pub-text)] text-5xl sm:text-6xl lg:text-7xl tabular-nums font-mono font-medium tracking-tight"
+                  className="text-[var(--pub-text)] text-5xl sm:text-6xl tabular-nums font-mono font-medium tracking-tight"
                 >
                   {displayLoss.toLocaleString()}
                 </motion.span>
