@@ -54,7 +54,7 @@ export default function CoverageMap() {
       {/* Dynamic Background Effects */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#111110_1px,transparent_1px),linear-gradient(to_bottom,#111110_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-20" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] blur-[150px] opacity-[0.15] pointer-events-none rounded-full" style={{ backgroundColor: "var(--pub-gold)" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] blur-[150px] opacity-[0.15] pointer-events-none rounded-full" style={{ backgroundColor: "var(--accent)" }} />
       </div>
 
       <div className="mx-auto max-w-[1440px] px-6 lg:px-12 grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-12 items-center relative z-10">
@@ -72,26 +72,29 @@ export default function CoverageMap() {
               </span>
             </div>
             
-            <h2 className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium text-white">
+            <h2 
+              className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium"
+              style={{ color: "#F5F3EE" }}
+            >
               Monitor <br />
-              <span style={{ color: "var(--pub-gold)" }}>All 50 States.</span><br />
+              <span style={{ color: "var(--accent)" }}>All 50 States.</span><br />
               Zero Blind Spots.
             </h2>
-            <p className="text-lg leading-relaxed mt-4 text-[#8A8580]">
-              Plexovia deeply integrates with standalone state procurement portals and <strong className="font-medium text-white">SAM.gov</strong> to build a comprehensive, high-velocity opportunity pipeline.
+            <p className="text-lg leading-relaxed mt-4" style={{ color: "#8A8580" }}>
+              Plexovia deeply integrates with standalone state procurement portals and <strong className="font-medium text-white" style={{ color: "#FFFFFF" }}>SAM.gov</strong> to build a comprehensive, high-velocity opportunity pipeline.
             </p>
           </div>
 
           <div className="mt-4 p-8 border border-[#2E2C2A] rounded-2xl flex flex-col gap-4 relative overflow-hidden bg-[#111110] shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all hover:border-[#3A3835]">
-            <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: "var(--pub-gold)" }} />
+            <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: "var(--accent)" }} />
             <div className="flex items-center gap-3">
               <Radar className="w-5 h-5 text-[#C9A84C]" />
-              <h3 className="text-sm font-semibold uppercase tracking-widest text-[#C9A84C]" style={{ fontFamily: "'Geist Mono', monospace" }}>
+              <h3 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "#C9A84C", fontFamily: "'Geist Mono', monospace" }}>
                 Coverage Allocation
               </h3>
             </div>
-            <p className="text-base leading-relaxed text-[#D6D3CD]">
-              Pick up to <strong className="font-semibold text-white">7 active states</strong> on the Essential tier. Need a massive footprint? Upgrade to Pro for unrestricted nationwide coverage.
+            <p className="text-base leading-relaxed" style={{ color: "#D6D3CD" }}>
+              Pick up to <strong className="font-semibold" style={{ color: "#FFFFFF" }}>7 active states</strong> on the Essential tier. Need a massive footprint? Upgrade to Pro for unrestricted nationwide coverage.
             </p>
           </div>
         </div>
