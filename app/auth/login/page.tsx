@@ -31,29 +31,17 @@ function GoogleButton() {
         id="google-login"
         onClick={handleGoogle}
         disabled={loading}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-          width: "100%", padding: "13px 20px",
-          background: "#fff", border: "1px solid #E5E0D8", borderRadius: "10px",
-          color: "#1C1917", fontSize: "0.9375rem", fontWeight: 600,
-          cursor: loading ? "not-allowed" : "pointer",
-          opacity: loading ? 0.75 : 1,
-          transition: "box-shadow 0.15s",
-          fontFamily: "var(--font-inter), sans-serif",
-          letterSpacing: "-0.01em",
-        }}
-        onMouseEnter={(e) => { if (!loading) e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+        className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 bg-[#FFFFFF] border border-[#E2DDD6] rounded-xl text-[#1C1917] font-semibold text-[15px] transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.18)] disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:shadow-none"
       >
         {loading ? (
-          <Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} />
+          <Loader2 size={18} className="animate-spin text-[#1C1917]" />
         ) : (
           <GoogleIcon />
         )}
         Continue with Google
       </button>
       {err && (
-        <p style={{ fontSize: "0.8rem", color: "#F87171", marginTop: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+        <p className="flex items-center gap-1.5 text-xs text-red-400 mt-2">
           <AlertCircle size={13} /> {err}
         </p>
       )}
@@ -102,74 +90,91 @@ function LoginForm() {
   }
 
   return (
-    <div style={card}>
+    <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl relative z-10">
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-        <h1 style={heading}>Welcome back</h1>
-        <p style={sub}>Sign in to your Plexovia account</p>
+      <div className="text-center mb-7">
+        <h1 className="font-bold text-2xl xl:text-[26px] tracking-tight text-[var(--app-text)] mb-2">Welcome back</h1>
+        <p className="text-[var(--app-muted)] text-[15px]">Sign in to your Plexovia account</p>
       </div>
 
       {/* Google — primary CTA */}
       <GoogleButton />
 
       {/* Divider */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "0.875rem 0" }}>
-        <div style={{ flex: 1, height: "1px", background: "#2D2A26" }} />
-        <span style={{ fontSize: "0.75rem", color: "#6B6560" }}>or</span>
-        <div style={{ flex: 1, height: "1px", background: "#2D2A26" }} />
+      <div className="flex items-center gap-3 my-5">
+        <div className="flex-1 h-px bg-[var(--app-border)]" />
+        <span className="text-xs text-[var(--app-faint)] lowercase tracking-wide">or</span>
+        <div className="flex-1 h-px bg-[var(--app-border)]" />
       </div>
 
       {/* Email / password */}
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label htmlFor="email" style={lbl}>Email</label>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com" required autoComplete="email" style={inp}
-            onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-            onBlur={(e)  => (e.target.style.borderColor = "#3D3830")} />
+          <label htmlFor="email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Email</label>
+          <input 
+            id="email" 
+            type="email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com" 
+            required 
+            autoComplete="email" 
+            className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+          />
         </div>
 
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-            <label htmlFor="password" style={lbl}>Password</label>
-            <Link href="/auth/forgot-password" tabIndex={-1}
-              style={{ fontSize: "0.78125rem", color: "#6B6560", textDecoration: "none" }}>
-              Forgot password
+          <div className="flex justify-between items-center mb-1.5 pl-0.5 pr-0.5">
+            <label htmlFor="password" className="block text-sm font-medium text-[var(--app-muted)]">Password</label>
+            <Link href="/auth/forgot-password" tabIndex={-1} className="text-[13px] text-[var(--app-faint)] hover:text-[var(--accent)] transition-colors underline decoration-transparent hover:decoration-[var(--accent)] underline-offset-2">
+              Forgot password?
             </Link>
           </div>
-          <div style={{ position: "relative" }}>
-            <input id="password" type={showPw ? "text" : "password"} value={pw}
-              onChange={(e) => setPw(e.target.value)} placeholder="Your password"
-              required autoComplete="current-password"
-              style={{ ...inp, paddingRight: "44px" }}
-              onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-              onBlur={(e)  => (e.target.style.borderColor = "#3D3830")} />
-            <button type="button" onClick={() => setShowPw(!showPw)} tabIndex={-1}
-              style={{ position: "absolute", right: "13px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#6B6560", padding: 0 }}
-              aria-label={showPw ? "Hide" : "Show"}>
-              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+          <div className="relative">
+            <input 
+              id="password" 
+              type={showPw ? "text" : "password"} 
+              value={pw}
+              onChange={(e) => setPw(e.target.value)} 
+              placeholder="Your password"
+              required 
+              autoComplete="current-password"
+              className="w-full px-4 py-3 pr-12 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+            />
+            <button 
+              type="button" 
+              onClick={() => setShowPw(!showPw)} 
+              tabIndex={-1}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--app-faint)] hover:text-[var(--app-muted)] transition-colors"
+            >
+              {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
         </div>
 
         {error && (
-          <p style={{ fontSize: "0.8rem", color: "#F87171", display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", background: "#2A1818", borderRadius: "8px", border: "1px solid #6B2A2A", margin: 0 }}>
-            <AlertCircle size={13} /> {error}
-          </p>
+          <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm mt-1">
+            <AlertCircle size={15} className="shrink-0" />
+            <p>{error}</p>
+          </div>
         )}
 
-        <button type="submit" id="email-login" disabled={loading} style={submitBtn}
-          onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#D4B05A"; }}
-          onMouseLeave={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#C9A84C"; }}>
-          {loading ? <Loader2 size={16} style={{ animation: "spin 0.8s linear infinite" }} /> : <>Sign In <ArrowRight size={15} /></>}
+        <button 
+          type="submit" 
+          id="email-login" 
+          disabled={loading} 
+          className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-2 bg-[var(--accent)] text-[#1C1917] font-bold text-[15px] rounded-xl transition-colors hover:bg-[var(--accent-lt)] disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          {loading ? <Loader2 size={18} className="animate-spin" /> : <>Sign In <ArrowRight size={17} strokeWidth={2.5} /></>}
         </button>
       </form>
 
-      <p style={{ textAlign: "center", fontSize: "0.8125rem", color: "#6B6560", marginTop: "1.25rem", marginBottom: 0 }}>
-        No account? <Link href="/auth/signup" style={gold}>Start free trial →</Link>
+      <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-6">
+        No account? <Link href="/auth/signup" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Start free trial &rarr;</Link>
       </p>
-      <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#4B4844", marginTop: "0.75rem", marginBottom: 0 }}>
-        Need help? <a href="mailto:support@plexovia.com" style={{ color: "#6B6560", textDecoration: "none" }}>support@plexovia.com</a>
+      <p className="text-center text-[13px] text-[var(--app-faint)] mt-3">
+        Need help? <a href="mailto:support@plexovia.com" className="hover:text-[var(--app-muted)] transition-colors">support@plexovia.com</a>
       </p>
     </div>
   );
@@ -178,12 +183,11 @@ function LoginForm() {
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function LoginPage() {
   return (
-    <div style={page}>
+    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative overflow-hidden">
       <Wordmark />
-      <Suspense fallback={<div style={card}><p style={sub}>Loading…</p></div>}>
+      <Suspense fallback={<div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl text-center text-[var(--app-muted)]"><Loader2 size={24} className="animate-spin mx-auto text-[var(--accent)]" /></div>}>
         <LoginForm />
       </Suspense>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -191,55 +195,10 @@ export default function LoginPage() {
 /* ─── Shared ──────────────────────────────────────────────────────── */
 function Wordmark() {
   return (
-    <div style={{ position: "absolute", top: "1.25rem", left: "1.75rem" }}>
-      <Link href="/" style={{ textDecoration: "none" }}>
-        <span style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-0.05em" }}>
-          <span style={{ color: "#C9A84C" }}>P</span><span style={{ color: "#F7F5F0" }}>lexovia</span>
-        </span>
+    <div className="absolute top-6 left-7 z-20">
+      <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+        <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
       </Link>
     </div>
   );
 }
-
-const page: React.CSSProperties = {
-  minHeight: "100vh", height: "100vh", overflow: "hidden",
-  background: "#1C1917",
-  display: "flex", flexDirection: "column",
-  alignItems: "center", justifyContent: "center",
-  position: "relative", fontFamily: "var(--font-inter), sans-serif",
-  padding: "0 1.25rem",
-};
-const card: React.CSSProperties = {
-  width: "100%", maxWidth: "400px",
-  background: "#252320", border: "1px solid #2D2A26",
-  borderRadius: "16px", padding: "2rem",
-};
-const heading: React.CSSProperties = {
-  fontWeight: 700, fontSize: "1.375rem", letterSpacing: "-0.03em",
-  color: "#F7F5F0", margin: 0,
-};
-const sub: React.CSSProperties = {
-  fontSize: "0.875rem", color: "#6B6560",
-  margin: "0.375rem 0 0", lineHeight: 1.55,
-};
-const lbl: React.CSSProperties = {
-  display: "block", fontSize: "0.8125rem", fontWeight: 500,
-  color: "#A8A29E", marginBottom: "0",
-};
-const inp: React.CSSProperties = {
-  width: "100%", padding: "11px 14px",
-  background: "#2A2724", border: "1px solid #3D3830",
-  borderRadius: "9px", color: "#F7F5F0",
-  fontSize: "0.9375rem", outline: "none",
-  transition: "border-color 0.15s", boxSizing: "border-box",
-};
-const submitBtn: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-  width: "100%", padding: "13px 20px",
-  background: "#C9A84C", color: "#1C1917",
-  border: "none", borderRadius: "10px",
-  fontFamily: "var(--font-inter), sans-serif",
-  fontWeight: 700, fontSize: "0.9375rem", letterSpacing: "-0.01em",
-  cursor: "pointer", transition: "background 0.15s",
-};
-const gold: React.CSSProperties = { color: "#C9A84C", textDecoration: "none", fontWeight: 600 };

@@ -51,12 +51,37 @@ export async function proxy(request: NextRequest) {
       loginUrl.searchParams.set('next', pathname)
       return NextResponse.redirect(loginUrl)
     }
-    // Logged in → continue to dashboard
+
+    // Logged in → Check onboarding and trial limits (except when explicitly on those pages)
+    if (pathname !== '/dashboard/onboarding' && pathname !== '/dashboard/billing' && pathname !== '/pricing') {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan, trial_ends_at, onboarding_complete')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profile) {
+        // 1. Check if onboarding is complete
+        if (!profile.onboarding_complete) {
+          return NextResponse.redirect(new URL('/dashboard/onboarding', request.url))
+        }
+
+        // 2. Check if trial expired and no plan mapping to an active subscription
+        if (!profile.plan || profile.plan === 'cancelled' || profile.plan === 'trial') {
+          const trialEnds = profile.trial_ends_at ? new Date(profile.trial_ends_at) : null;
+          if (!trialEnds || trialEnds < new Date()) {
+            return NextResponse.redirect(new URL('/pricing', request.url))
+          }
+        }
+      }
+    }
+    
+    // Logged in and valid -> continue to dashboard
     return response
   }
 
   // ── Redirect logged-in users away from auth pages ────────────────────────────
-  if (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup')) {
+  if (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup') || pathname.startsWith('/auth/forgot-password') || pathname.startsWith('/auth/reset-password')) {
     if (session) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }

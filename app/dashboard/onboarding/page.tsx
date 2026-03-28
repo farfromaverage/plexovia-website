@@ -9,7 +9,7 @@ import {
   Search, Plus, Tag, MapPin, FileText,
 } from "lucide-react";
 
-/* ─── NAICS list (discovery / lookup only) ────────────────────────── */
+/* ─── Shared data and logic ───────────────────────────────────────── */
 const NAICS_LIST: { code: string; desc: string }[] = [
   { code: "541511", desc: "Custom Computer Programming Services" },
   { code: "541512", desc: "Computer Systems Design Services" },
@@ -17,7 +17,7 @@ const NAICS_LIST: { code: string; desc: string }[] = [
   { code: "541519", desc: "Other Computer Related Services" },
   { code: "541330", desc: "Engineering Services" },
   { code: "541611", desc: "Administrative Management Consulting" },
-  { code: "541614", desc: "Process‚ Physical Distribution & Logistics Consulting" },
+  { code: "541614", desc: "Process, Physical Distribution & Logistics Consulting" },
   { code: "541620", desc: "Environmental Consulting Services" },
   { code: "541690", desc: "Other Scientific & Technical Consulting" },
   { code: "541715", desc: "R&D in Physical, Engineering & Life Sciences" },
@@ -74,74 +74,26 @@ const REGIONS: Record<string, string[]> = {
   "Pacific":       ["AK","CA","HI","OR","WA"],
 };
 
-/* ─── Shared styles ───────────────────────────────────────────────── */
-const S = {
-  page: {
-    minHeight: "100vh", background: "#1C1917",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    position: "relative" as const, fontFamily: "var(--font-inter), sans-serif",
-    padding: "5rem 1.25rem 2rem",
-  } as React.CSSProperties,
-  card: {
-    width: "100%", maxWidth: "560px",
-    background: "#252320", border: "1px solid #2D2A26",
-    borderRadius: "18px", padding: "2.25rem",
-  } as React.CSSProperties,
-  h2: {
-    fontWeight: 700, fontSize: "1.25rem", letterSpacing: "-0.03em",
-    color: "#F7F5F0", margin: "0 0 0.4rem",
-  } as React.CSSProperties,
-  sub: {
-    fontSize: "0.875rem", color: "#6B6560",
-    margin: "0 0 1.375rem", lineHeight: 1.55,
-  } as React.CSSProperties,
-  lbl: {
-    display: "block", fontSize: "0.8125rem", fontWeight: 500,
-    color: "#A8A29E", marginBottom: "5px",
-  } as React.CSSProperties,
-  inp: {
-    width: "100%", padding: "10px 14px",
-    background: "#2A2724", border: "1px solid #3D3830",
-    borderRadius: "9px", color: "#F7F5F0",
-    fontSize: "0.9rem", outline: "none",
-    transition: "border-color 0.15s", boxSizing: "border-box" as const,
-    fontFamily: "var(--font-inter), sans-serif",
-  } as React.CSSProperties,
-  next: {
-    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-    padding: "12px 20px", background: "#C9A84C", color: "#1C1917",
-    border: "none", borderRadius: "10px",
-    fontFamily: "var(--font-inter), sans-serif", fontWeight: 700,
-    fontSize: "0.9375rem", letterSpacing: "-0.01em",
-    cursor: "pointer", transition: "background 0.15s",
-  } as React.CSSProperties,
-  back: {
-    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-    padding: "12px 16px", background: "#2A2724",
-    border: "1px solid #3D3830", borderRadius: "10px",
-    color: "#A8A29E", fontSize: "0.9rem",
-    fontFamily: "var(--font-inter), sans-serif",
-    cursor: "pointer", transition: "border-color 0.15s",
-  } as React.CSSProperties,
-};
+/* ─── Components ──────────────────────────────────────────────────── */
 
-/* ─── Progress bar ────────────────────────────────────────────────── */
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["NAICS Codes", "States", "Keywords and set-asides"];
+  const labels = ["NAICS Codes", "States", "Keywords & Set-asides"];
   return (
-    <div style={{ marginBottom: "1.75rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <span style={{ fontSize: "0.8125rem", color: "#6B6560" }}>Step {current} of {total}</span>
-        <span style={{ fontSize: "0.8125rem", color: "#C9A84C", fontWeight: 600 }}>{labels[current - 1]}</span>
+    <div className="mb-7">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm text-[var(--app-muted)]">Step {current} of {total}</span>
+        <span className="text-sm text-[var(--accent)] font-semibold">{labels[current - 1]}</span>
       </div>
-      <div style={{ height: "4px", background: "#2D2A26", borderRadius: "9999px", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(current / total) * 100}%`, background: "#C9A84C", borderRadius: "9999px", transition: "width 0.35s ease" }} />
+      <div className="h-1 bg-[var(--app-border)] rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-[var(--accent)] rounded-full transition-all duration-300 ease-out" 
+          style={{ width: `${(current / total) * 100}%` }} 
+        />
       </div>
     </div>
   );
 }
 
-/* ─── Step 1: NAICS picker with custom-code support ──────────────── */
 function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setSelected: (v: string[]) => void; naicsLimit: number }) {
   const [query, setQuery] = useState("");
   const LIMIT = naicsLimit;
@@ -170,9 +122,9 @@ function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setS
   }
 
   return (
-    <div>
-      <h2 style={S.h2}>Which NAICS codes does your firm hold?</h2>
-      <p style={S.sub}>
+    <div className="flex flex-col h-full fade-in">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Which NAICS codes does your firm hold?</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-5">
         Select from the list or type any 6-digit NAICS code directly.
         You can add up to {LIMIT === 999 ? "unlimited" : LIMIT} codes.
         These are the codes your company is registered under at SAM.gov.
@@ -180,64 +132,61 @@ function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setS
 
       {/* Selected chips */}
       {selected.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "0.875rem" }}>
-          {selected.map((code) => (
-            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", background: "#C9A84C18", border: "1px solid #C9A84C50", borderRadius: "9999px", fontSize: "0.78125rem", color: "#C9A84C", fontFamily: "var(--font-geist-mono, monospace)" }}>
-              {code}
-              {NAICS_MAP.get(code) && (
-                <span style={{ fontSize: "0.7rem", color: "#A8865A", fontFamily: "var(--font-inter), sans-serif" }}>
-                  {NAICS_MAP.get(code)!.substring(0, 22)}{NAICS_MAP.get(code)!.length > 22 ? "…" : ""}
-                </span>
-              )}
-              <button type="button" onClick={() => toggle(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "#C9A84C", padding: 0, lineHeight: 1, display: "flex" }} aria-label={`Remove ${code}`}>
-                <X size={12} />
-              </button>
-            </span>
-          ))}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {selected.map((code) => {
+            const desc = NAICS_MAP.get(code);
+            return (
+              <span key={code} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[13px] text-[var(--accent)] font-mono">
+                {code}
+                {desc && (
+                  <span className="text-[11px] text-[var(--accent)]/70 font-sans tracking-tight">
+                    {desc.substring(0, 22)}{desc.length > 22 ? "…" : ""}
+                  </span>
+                )}
+                <button type="button" onClick={() => toggle(code)} className="text-[var(--accent)] hover:text-white transition-colors" aria-label={`Remove ${code}`}>
+                  <X size={13} strokeWidth={2.5} />
+                </button>
+              </span>
+            );
+          })}
         </div>
       )}
 
       {/* Search row */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
-        <div style={{ position: "relative", flex: 1 }}>
-          <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#6B6560" }} />
+      <div className="flex items-center gap-3 mb-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addCustom(); }}
-            placeholder="Search by code or description, or type any 6-digit code…"
-            style={{ ...S.inp, paddingLeft: "36px" }}
-            onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-            onBlur={(e) => (e.target.style.borderColor = "#3D3830")}
+            placeholder="Search by code or desc, or type 6-digit code…"
+            className="w-full pl-[38px] pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
             autoComplete="off"
           />
         </div>
-        <span style={{ fontSize: "0.78125rem", color: selected.length >= LIMIT ? "#D97706" : "#6B6560", whiteSpace: "nowrap", fontFamily: "var(--font-geist-mono, monospace)", minWidth: "36px", textAlign: "right" }}>
-          {selected.length}/{LIMIT}
+        <span className={`text-[13px] font-mono whitespace-nowrap min-w-[36px] text-right ${selected.length >= LIMIT ? "text-amber-500 font-bold" : "text-[var(--app-muted)]"}`}>
+          {selected.length}/{LIMIT === 999 ? "∞" : LIMIT}
         </span>
       </div>
 
       {/* Results */}
-      <div style={{ maxHeight: "264px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "3px", paddingRight: "2px" }}>
-        {/* Custom code add row */}
+      <div className="flex-1 max-h-[290px] overflow-y-auto flex flex-col gap-1.5 pr-1 custom-scroll">
         {canAddCustom && (
           <button
             type="button"
             onClick={addCustom}
-            style={{ display: "flex", alignItems: "center", gap: "9px", padding: "10px 12px", borderRadius: "9px", border: "1px dashed #C9A84C70", background: "#C9A84C0A", cursor: "pointer", textAlign: "left", transition: "border-color 0.15s, background 0.15s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#C9A84C18"; e.currentTarget.style.borderColor = "#C9A84C"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#C9A84C0A"; e.currentTarget.style.borderColor = "#C9A84C70"; }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl border border-dashed border-[var(--accent)]/50 bg-[var(--accent-bg-app)] hover:bg-[var(--accent)]/20 hover:border-[var(--accent)] transition-colors text-left"
           >
-            <Plus size={14} color="#C9A84C" style={{ flexShrink: 0 }} />
+            <Plus size={16} className="text-[var(--accent)] shrink-0" />
             <div>
-              <span style={{ fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.875rem", color: "#C9A84C", marginRight: "8px" }}>{trimmed}</span>
-              <span style={{ fontSize: "0.8125rem", color: "#A8A29E" }}>Add this NAICS code directly</span>
+              <span className="font-mono text-[14px] text-[var(--accent)] mr-2 font-semibold">{trimmed}</span>
+              <span className="text-[13px] text-[var(--app-muted)]">Add this NAICS code directly</span>
             </div>
           </button>
         )}
 
-        {/* List matches */}
         {filtered.map((n) => {
           const isSelected = selected.includes(n.code);
           const isDisabled = !isSelected && selected.length >= LIMIT;
@@ -247,25 +196,30 @@ function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setS
               type="button"
               onClick={() => toggle(n.code)}
               disabled={isDisabled}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: "9px", border: "1px solid", background: isSelected ? "#C9A84C10" : "#2A2724", borderColor: isSelected ? "#C9A84C50" : "#3D3830", cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.4 : 1, textAlign: "left", gap: "8px", transition: "border-color 0.15s, background 0.15s" }}
+              className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl border transition-all text-left gap-2 ${
+                isSelected 
+                  ? "bg-[var(--accent-bg-app)] border-[var(--accent)]/50" 
+                  : "bg-[var(--app-surface-2)] border-[var(--app-border)] hover:border-[var(--app-muted)]"
+              } ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
             >
-              <div>
-                <span style={{ fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.8125rem", color: "#C9A84C", marginRight: "8px" }}>{n.code}</span>
-                <span style={{ fontSize: "0.8125rem", color: "#A8A29E", fontFamily: "var(--font-inter), sans-serif" }}>{n.desc}</span>
+              <div className="flex-1 min-w-0 pr-2">
+                <span className={`font-mono text-[13.5px] mr-2.5 ${isSelected ? "text-[var(--accent)] font-semibold" : "text-[var(--app-text)]"}`}>
+                  {n.code}
+                </span>
+                <span className={`text-[13.5px] truncate ${isSelected ? "text-[var(--accent)]/80" : "text-[var(--app-muted)]"}`}>
+                  {n.desc}
+                </span>
               </div>
-              {isSelected && <Check size={14} color="#C9A84C" style={{ flexShrink: 0 }} />}
+              {isSelected && <Check size={16} className="text-[var(--accent)] shrink-0" strokeWidth={2.5} />}
             </button>
           );
         })}
 
-        {/* Empty: not a 6-digit code and no results */}
         {filtered.length === 0 && !canAddCustom && trimmed.length > 0 && (
-          <div style={{ padding: "1rem 0.75rem", textAlign: "center" }}>
-            <p style={{ fontSize: "0.875rem", color: "#6B6560", margin: 0 }}>
-              No codes match your search.
-            </p>
+          <div className="py-5 text-center">
+            <p className="text-[14px] text-[var(--app-muted)]">No codes match your search.</p>
             {/^\d+$/.test(trimmed) && trimmed.length < 6 && (
-              <p style={{ fontSize: "0.8rem", color: "#6B6560", margin: "0.375rem 0 0" }}>
+              <p className="text-[13px] text-[var(--app-faint)] mt-1.5">
                 NAICS codes are 6 digits — keep typing ({6 - trimmed.length} more)
               </p>
             )}
@@ -274,15 +228,14 @@ function Step1({ selected, setSelected, naicsLimit }: { selected: string[]; setS
       </div>
 
       {selected.length >= LIMIT && (
-        <p style={{ fontSize: "0.78125rem", color: "#D97706", marginTop: "0.5rem" }}>
-          Limit reached ({selected.length}/{naicsLimit === 999 ? "∞" : naicsLimit}). Remove a code to add another.
+        <p className="text-[13px] text-amber-500 font-medium mt-3">
+          Limit reached ({selected.length}/{LIMIT === 999 ? "∞" : LIMIT}). Remove a code to add another.
         </p>
       )}
     </div>
   );
 }
 
-/* ─── Step 2: State picker ────────────────────────────────────────── */
 function Step2({ selected, setSelected, stateLimit }: { selected: string[]; setSelected: (v: string[]) => void; stateLimit: number }) {
   const LIMIT = stateLimit;
 
@@ -295,27 +248,27 @@ function Step2({ selected, setSelected, stateLimit }: { selected: string[]; setS
   }
 
   return (
-    <div>
-      <h2 style={S.h2}>Which states do you want to monitor?</h2>
-      <p style={S.sub}>
-      Select up to {LIMIT === 50 ? "all 50" : LIMIT} states on this plan.
+    <div className="flex flex-col h-full fade-in">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Which states do you want to monitor?</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-1">
+        Select up to {LIMIT === 50 ? "all 50" : LIMIT} states on this plan.
         {LIMIT < 50 && " Pro unlocks all 50 states."}
-        We monitor each state&rsquo;s procurement portal nightly.
+        <br />We monitor each state's procurement portal nightly.
       </p>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.75rem" }}>
-        <span style={{ fontSize: "0.78125rem", color: selected.length >= LIMIT ? "#D97706" : "#6B6560", fontFamily: "var(--font-geist-mono, monospace)" }}>
-          {selected.length}/{LIMIT} selected
+      <div className="flex justify-end mb-3">
+        <span className={`text-[13px] font-mono ${selected.length >= LIMIT ? "text-amber-500 font-bold" : "text-[var(--app-muted)]"}`}>
+          {selected.length}/{LIMIT === 50 ? "50" : LIMIT} selected
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", maxHeight: "290px", overflowY: "auto", paddingRight: "4px" }}>
+      <div className="flex-1 max-h-[340px] overflow-y-auto flex flex-col gap-4 pr-2 custom-scroll">
         {Object.entries(REGIONS).map(([region, states]) => (
           <div key={region}>
-            <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "#6B6560", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.4rem", display: "flex", alignItems: "center", gap: "5px" }}>
-              <MapPin size={10} /> {region}
+            <p className="text-[12px] font-bold text-[var(--app-faint)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <MapPin size={12} /> {region}
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            <div className="flex flex-wrap gap-2">
               {states.map((state) => {
                 const isSelected = selected.includes(state);
                 const isDisabled = !isSelected && selected.length >= LIMIT;
@@ -325,7 +278,11 @@ function Step2({ selected, setSelected, stateLimit }: { selected: string[]; setS
                     type="button"
                     onClick={() => toggleState(state)}
                     disabled={isDisabled}
-                    style={{ padding: "5px 12px", borderRadius: "9999px", border: "1px solid", background: isSelected ? "#C9A84C18" : "#2A2724", borderColor: isSelected ? "#C9A84C" : "#3D3830", color: isSelected ? "#C9A84C" : "#A8A29E", fontSize: "0.8125rem", fontWeight: isSelected ? 600 : 400, cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.38 : 1, transition: "all 0.15s", fontFamily: "var(--font-inter), sans-serif" }}
+                    className={`px-3 py-1.5 rounded-full border text-[13.5px] font-medium transition-all ${
+                      isSelected 
+                        ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
+                        : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
+                    } ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                   >
                     {state}
                   </button>
@@ -337,7 +294,7 @@ function Step2({ selected, setSelected, stateLimit }: { selected: string[]; setS
       </div>
 
       {selected.length >= LIMIT && LIMIT < 50 && (
-        <p style={{ fontSize: "0.78125rem", color: "#D97706", marginTop: "0.5rem" }}>
+        <p className="text-[13px] text-amber-500 font-medium mt-3">
           Limit reached ({LIMIT}/{LIMIT}). Upgrade to Pro for all 50 states.
         </p>
       )}
@@ -345,7 +302,6 @@ function Step2({ selected, setSelected, stateLimit }: { selected: string[]; setS
   );
 }
 
-/* ─── Step 3: Keywords + Company ──────────────────────────────────── */
 function Step3({
   keywords, setKeywords, company, setCompany, keywordLimit, setAsides, setSetAsides,
 }: {
@@ -357,12 +313,10 @@ function Step3({
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /** Strip surrounding quotes, whitespace, and trailing punctuation */
   function clean(raw: string): string {
     return raw.trim().replace(/^["'\s]+|["'.,;\s]+$/g, "").trim().toLowerCase();
   }
 
-  /** Add one or more comma-separated keywords from the current input */
   function flush(source?: string) {
     const src = (source ?? input).trim();
     if (!src) return;
@@ -370,7 +324,6 @@ function Step3({
     const next = [...keywords];
     let changed = false;
     for (const val of parts) {
-      // Case-insensitive deduplication
       if (val && !next.map((k) => k.toLowerCase()).includes(val) && next.length < keywordLimit) {
         next.push(val);
         changed = true;
@@ -393,91 +346,80 @@ function Step3({
   }
 
   return (
-    <div>
-      <h2 style={S.h2}>Refine your matches (optional)</h2>
-      <p style={S.sub}>
+    <div className="flex flex-col h-full fade-in">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Refine your matches (optional)</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
         Keywords let the engine catch contracts beyond your NAICS codes.
-        Press <strong style={{ color: "#C9A84C", fontWeight: 600 }}>Enter</strong> or{" "}
-        <strong style={{ color: "#C9A84C", fontWeight: 600 }}>comma</strong> to add each keyword.
+        Press <strong className="text-[var(--accent)] font-semibold">Enter</strong> or <strong className="text-[var(--accent)] font-semibold">comma</strong> to add each keyword.
         You can also paste a comma-separated list.
       </p>
 
       {/* Company name */}
-      <div style={{ marginBottom: "1.25rem" }}>
-        <label style={S.lbl}>Company name</label>
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Company name</label>
         <input
           type="text"
           value={company}
           onChange={(e) => setCompany(e.target.value)}
           placeholder="Your registered business name"
-          style={S.inp}
-          onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-          onBlur={(e) => (e.target.style.borderColor = "#3D3830")}
+          className="w-full px-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
         />
       </div>
 
       {/* Keywords input */}
-      <label style={S.lbl}>
-        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <Tag size={13} /> Keywords
-          <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: keywordLimit < 999 && keywords.length >= keywordLimit ? "#D97706" : "#6B6560", fontFamily: "var(--font-geist-mono, monospace)" }}>
+      <div className="mb-5">
+        <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">
+          <Tag size={14} /> Keywords
+          <span className={`ml-auto font-mono text-[12px] ${keywordLimit < 999 && keywords.length >= keywordLimit ? "text-amber-500 font-bold" : "text-[var(--app-faint)]"}`}>
             {keywords.length}/{keywordLimit === 999 ? "∞" : keywordLimit}
           </span>
-        </span>
-      </label>
-
-      <div
-        style={{ minHeight: "88px", padding: "10px 12px", background: "#2A2724", border: "1px solid #3D3830", borderRadius: "9px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "flex-start", cursor: "text", transition: "border-color 0.15s" }}
-        onClick={() => inputRef.current?.focus()}
-        onFocus={() => { const el = document.querySelector<HTMLDivElement>('[data-kw-box]'); if (el) el.style.borderColor = "#C9A84C"; }}
-        data-kw-box
-      >
-        {keywords.map((kw) => (
-          <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "3px 10px", background: "#C9A84C18", border: "1px solid #C9A84C40", borderRadius: "9999px", fontSize: "0.8125rem", color: "#C9A84C", whiteSpace: "nowrap" }}>
-            {kw}
-            <button
-              type="button"
-              onClick={() => setKeywords(keywords.filter((k) => k !== kw))}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#C9A84C", padding: 0, lineHeight: 1, display: "flex" }}
-              aria-label={`Remove ${kw}`}
-            >
-              <X size={11} />
-            </button>
-          </span>
-        ))}
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => flush()}
-          placeholder={keywords.length === 0 ? "e.g. cybersecurity, cloud, janitorial…" : ""}
-          style={{ background: "none", border: "none", outline: "none", color: "#F7F5F0", fontSize: "0.875rem", flex: 1, minWidth: "160px", fontFamily: "var(--font-inter), sans-serif", padding: "2px 0" }}
-        />
+        </label>
+        <div
+          className="min-h-[96px] p-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] flex-col rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)]"
+          onClick={() => inputRef.current?.focus()}
+        >
+          {keywords.map((kw) => (
+            <span key={kw} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[13px] text-[var(--accent)]">
+              {kw}
+              <button
+                type="button"
+                onClick={() => setKeywords(keywords.filter((k) => k !== kw))}
+                className="text-[var(--accent)] hover:text-white transition-colors"
+                aria-label={`Remove ${kw}`}
+              >
+                <X size={12} strokeWidth={2.5} />
+              </button>
+            </span>
+          ))}
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={() => flush()}
+            placeholder={keywords.length === 0 ? "e.g. cybersecurity, cloud, janitorial…" : ""}
+            className="flex-1 min-w-[160px] bg-transparent border-none outline-none text-[var(--app-text)] text-[14px] placeholder-[var(--app-faint)] mt-1"
+          />
+        </div>
+        <p className="text-[12.5px] text-[var(--app-muted)] mt-2 leading-relaxed">
+          Each word/phrase counts as one keyword. Quotes and commas are stripped.
+        </p>
+        {keywordLimit < 999 && keywords.length >= keywordLimit && (
+          <p className="text-[13px] text-amber-500 font-medium mt-1">Keyword limit reached ({keywordLimit}/{keywordLimit}).</p>
+        )}
       </div>
 
-      <p style={{ fontSize: "0.78125rem", color: "#6B6560", marginTop: "0.375rem", lineHeight: 1.5 }}>
-        Each word or phrase counts as one keyword. Quotes and commas are stripped automatically.
-        Example: type <code style={{ color: "#A8A29E", background: "#2A2724", padding: "1px 5px", borderRadius: "4px" }}>cybersecurity, cloud</code> then press Enter to add both at once.
-      </p>
-
-      {keywordLimit < 999 && keywords.length >= keywordLimit && (
-        <p style={{ fontSize: "0.78125rem", color: "#D97706", marginTop: "0.25rem" }}>Keyword limit reached ({keywordLimit}/{keywordLimit}).</p>
-      )}
-
       {/* Set-aside preferences */}
-      <div style={{ marginTop: "1.25rem" }}>
-        <label style={S.lbl}>
-          <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <FileText size={13} /> Set-Aside Preferences
-            <span style={{ fontSize: "0.72rem", color: "#6B6560", marginLeft: "2px" }}>(optional)</span>
-          </span>
+      <div className="mt-1">
+        <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--app-muted)] mb-1 pl-0.5">
+          <FileText size={14} /> Set-Aside Preferences
+          <span className="text-[11px] text-[var(--app-faint)] opacity-80 uppercase tracking-widest ml-1">(Optional)</span>
         </label>
-        <p style={{ fontSize: "0.78125rem", color: "#6B6560", margin: "0 0 0.625rem", lineHeight: 1.45 }}>
-          Only show contracts with these set-aside designations. Leave all unselected to see all contracts.
+        <p className="text-[13px] text-[var(--app-muted)] mb-3 leading-relaxed">
+          Only show contracts with these designations. Leave empty to see all available.
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+        <div className="flex flex-wrap gap-2">
           {([
             { code: "8a",     label: "8(a)" },
             { code: "wosb",   label: "WOSB" },
@@ -492,7 +434,11 @@ function Step3({
                 key={code}
                 type="button"
                 onClick={() => setSetAsides(active ? setAsides.filter(s => s !== code) : [...setAsides, code])}
-                style={{ padding: "5px 13px", borderRadius: "9999px", border: "1px solid", background: active ? "#C9A84C18" : "#2A2724", borderColor: active ? "#C9A84C" : "#3D3830", color: active ? "#C9A84C" : "#A8A29E", fontSize: "0.8125rem", fontWeight: active ? 600 : 400, cursor: "pointer", transition: "all 0.15s", fontFamily: "var(--font-inter), sans-serif" }}
+                className={`px-3 py-1.5 rounded-full border text-[13.5px] font-medium transition-all ${
+                  active 
+                    ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
+                    : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
+                }`}
               >
                 {label}
               </button>
@@ -517,13 +463,11 @@ export default function OnboardingPage() {
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
 
-  // Plan-based limits
   const isPro         = plan === "pro";
   const naicsLimit    = isPro ? 999 : 10;
   const stateLimit    = isPro ? 50  : 7;
-  const keywordLimit  = isPro ? 999 : 10;  // pricing_plan.md: Essential = 10 keywords
+  const keywordLimit  = isPro ? 999 : 10;
 
-  /* Pre-load existing profile so returning users see their data */
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -539,7 +483,7 @@ export default function OnboardingPage() {
       if (data.company_name)         setCompany(data.company_name);
       if (data.plan)                 setPlan(data.plan);
       if (data.set_aside_preferences?.length) setSetAsides(data.set_aside_preferences);
-      // Clean any corrupted keyword data (e.g. one string with quotes/commas)
+      
       if (data.keywords?.length) {
         const cleaned: string[] = [];
         for (const raw of data.keywords) {
@@ -576,34 +520,37 @@ export default function OnboardingPage() {
   const canNext = step === 1 ? naics.length > 0 : step === 2 ? states.length > 0 : true;
 
   return (
-    <div style={S.page}>
-      {/* Wordmark */}
-      <div style={{ position: "absolute", top: "1.25rem", left: "1.75rem" }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
-          <span style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-0.05em" }}>
-            <span style={{ color: "#C9A84C" }}>P</span><span style={{ color: "#F7F5F0" }}>lexovia</span>
-          </span>
+    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative">
+      <div className="absolute top-6 left-7 z-20">
+        <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+          <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
         </Link>
       </div>
 
-      <div style={S.card}>
+      <div className="w-full max-w-[580px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl min-h-[580px] flex flex-col">
         <StepBar current={step} total={3} />
 
-        {step === 1 && <Step1 selected={naics}    setSelected={setNaics}   naicsLimit={naicsLimit} />}
-        {step === 2 && <Step2 selected={states}   setSelected={setStates}  stateLimit={stateLimit} />}
-        {step === 3 && <Step3 keywords={keywords} setKeywords={setKeywords} company={company} setCompany={setCompany} keywordLimit={keywordLimit} setAsides={setAsides} setSetAsides={setSetAsides} />}
+        <div className="flex-1 mb-8 overflow-hidden">
+          {step === 1 && <Step1 selected={naics}    setSelected={setNaics}   naicsLimit={naicsLimit} />}
+          {step === 2 && <Step2 selected={states}   setSelected={setStates}  stateLimit={stateLimit} />}
+          {step === 3 && <Step3 keywords={keywords} setKeywords={setKeywords} company={company} setCompany={setCompany} keywordLimit={keywordLimit} setAsides={setAsides} setSetAsides={setSetAsides} />}
+        </div>
 
         {error && (
-          <p style={{ fontSize: "0.8rem", color: "#F87171", marginTop: "1rem", padding: "8px 12px", background: "#2A1818", borderRadius: "8px", border: "1px solid #6B2A2A" }}>
-            {error}
-          </p>
+          <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm mb-4">
+            <p className="flex items-center gap-1.5"><X size={15}/> {error}</p>
+          </div>
         )}
 
         {/* Navigation */}
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
+        <div className="flex gap-3 border-t border-[var(--app-border)] pt-6 mt-auto">
           {step > 1 && (
-            <button type="button" onClick={() => setStep((s) => s - 1)} style={S.back}>
-              <ArrowLeft size={15} /> Back
+            <button 
+              type="button" 
+              onClick={() => setStep((s) => s - 1)} 
+              className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] text-[var(--app-muted)] font-medium text-[15px] rounded-xl transition-colors hover:text-[var(--app-text)] hover:border-[var(--app-muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] outline-none"
+            >
+              <ArrowLeft size={16} /> Back
             </button>
           )}
 
@@ -612,36 +559,43 @@ export default function OnboardingPage() {
               type="button"
               onClick={() => setStep((s) => s + 1)}
               disabled={!canNext}
-              style={{ ...S.next, opacity: canNext ? 1 : 0.45, cursor: canNext ? "pointer" : "not-allowed" }}
-              onMouseEnter={(e) => { if (canNext) e.currentTarget.style.background = "#D4B05A"; }}
-              onMouseLeave={(e) => { if (canNext) e.currentTarget.style.background = "#C9A84C"; }}
+              className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${
+                canNext 
+                  ? "bg-[var(--accent)] hover:bg-[var(--accent-lt)]" 
+                  : "bg-[var(--accent)]/50 cursor-not-allowed"
+              }`}
             >
-              Next <ArrowRight size={15} />
+              Next <ArrowRight size={17} strokeWidth={2.5}/>
             </button>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: "0.5rem" }}>
+            <div className="flex flex-col flex-1 gap-2">
               <button
                 type="button"
                 onClick={handleFinish}
                 disabled={saving}
-                style={{ ...S.next, opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
-                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = "#D4B05A"; }}
-                onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = "#C9A84C"; }}
+                className={`flex items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${
+                  saving 
+                    ? "bg-[var(--accent)]/70 cursor-not-allowed" 
+                    : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"
+                }`}
               >
                 {saving
-                  ? <><Loader2 size={16} style={{ animation: "spin 0.8s linear infinite" }} /> Saving...</>
-                  : <><Check size={15} /> Go to Dashboard</>
+                  ? <><Loader2 size={18} className="animate-spin" /> Saving...</>
+                  : <><Check size={17} strokeWidth={2.5} /> Go to Dashboard</>
                 }
               </button>
-              <button type="button" onClick={handleFinish} disabled={saving} style={{ background: "none", border: "none", color: "#6B6560", fontSize: "0.8125rem", cursor: "pointer", fontFamily: "var(--font-inter), sans-serif", padding: "4px" }}>
+              <button 
+                type="button" 
+                onClick={handleFinish} 
+                disabled={saving} 
+                className="text-center text-[13px] text-[var(--app-muted)] hover:text-[var(--app-text)] transition-colors py-1 outline-none focus-visible:text-[var(--accent)]"
+              >
                 Skip for now
               </button>
             </div>
           )}
         </div>
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -34,20 +34,20 @@ export default function ForgotPasswordPage() {
   /* ── Success state ── */
   if (sent) {
     return (
-      <div style={page}>
+      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative overflow-hidden">
         <Wordmark />
-        <div style={card}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#1E2A1E", border: "1px solid #2D5A2D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-              <Mail size={22} color="#4ADE80" />
+        <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl relative z-10">
+          <div className="text-center flex flex-col items-center">
+            <div className="w-14 h-14 rounded-2xl bg-[#1E2A1E] border border-[#2D5A2D] flex items-center justify-center mb-5 shadow-inner">
+              <Mail size={24} className="text-[#4ADE80]" />
             </div>
-            <h1 style={heading}>Check your inbox</h1>
-            <p style={{ ...sub, marginTop: "0.5rem" }}>
-              If <strong style={{ color: "#F7F5F0" }}>{email}</strong> has an account,
+            <h1 className="font-bold text-2xl tracking-tight text-[var(--app-text)] mb-2">Check your inbox</h1>
+            <p className="text-[var(--app-muted)] text-[15px] leading-relaxed mt-2">
+              If <strong className="text-[var(--app-text)] font-semibold">{email}</strong> has an account,
               a reset link is on its way. Check your spam folder if you don't see it.
             </p>
-            <p style={{ ...sub, marginTop: "1.25rem", fontSize: "0.8125rem" }}>
-              Remembered it? <Link href="/auth/login" style={gold}>Sign in →</Link>
+            <p className="text-[14px] text-[var(--app-muted)] mt-6">
+              Remembered it? <Link href="/auth/login" className="text-[var(--accent)] font-semibold hover:text-[var(--accent-lt)] transition-colors">Sign in &rarr;</Link>
             </p>
           </div>
         </div>
@@ -56,20 +56,20 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div style={page}>
+    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative overflow-hidden">
       <Wordmark />
 
-      <div style={card}>
+      <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl relative z-10">
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h1 style={heading}>Reset your password</h1>
-          <p style={sub}>Enter your email and we will send a reset link.</p>
+        <div className="text-center mb-7">
+          <h1 className="font-bold text-2xl xl:text-[26px] tracking-tight text-[var(--app-text)] mb-2">Reset your password</h1>
+          <p className="text-[var(--app-muted)] text-[15px]">Enter your email and we will send a reset link.</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="email" style={lbl}>Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Email</label>
             <input
               id="email"
               type="email"
@@ -78,42 +78,37 @@ export default function ForgotPasswordPage() {
               placeholder="you@example.com"
               required
               autoComplete="email"
-              style={inp}
-              onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-              onBlur={(e)  => (e.target.style.borderColor = "#3D3830")}
+              className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
             />
           </div>
 
           {error && (
-            <p style={{ fontSize: "0.8rem", color: "#F87171", display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", background: "#2A1818", borderRadius: "8px", border: "1px solid #6B2A2A", margin: 0 }}>
-              <AlertCircle size={13} /> {error}
-            </p>
+            <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm mt-1">
+              <AlertCircle size={15} className="shrink-0" />
+              <p>{error}</p>
+            </div>
           )}
 
           <button
             type="submit"
             id="reset-submit"
             disabled={loading}
-            style={submitBtn}
-            onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#D4B05A"; }}
-            onMouseLeave={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#C9A84C"; }}
+            className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-2 bg-[var(--accent)] text-[#1C1917] font-bold text-[15px] rounded-xl transition-colors hover:bg-[var(--accent-lt)] disabled:opacity-75 disabled:cursor-not-allowed"
           >
             {loading
-              ? <Loader2 size={16} style={{ animation: "spin 0.8s linear infinite" }} />
-              : <>Send Reset Link <ArrowRight size={15} /></>
+              ? <Loader2 size={18} className="animate-spin" />
+              : <>Send Reset Link <ArrowRight size={17} strokeWidth={2.5} /></>
             }
           </button>
         </form>
 
-        <p style={{ textAlign: "center", fontSize: "0.8125rem", color: "#6B6560", marginTop: "1.25rem", marginBottom: 0 }}>
-          Remembered it? <Link href="/auth/login" style={gold}>Sign in →</Link>
+        <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-6">
+          Remembered it? <Link href="/auth/login" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Sign in &rarr;</Link>
         </p>
-        <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#4B4844", marginTop: "0.75rem", marginBottom: 0 }}>
-          Need help? <a href="mailto:support@plexovia.com" style={{ color: "#6B6560", textDecoration: "none" }}>support@plexovia.com</a>
+        <p className="text-center text-[13px] text-[var(--app-faint)] mt-3">
+          Need help? <a href="mailto:support@plexovia.com" className="hover:text-[var(--app-muted)] transition-colors">support@plexovia.com</a>
         </p>
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -121,55 +116,10 @@ export default function ForgotPasswordPage() {
 /* ─── Shared ──────────────────────────────────────────────────────── */
 function Wordmark() {
   return (
-    <div style={{ position: "absolute", top: "1.25rem", left: "1.75rem" }}>
-      <Link href="/" style={{ textDecoration: "none" }}>
-        <span style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-0.05em" }}>
-          <span style={{ color: "#C9A84C" }}>P</span><span style={{ color: "#F7F5F0" }}>lexovia</span>
-        </span>
+    <div className="absolute top-6 left-7 z-20">
+      <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+        <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
       </Link>
     </div>
   );
 }
-
-const page: React.CSSProperties = {
-  minHeight: "100vh", height: "100vh", overflow: "hidden",
-  background: "#1C1917",
-  display: "flex", flexDirection: "column",
-  alignItems: "center", justifyContent: "center",
-  position: "relative", fontFamily: "var(--font-inter), sans-serif",
-  padding: "0 1.25rem",
-};
-const card: React.CSSProperties = {
-  width: "100%", maxWidth: "400px",
-  background: "#252320", border: "1px solid #2D2A26",
-  borderRadius: "16px", padding: "2rem",
-};
-const heading: React.CSSProperties = {
-  fontWeight: 700, fontSize: "1.375rem", letterSpacing: "-0.03em",
-  color: "#F7F5F0", margin: 0,
-};
-const sub: React.CSSProperties = {
-  fontSize: "0.875rem", color: "#6B6560",
-  margin: "0.375rem 0 0", lineHeight: 1.55,
-};
-const lbl: React.CSSProperties = {
-  display: "block", fontSize: "0.8125rem", fontWeight: 500,
-  color: "#A8A29E", marginBottom: "5px",
-};
-const inp: React.CSSProperties = {
-  width: "100%", padding: "11px 14px",
-  background: "#2A2724", border: "1px solid #3D3830",
-  borderRadius: "9px", color: "#F7F5F0",
-  fontSize: "0.9375rem", outline: "none",
-  transition: "border-color 0.15s", boxSizing: "border-box",
-};
-const submitBtn: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-  width: "100%", padding: "13px 20px",
-  background: "#C9A84C", color: "#1C1917",
-  border: "none", borderRadius: "10px",
-  fontFamily: "var(--font-inter), sans-serif",
-  fontWeight: 700, fontSize: "0.9375rem", letterSpacing: "-0.01em",
-  cursor: "pointer", transition: "background 0.15s",
-};
-const gold: React.CSSProperties = { color: "#C9A84C", textDecoration: "none", fontWeight: 600 };

@@ -2,14 +2,13 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
 
-/* ─── Inner form (uses useSearchParams) ──────────────────────────── */
+/* ─── Inner form ─────────────────────────────────────────────────── */
 function ResetForm() {
   const router  = useRouter();
-  const params  = useSearchParams();
   const [pw,       setPw]       = useState("");
   const [confirm,  setConfirm]  = useState("");
   const [showPw,   setShowPw]   = useState(false);
@@ -21,9 +20,16 @@ function ResetForm() {
   /* Supabase sends the token in the URL hash — wait for the client to
      exchange it for a session before allowing form submission */
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
+    
+    // As a fallback (if event was already fired before effect ran), check if session exists.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+       if (session) setReady(true);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,13 +51,15 @@ function ResetForm() {
   /* ── Success ── */
   if (success) {
     return (
-      <div style={card}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#1E2A1E", border: "1px solid #2D5A2D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-            <CheckCircle2 size={22} color="#4ADE80" />
+      <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl relative z-10">
+        <div className="text-center flex flex-col items-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#1E2A1E] border border-[#2D5A2D] flex items-center justify-center mb-5 shadow-inner">
+            <CheckCircle2 size={24} className="text-[#4ADE80]" />
           </div>
-          <h1 style={heading}>Password updated</h1>
-          <p style={{ ...sub, marginTop: "0.5rem" }}>Redirecting you to sign in...</p>
+          <h1 className="font-bold text-2xl tracking-tight text-[var(--app-text)] mb-2">Password updated</h1>
+          <p className="text-[var(--app-muted)] text-[15px] leading-relaxed mt-2">
+            Redirecting you to sign in...
+          </p>
         </div>
       </div>
     );
@@ -60,12 +68,12 @@ function ResetForm() {
   /* ── Waiting for token ── */
   if (!ready) {
     return (
-      <div style={card}>
-        <div style={{ textAlign: "center" }}>
-          <Loader2 size={28} style={{ animation: "spin 0.8s linear infinite", color: "#C9A84C", margin: "0 auto 1rem" }} />
-          <p style={sub}>Verifying your reset link...</p>
-          <p style={{ ...sub, marginTop: "0.75rem", fontSize: "0.8rem" }}>
-            Link expired? <Link href="/auth/forgot-password" style={gold}>Request a new one →</Link>
+      <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl relative z-10">
+        <div className="text-center">
+          <Loader2 size={32} className="animate-spin text-[var(--accent)] mx-auto mb-4" />
+          <p className="text-[var(--app-muted)] text-[15px]">Verifying your reset link...</p>
+          <p className="text-[14px] text-[var(--app-muted)] mt-4">
+            Link expired? <Link href="/auth/forgot-password" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Request a new one &rarr;</Link>
           </p>
         </div>
       </div>
@@ -73,18 +81,18 @@ function ResetForm() {
   }
 
   return (
-    <div style={card}>
+    <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl relative z-10">
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-        <h1 style={heading}>Set new password</h1>
-        <p style={sub}>Must be at least 8 characters.</p>
+      <div className="text-center mb-7">
+        <h1 className="font-bold text-2xl xl:text-[26px] tracking-tight text-[var(--app-text)] mb-2">Set new password</h1>
+        <p className="text-[var(--app-muted)] text-[15px]">Must be at least 8 characters.</p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* New password */}
         <div>
-          <label htmlFor="password" style={lbl}>New password</label>
-          <div style={{ position: "relative" }}>
+          <label htmlFor="password" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">New password</label>
+          <div className="relative">
             <input
               id="password"
               type={showPw ? "text" : "password"}
@@ -92,21 +100,23 @@ function ResetForm() {
               onChange={(e) => setPw(e.target.value)}
               placeholder="8+ characters"
               required
-              style={{ ...inp, paddingRight: "44px" }}
-              onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-              onBlur={(e)  => (e.target.style.borderColor = "#3D3830")}
+              className="w-full px-4 py-3 pr-12 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
             />
-            <button type="button" onClick={() => setShowPw(!showPw)} tabIndex={-1}
-              style={{ position: "absolute", right: "13px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#6B6560", padding: 0 }}
-              aria-label={showPw ? "Hide password" : "Show password"}>
-              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            <button 
+              type="button" 
+              onClick={() => setShowPw(!showPw)} 
+              tabIndex={-1}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--app-faint)] hover:text-[var(--app-muted)] transition-colors"
+            >
+              {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
         </div>
 
         {/* Confirm password */}
         <div>
-          <label htmlFor="confirm" style={lbl}>Confirm password</label>
+          <label htmlFor="confirm" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Confirm password</label>
           <input
             id="confirm"
             type="password"
@@ -114,30 +124,27 @@ function ResetForm() {
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Repeat your password"
             required
-            style={inp}
-            onFocus={(e) => (e.target.style.borderColor = "#C9A84C")}
-            onBlur={(e)  => (e.target.style.borderColor = "#3D3830")}
+            className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
           />
         </div>
 
         {/* Error */}
         {error && (
-          <p style={{ fontSize: "0.8rem", color: "#F87171", display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", background: "#2A1818", borderRadius: "8px", border: "1px solid #6B2A2A", margin: 0 }}>
-            <AlertCircle size={13} /> {error}
-          </p>
+          <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm mt-1">
+            <AlertCircle size={15} className="shrink-0" />
+            <p>{error}</p>
+          </div>
         )}
 
         <button
           type="submit"
           id="update-password"
           disabled={loading}
-          style={submitBtn}
-          onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#D4B05A"; }}
-          onMouseLeave={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#C9A84C"; }}
+          className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-2 bg-[var(--accent)] text-[#1C1917] font-bold text-[15px] rounded-xl transition-colors hover:bg-[var(--accent-lt)] disabled:opacity-75 disabled:cursor-not-allowed"
         >
           {loading
-            ? <Loader2 size={16} style={{ animation: "spin 0.8s linear infinite" }} />
-            : <>Update Password <ArrowRight size={15} /></>
+            ? <Loader2 size={18} className="animate-spin" />
+            : <>Update Password <ArrowRight size={17} strokeWidth={2.5} /></>
           }
         </button>
       </form>
@@ -148,16 +155,15 @@ function ResetForm() {
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function ResetPasswordPage() {
   return (
-    <div style={page}>
+    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative overflow-hidden">
       <Wordmark />
       <Suspense fallback={
-        <div style={card}>
-          <p style={{ ...sub, textAlign: "center" }}>Loading...</p>
+        <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl text-center text-[var(--app-muted)]">
+          <Loader2 size={24} className="animate-spin mx-auto text-[var(--accent)]" />
         </div>
       }>
         <ResetForm />
       </Suspense>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -165,55 +171,10 @@ export default function ResetPasswordPage() {
 /* ─── Shared ──────────────────────────────────────────────────────── */
 function Wordmark() {
   return (
-    <div style={{ position: "absolute", top: "1.25rem", left: "1.75rem" }}>
-      <Link href="/" style={{ textDecoration: "none" }}>
-        <span style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-0.05em" }}>
-          <span style={{ color: "#C9A84C" }}>P</span><span style={{ color: "#F7F5F0" }}>lexovia</span>
-        </span>
+    <div className="absolute top-6 left-7 z-20">
+      <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+        <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
       </Link>
     </div>
   );
 }
-
-const page: React.CSSProperties = {
-  minHeight: "100vh", height: "100vh", overflow: "hidden",
-  background: "#1C1917",
-  display: "flex", flexDirection: "column",
-  alignItems: "center", justifyContent: "center",
-  position: "relative", fontFamily: "var(--font-inter), sans-serif",
-  padding: "0 1.25rem",
-};
-const card: React.CSSProperties = {
-  width: "100%", maxWidth: "400px",
-  background: "#252320", border: "1px solid #2D2A26",
-  borderRadius: "16px", padding: "2rem",
-};
-const heading: React.CSSProperties = {
-  fontWeight: 700, fontSize: "1.375rem", letterSpacing: "-0.03em",
-  color: "#F7F5F0", margin: 0,
-};
-const sub: React.CSSProperties = {
-  fontSize: "0.875rem", color: "#6B6560",
-  margin: "0.375rem 0 0", lineHeight: 1.55,
-};
-const lbl: React.CSSProperties = {
-  display: "block", fontSize: "0.8125rem", fontWeight: 500,
-  color: "#A8A29E", marginBottom: "5px",
-};
-const inp: React.CSSProperties = {
-  width: "100%", padding: "11px 14px",
-  background: "#2A2724", border: "1px solid #3D3830",
-  borderRadius: "9px", color: "#F7F5F0",
-  fontSize: "0.9375rem", outline: "none",
-  transition: "border-color 0.15s", boxSizing: "border-box",
-};
-const submitBtn: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-  width: "100%", padding: "13px 20px",
-  background: "#C9A84C", color: "#1C1917",
-  border: "none", borderRadius: "10px",
-  fontFamily: "var(--font-inter), sans-serif",
-  fontWeight: 700, fontSize: "0.9375rem", letterSpacing: "-0.01em",
-  cursor: "pointer", transition: "background 0.15s",
-};
-const gold: React.CSSProperties = { color: "#C9A84C", textDecoration: "none", fontWeight: 600 };
