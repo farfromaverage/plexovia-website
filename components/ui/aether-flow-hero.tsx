@@ -17,7 +17,7 @@ export default function AetherFlowHero() {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
-    const mouse = { x: null as number | null, y: null as number | null, radius: 200 };
+    const mouse = { x: null as number | null, y: null as number | null, radius: 250 };
 
     class Particle {
       x: number;
@@ -44,12 +44,12 @@ export default function AetherFlowHero() {
         ctx.fill();
       }
 
-      update() {
+      update(cw: number, ch: number) {
         if (!canvas) return;
-        if (this.x > canvas.width || this.x < 0) {
+        if (this.x > cw || this.x < 0) {
           this.directionX = -this.directionX;
         }
-        if (this.y > canvas.height || this.y < 0) {
+        if (this.y > ch || this.y < 0) {
           this.directionY = -this.directionY;
         }
 
@@ -76,56 +76,73 @@ export default function AetherFlowHero() {
     function init() {
       if (!canvas) return;
       particles = [];
-      let numberOfParticles = (canvas.height * canvas.width) / 9000;
+      let cw = canvas.width;
+      let ch = canvas.height;
+      let numberOfParticles = (cw * ch) / 9000;
+      
       for (let i = 0; i < numberOfParticles; i++) {
-        let size = Math.random() * 2 + 1;
-        let x = Math.random() * (innerWidth - size * 2 - size * 2) + size * 2;
-        let y = Math.random() * (innerHeight - size * 2 - size * 2) + size * 2;
-        let directionX = Math.random() * 0.4 - 0.2;
-        let directionY = Math.random() * 0.4 - 0.2;
-        // Rich Gold for background particles
-        let color = 'rgba(201, 168, 76, 0.9)'; 
+        let size = Math.random() * 2.5 + 1; // Slightly larger for better visibility
+        let x = Math.random() * (cw - size * 2) + size;
+        let y = Math.random() * (ch - size * 2) + size;
+        let directionX = Math.random() * 1.0 - 0.5; // Slightly faster
+        let directionY = Math.random() * 1.0 - 0.5;
+        // Deep Charcoal for base particles against the white parchment
+        let color = 'rgba(28, 25, 23, 0.8)'; 
         particles.push(new Particle(x, y, directionX, directionY, size, color));
       }
     }
 
     const resizeCanvas = () => {
       if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const parent = canvas.parentElement;
+      if (parent) {
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+      } else {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
       init();
     };
+    
+    // Defer resize setup slightly to ensure container dims are ready
+    setTimeout(resizeCanvas, 50);
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
 
     const connect = () => {
       if (!canvas || !ctx) return;
       let opacityValue = 1;
+      let cw = canvas.width;
+      let ch = canvas.height;
+      
       for (let a = 0; a < particles.length; a++) {
         for (let b = a; b < particles.length; b++) {
-          let distance =
-            (particles[a].x - particles[b].x) * (particles[a].x - particles[b].x) +
-            (particles[a].y - particles[b].y) * (particles[a].y - particles[b].y);
+          let dx = particles[a].x - particles[b].x;
+          let dy = particles[a].y - particles[b].y;
+          let distance = dx * dx + dy * dy;
 
-          if (distance < (canvas.width / 7) * (canvas.height / 7)) {
-            opacityValue = 1 - distance / 20000;
+          if (distance < (cw / 7) * (ch / 7)) {
+            opacityValue = 1 - distance / 22000;
             if (opacityValue < 0) opacityValue = 0;
-            
-            let dx_mouse_a = particles[a].x - (mouse.x || -9999);
-            let dy_mouse_a = particles[a].y - (mouse.y || -9999);
-            let distance_mouse_a = Math.sqrt(dx_mouse_a * dx_mouse_a + dy_mouse_a * dy_mouse_a);
+            if (opacityValue > 1) opacityValue = 1;
 
-            if (mouse.x && distance_mouse_a < mouse.radius) {
-              // Mouse highlighted connections — Deep Black/Charcoal 
-              ctx.strokeStyle = `rgba(30, 30, 30, ${opacityValue})`;
-            } else {
-              // Standard connecting lines — Smooth Dark Gold
-              ctx.strokeStyle = `rgba(184, 146, 45, ${opacityValue * 0.7})`;
-            }
+            let dx_mouse = particles[a].x - (mouse.x || -9999);
+            let dy_mouse = particles[a].y - (mouse.y || -9999);
+            let distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
 
-            // Thicker line handles the lack of a black backdrop better
+            // Set explicit line properties
             ctx.lineWidth = 1.5; 
             ctx.beginPath();
+            
+            if (mouse.x !== null && mouse.y !== null && distance_mouse < mouse.radius) {
+              // Interactive lines turn Bright Gold when cursor is near
+              ctx.strokeStyle = `rgba(201, 168, 76, ${opacityValue.toFixed(2)})`;
+              ctx.lineWidth = 2.0; // Make them slightly thicker to pop out
+            } else {
+              // Default lines are subtle grey/charcoal dots connecting
+              ctx.strokeStyle = `rgba(28, 25, 23, ${(opacityValue * 0.25).toFixed(2)})`;
+            }
+
             ctx.moveTo(particles[a].x, particles[a].y);
             ctx.lineTo(particles[b].x, particles[b].y);
             ctx.stroke();
@@ -138,16 +155,18 @@ export default function AetherFlowHero() {
       if (!canvas || !ctx) return;
       animationFrameId = requestAnimationFrame(animate);
       
-      // Clear canvas fully to let the CSS gradients show through
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      // Clear exactly the canvas dimensions
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
+        particles[i].update(canvas.width, canvas.height);
       }
       connect();
     };
 
     const handleMouseMove = (event: MouseEvent) => {
+      // Get exact coordinates relative to the canvas if positioned weirdly, 
+      // but clientX/Y works since the hero covers the top of the window
       mouse.x = event.clientX;
       mouse.y = event.clientY;
     };
@@ -160,7 +179,6 @@ export default function AetherFlowHero() {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseout', handleMouseOut);
 
-    init();
     animate();
 
     return () => {
@@ -192,24 +210,31 @@ export default function AetherFlowHero() {
 
   return (
     <div className="relative min-h-[90vh] w-full flex flex-col items-center justify-center overflow-hidden px-5 sm:px-8 lg:px-12" aria-label="Hero">
-      {/* Background styling layers underneath the interactive canvas */}
-      <div className="grain absolute inset-0 z-[-30]" aria-hidden="true" />
-      <div
-        className="absolute inset-0 z-[-40]"
-        style={{
-          background: "radial-gradient(ellipse 80% 60% at 50% 0%, #F0EDE7 0%, #F7F5F0 70%)",
-        }}
-        aria-hidden="true"
-      />
+      
+      {/* PERFECTLY ISOLATED BACKGROUND STACK */}
+      {/* 
+        We use z-0 to establish a solid ground layer stacking context. 
+        This prevents anything from falling 'behind' the body tag's white background. 
+      */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Layer 1: Parchment Gradient */}
+        <div
+          className="absolute inset-0 w-full h-full"
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, #F0EDE7 0%, #F7F5F0 70%)" }}
+          aria-hidden="true"
+        />
+        {/* Layer 2: Texture Grain */}
+        <div className="grain absolute inset-0 w-full h-full mix-blend-multiply opacity-50" aria-hidden="true" />
+        
+        {/* Layer 3: Interactive Canvas exactly filling the container */}
+        <canvas 
+          ref={canvasRef} 
+          className="absolute inset-0 w-full h-full block" 
+        />
+      </div>
 
-      {/* The canvas MUST have a z-index under the text but above the background */}
-      <canvas 
-        ref={canvasRef} 
-        className="absolute inset-0 z-[-10] w-full h-full pointer-events-none" 
-      />
-
-      {/* Main Content Overlay */}
-      <div className="relative z-10 mx-auto max-w-7xl pt-28 pb-20 w-full">
+      {/* Main Content Overlay: z-10 puts it solidly ON TOP of the background stack */}
+      <div className="relative z-10 mx-auto max-w-7xl pt-28 pb-20 w-full pointer-events-auto">
         <div className="flex flex-col items-center text-center gap-12 lg:gap-16">
           <motion.div
             className="flex-1 max-w-3xl w-full flex flex-col items-center"
@@ -268,7 +293,7 @@ export default function AetherFlowHero() {
               <Link
                 href="/auth/signup"
                 id="hero-cta"
-                className="btn-gold text-base px-8 py-4 inline-flex items-center gap-2 w-full sm:w-auto justify-center rounded-lg font-bold shadow-xl shadow-[#C9A84C]/20 hover:shadow-2xl hover:shadow-[#1C1917]/20 transition-all z-20"
+                className="btn-gold text-base px-8 py-4 inline-flex items-center gap-2 w-full sm:w-auto justify-center rounded-lg font-bold shadow-xl shadow-[#C9A84C]/20 hover:shadow-2xl hover:shadow-[#1C1917]/20 transition-all"
               >
                 Start Free Trial
                 <ArrowRight size={18} aria-hidden="true" />
@@ -279,7 +304,7 @@ export default function AetherFlowHero() {
                 className="
                   text-sm font-bold text-[#8A8580]
                   hover:text-[#1C1917] transition-colors
-                  underline decoration-[#E2DDD6] underline-offset-4 z-20
+                  underline decoration-[#E2DDD6] underline-offset-4
                 "
               >
                 See pricing
