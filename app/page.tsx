@@ -9,16 +9,16 @@ import FinalCTA from "@/components/home/final-cta";
 import Footer from "@/components/home/footer";
 
 export const metadata: Metadata = {
-  title: "Government Contract Alerts for All 50 States | Plexovia",
+  title: "Government Contract Intelligence System | Plexovia",
   description:
-    "Stop manually checking SAM.gov. Plexovia monitors 50 state portals and SAM.gov daily. Scored contract matches delivered to your inbox by 6 AM. 7-day free trial.",
+    "A system that helps you consistently find and win the right government contracts. Plexovia replaces manual searching with an automated intelligence system.",
   alternates: {
     canonical: "https://plexovia.com",
   },
   openGraph: {
-    title: "Plexovia: Government Contract Alerts for All 50 States",
+    title: "Plexovia: Government Contract Intelligence System",
     description:
-      "Stop manually checking SAM.gov. Get scored contract matches in your inbox by 6 AM. All 50 states. 7-day free trial.",
+      "A system that helps you consistently find and win the right government contracts.",
     url: "https://plexovia.com",
   },
 };

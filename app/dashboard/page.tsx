@@ -447,6 +447,7 @@ export default function DashboardPage() {
               { href:"/dashboard",                label:"Overview",  icon:<TrendingUp size={14} /> },
               { href:"/dashboard/contracts",       label:"Contracts", icon:<FileText size={14} /> },
               { href:"/dashboard/profile",         label:"Profile",   icon:<Settings size={14} /> },
+              { href:"/dashboard/competitors",     label:"Competitors", icon:<Shield size={14} /> },
               { href:"/dashboard/team", label:"Team", icon:<Users size={14} /> },
             ].map(({ href, label, icon }) => (
               <Link key={href} href={href}
@@ -587,7 +588,7 @@ export default function DashboardPage() {
                     {daysLeft !== null ? `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : "Start your subscription today"}
                   </p>
                   <p style={{ fontSize:"0.8125rem", color:"#6B6560", margin:"4px 0 0" }}>
-                    Activate your Premium Professional plan. $299/mo. Cancel anytime.
+                    Activate your subscription to the Plexovia Intelligence system. $299/mo. Cancel anytime.
                   </p>
                 </div>
               </div>

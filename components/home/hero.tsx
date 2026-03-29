@@ -60,7 +60,7 @@ export default function Hero() {
                   className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] animate-pulse"
                   aria-hidden="true"
                 />
-                Government Contract Monitoring
+                Government Contract Intelligence
               </span>
             </motion.div>
 
@@ -72,13 +72,11 @@ export default function Hero() {
                 text-[#1C1917] leading-[1.1] mb-6
               "
             >
-              Every contract
+              A system to consistently
               <br />
-              matching your
+              <span className="text-[#C9A84C]">find and win</span>
               <br />
-              <span className="text-[#C9A84C]">NAICS codes.</span>
-              <br />
-              In your inbox by 6 AM.
+              the right government contracts.
             </motion.h1>
 
             {/* Subline */}
@@ -89,9 +87,7 @@ export default function Hero() {
                 leading-relaxed max-w-xl mb-8
               "
             >
-              Plexovia monitors SAM.gov and all 50 state portals every night.
-              You wake up to a ranked list of contracts you can actually win.
-              Your competitor is already doing this. Now you can too.
+              Plexovia replaces hours of manual searching with an automated advantage. We monitor SAM.gov and all 50 state portals, score opportunities based on your NAICS codes, and deliver the exact contracts you can actually win straight to your inbox.
             </motion.p>
 
             {/* CTA group */}
@@ -104,7 +100,7 @@ export default function Hero() {
                 id="hero-cta"
                 className="btn-gold text-base px-7 py-4 inline-flex items-center gap-2 w-full sm:w-auto justify-center"
               >
-                Start Your Free 7-Day Trial
+                Start Free Trial
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
 

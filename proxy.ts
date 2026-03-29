@@ -13,7 +13,7 @@ import type { NextRequest } from 'next/server'
  *   /auth/*      → if already logged in, redirect to /dashboard (no re-login)
  *   everything else → pass through
  */
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   console.log("==== PROXY.TS INTERCEPTED: ", pathname, "====");
 

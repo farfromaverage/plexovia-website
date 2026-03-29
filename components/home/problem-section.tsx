@@ -231,12 +231,11 @@ export default function ProblemSection() {
               color:      "var(--pub-text)",
             }}
           >
-            Plexovia scans SAM.gov and your selected state portals every night.
+            Plexovia scans SAM.gov and all 50 state portals every night.
             Contracts matching your NAICS codes land in your inbox, scored 0
-            to 100 and ranked by relevance. Essential covers 7 states and
-            delivers once per morning. Pro covers all 50 states with up to 4
-            alerts per day and adds competitor tracking. No login. No manual
-            searching.
+            to 100 based on relevance. You get competitor tracking and complete
+            daily digests without restrictions. No limits. No manual
+            searching. Just the contracts you can win.
           </p>
 
           <div>

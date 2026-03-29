@@ -7,23 +7,17 @@ import { ExternalLink, ArrowLeft, CreditCard, Calendar, Zap, AlertCircle } from 
 import Link from "next/link";
 
 const PLAN_DETAILS = {
-  essential: {
-    name: "Essential",
-    price: "$119/mo",
+  trial: {
+    name: "Trial",
+    price: "Free",
     color: "#C9A84C",
-    features: ["10 NAICS codes", "7 states", "30-day history", "Daily email digest"],
+    features: ["All 50 states", "Unlimited NAICS codes", "Daily email digest", "Competitor tracking", "Match explanations", "90-day history"],
   },
-  pro: {
-    name: "Pro",
+  active: {
+    name: "Plexovia Intelligence",
     price: "$299/mo",
     color: "#4ADE80",
-    features: ["Unlimited NAICS", "All 50 states", "90-day history", "3 team seats", "CSV export", "Competitor tracking"],
-  },
-  enterprise: {
-    name: "Enterprise",
-    price: "Custom",
-    color: "#60A5FA",
-    features: ["Everything in Pro", "10 team seats", "White-label emails", "Custom alert schedule", "REST API access"],
+    features: ["All 50 states", "Unlimited NAICS codes", "Daily email digest", "Competitor tracking", "Match explanations", "90-day history"],
   },
   cancelled: {
     name: "Cancelled",
@@ -59,8 +53,11 @@ export default function BillingPage() {
     load();
   }, [router]);
 
-  const plan = (profile?.plan ?? "essential") as keyof typeof PLAN_DETAILS;
-  const details = PLAN_DETAILS[plan] ?? PLAN_DETAILS.essential;
+  // Remap legacy 'pro' and 'premium' to 'active'
+  const rawPlan = profile?.plan ?? "trial";
+  const mappedPlan = (rawPlan === "pro" || rawPlan === "premium" || rawPlan === "professional") ? "active" : rawPlan;
+  const plan = mappedPlan as keyof typeof PLAN_DETAILS;
+  const details = PLAN_DETAILS[plan] ?? PLAN_DETAILS.trial;
 
   const isTrialing = profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date();
   const trialDaysLeft = isTrialing
@@ -131,15 +128,15 @@ export default function BillingPage() {
                   <CreditCard size={14} /> Manage Billing <ExternalLink size={12} />
                 </a>
               )}
-              {/* Upgrade CTA for Essential users */}
-              {(plan === "essential" || plan === "cancelled") && (
+              {/* Upgrade CTA for Trial or Cancelled users */}
+              {(plan === "trial" || plan === "cancelled") && (
                 <a
                   href="https://plexovia.lemonsqueezy.com/checkout/buy/pro-monthly"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ ...s.actionBtn, background: "#1C1917", color: "#fff" }}
                 >
-                  <Zap size={14} /> Upgrade to Pro
+                  <Zap size={14} /> Subscribe to Plexovia Intelligence
                 </a>
               )}
             </div>
@@ -160,43 +157,19 @@ export default function BillingPage() {
           )}
         </div>
 
-        {/* Upgrade to Pro card — only for Essential */}
-        {plan === "essential" && (
-          <div style={{ ...s.card, border: "1px solid var(--accent)", background: "var(--accent-bg-app)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 4 }}>Ready to go Pro?</div>
-                <p style={{ color: "var(--app-muted)", fontSize: "0.85rem", margin: 0 }}>
-                  Get all 50 states, unlimited NAICS codes, 90-day history, competitor tracking, and 3 team seats.
-                </p>
-              </div>
-              <a
-                href="https://plexovia.lemonsqueezy.com/checkout/buy/pro-monthly"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ ...s.actionBtn, background: "var(--accent)", color: "#1C1917" }}
-              >
-                Upgrade to Pro — $299/mo <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-        )}
-
-        {/* Enterprise card */}
-        {(plan === "essential" || plan === "pro") && (
-          <div style={{ ...s.card, textAlign: "center" }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>Need Enterprise?</div>
-            <p style={{ color: "var(--app-muted)", fontSize: "0.85rem", margin: "0 0 1rem" }}>
-              10 team seats, white-label emails, custom alert schedules, REST API access.
-            </p>
-            <a
-              href="mailto:support@plexovia.com?subject=Enterprise Inquiry"
-              style={{ ...s.actionBtn, background: "var(--app-surface-2)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}
-            >
-              Contact us — support@plexovia.com
-            </a>
-          </div>
-        )}
+        {/* Agency / Enterprise card */}
+        <div style={{ ...s.card, textAlign: "center" }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Need Agency or Enterprise access?</div>
+          <p style={{ color: "var(--app-muted)", fontSize: "0.85rem", margin: "0 0 1rem" }}>
+            The Plexovia Intelligence system remains the same. You can purchase multiple subscriptions to scale your team.
+          </p>
+          <a
+            href="mailto:support@plexovia.com?subject=Enterprise Inquiry"
+            style={{ ...s.actionBtn, background: "var(--app-surface-2)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}
+          >
+            Contact us — support@plexovia.com
+          </a>
+        </div>
       </div>
     </div>
   );

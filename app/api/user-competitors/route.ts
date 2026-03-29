@@ -1,6 +1,6 @@
 /**
  * Plexovia — GET /api/user-competitors
- * Server-side proxy to engine /api/user/competitors (Pro-gated).
+ * Server-side proxy to engine /api/user/competitors.
  */
 
 import { createServerClient } from '@supabase/ssr'
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     )
 
     if (res.status === 403) {
-      return NextResponse.json({ error: 'Pro plan required' }, { status: 403 })
+      return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
     }
     if (!res.ok) {
       return NextResponse.json({ error: `Engine error ${res.status}` }, { status: res.status })

@@ -167,7 +167,7 @@ export default function FinalCTA() {
               (e.currentTarget as HTMLAnchorElement).style.color = "#6B6560";
             }}
           >
-            Compare plans at /pricing →
+            View full feature list at /pricing →
           </Link>
         </motion.div>
 

@@ -121,9 +121,9 @@ function Step1_Email({ email, setEmail }: { email: string; setEmail: (v: string)
   );
 }
 
-function Step2({ selected, setSelected, naicsLimit }: { selected: string[]; setSelected: (v: string[]) => void; naicsLimit: number }) {
+function Step2({ selected, setSelected }: { selected: string[]; setSelected: (v: string[]) => void }) {
   const [query, setQuery] = useState("");
-  const LIMIT = naicsLimit;
+  const LIMIT = 999;
 
   const trimmed = query.trim();
   const isCustom6 = /^\d{6}$/.test(trimmed) && !NAICS_MAP.has(trimmed);
@@ -263,8 +263,8 @@ function Step2({ selected, setSelected, naicsLimit }: { selected: string[]; setS
   );
 }
 
-function Step4({ selected, setSelected, stateLimit }: { selected: string[]; setSelected: (v: string[]) => void; stateLimit: number }) {
-  const LIMIT = stateLimit;
+function Step4({ selected, setSelected }: { selected: string[]; setSelected: (v: string[]) => void }) {
+  const LIMIT = 50;
 
   function toggleState(state: string) {
     if (selected.includes(state)) {
@@ -278,8 +278,7 @@ function Step4({ selected, setSelected, stateLimit }: { selected: string[]; setS
     <div className="flex flex-col h-full fade-in">
       <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Which states do you want to monitor?</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-1">
-        Select up to {LIMIT === 50 ? "all 50" : LIMIT} states on this plan.
-        {LIMIT < 50 && " Pro unlocks all 50 states."}
+        Select up to 50 states to monitor.
         <br />We monitor each state's procurement portal nightly.
       </p>
 
@@ -320,9 +319,9 @@ function Step4({ selected, setSelected, stateLimit }: { selected: string[]; setS
         ))}
       </div>
 
-      {selected.length >= LIMIT && LIMIT < 50 && (
+      {selected.length >= LIMIT && (
         <p className="text-[13px] text-amber-500 font-medium mt-3">
-          Limit reached ({LIMIT}/{LIMIT}). Upgrade to Pro for all 50 states.
+          Limit reached ({LIMIT}/{LIMIT}). Remove a state to add another.
         </p>
       )}
     </div>
@@ -330,15 +329,15 @@ function Step4({ selected, setSelected, stateLimit }: { selected: string[]; setS
 }
 
 function Step3({
-  keywords, setKeywords, company, setCompany, keywordLimit, setAsides, setSetAsides,
+  keywords, setKeywords, company, setCompany, setAsides, setSetAsides,
 }: {
   keywords: string[]; setKeywords: (v: string[]) => void;
   company: string; setCompany: (v: string) => void;
-  keywordLimit: number;
   setAsides: string[]; setSetAsides: (v: string[]) => void;
 }) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const keywordLimit = 999;
 
   function clean(raw: string): string {
     return raw.trim().replace(/^["'\s]+|["'.,;\s]+$/g, "").trim().toLowerCase();
@@ -491,11 +490,6 @@ export default function OnboardingPage() {
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
 
-  const isPro         = plan === "pro";
-  const naicsLimit    = isPro ? 999 : 10;
-  const stateLimit    = isPro ? 50  : 7;
-  const keywordLimit  = isPro ? 999 : 10;
-
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -564,9 +558,9 @@ export default function OnboardingPage() {
 
         <div className="flex-1 mb-8 overflow-hidden">
           {step === 1 && <Step1_Email email={email}  setEmail={setEmail} />}
-          {step === 2 && <Step2 selected={naics}    setSelected={setNaics}   naicsLimit={naicsLimit} />}
-          {step === 3 && <Step3 keywords={keywords} setKeywords={setKeywords} company={company} setCompany={setCompany} keywordLimit={keywordLimit} setAsides={setAsides} setSetAsides={setSetAsides} />}
-          {step === 4 && <Step4 selected={states}   setSelected={setStates}  stateLimit={stateLimit} />}
+          {step === 2 && <Step2 selected={naics}    setSelected={setNaics} />}
+          {step === 3 && <Step3 keywords={keywords} setKeywords={setKeywords} company={company} setCompany={setCompany} setAsides={setAsides} setSetAsides={setSetAsides} />}
+          {step === 4 && <Step4 selected={states}   setSelected={setStates} />}
         </div>
 
         {error && (

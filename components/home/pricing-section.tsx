@@ -21,7 +21,7 @@ type BillingCycle = "monthly" | "yearly";
 const PLANS = [
   {
     id:           "professional",
-    name:         "All-in-One Professional",
+    name:         "Plexovia Intelligence",
     monthly:      299,
     yearly:       2490,
     perMonthYr:   208,
@@ -380,7 +380,7 @@ export default function PricingSection() {
                   id={`pricing-cta-${plan.id}`}
                   style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", width: "100%" }}
                 >
-                  Start Free 7-Day Trial
+                  Start Free Trial
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
 
@@ -393,7 +393,7 @@ export default function PricingSection() {
                     marginTop:  "0.625rem",
                   }}
                 >
-                  Credit card required for trial. No charge until Day 8. Cancel anytime.
+                  Cancel anytime. No commitment.
                 </p>
               </div>
             </motion.div>

@@ -17,8 +17,6 @@ const STATE_CONTRACT_DATA: Record<string, number> = {
   WY: 45
 };
 
-const ESSENTIAL_PLAN_STATES = ["CA", "NY", "TX", "FL", "VA", "MA", "MD"];
-
 // Coordinates for radar pings (rough SVG viewbox translation)
 const RADAR_NODES = [
   { id: "CA", x: 100, y: 300 },
@@ -34,15 +32,8 @@ export default function CoverageMap() {
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const mapRef = useRef<SVGSVGElement>(null);
-  const [scanActive, setScanActive] = useState(false);
-
   useEffect(() => {
-    // Subtle auto-scan ping every 4 seconds
-    const interval = setInterval(() => {
-      setScanActive(true);
-      setTimeout(() => setScanActive(false), 1500);
-    }, 4000);
-    return () => clearInterval(interval);
+    // Keep empty or remove if not needed
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -94,7 +85,7 @@ export default function CoverageMap() {
               </h3>
             </div>
             <p className="text-base leading-relaxed" style={{ color: "#D6D3CD" }}>
-              Pick up to <strong className="font-semibold" style={{ color: "#FFFFFF" }}>7 active states</strong> on the Essential tier. Need a massive footprint? Upgrade to Pro for unrestricted nationwide coverage.
+              Get automated coverage across <strong className="font-semibold" style={{ color: "#FFFFFF" }}>all 50 active states</strong>. Unrestricted nationwide pipeline generation with no limits on your footprint.
             </p>
           </div>
         </div>
@@ -110,13 +101,12 @@ export default function CoverageMap() {
             >
               {Object.keys(usaMapDimensions).map((stateKey) => {
                 const stateInfo = usaMapDimensions[stateKey as keyof typeof usaMapDimensions];
-                const isEssential = ESSENTIAL_PLAN_STATES.includes(stateKey);
                 const isHovered = hoveredState === stateKey;
                 
                 // Advanced Dark Theme Styling
-                const fillBase = isEssential ? "#1A1917" : "#0A0A0A";
+                const fillBase = "#1A1917"; // All states highlighted identically
                 const fillHover = "#C9A84C";
-                const strokeBase = "#2E2C2A";
+                const strokeBase = "#3A3835";
                 const strokeHover = "#E8C06A";
 
                 return (
@@ -128,22 +118,11 @@ export default function CoverageMap() {
                     onMouseLeave={() => setHoveredState(null)}
                     className="transition-all duration-300 ease-out cursor-pointer outline-none"
                     fill={isHovered ? fillHover : fillBase}
-                    stroke={isHovered ? strokeHover : (isEssential ? "#3A3835" : strokeBase)}
-                    strokeWidth={isHovered ? 2 : (isEssential ? 1.5 : 1)}
+                    stroke={isHovered ? strokeHover : strokeBase}
+                    strokeWidth={isHovered ? 2 : 1.5}
                   />
                 );
               })}
-
-              {/* Radar Pings on Major Nodes */}
-              {RADAR_NODES.map((node, i) => (
-                <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
-                  {scanActive && (
-                    <circle cx="0" cy="0" r="40" fill="none" stroke="#C9A84C" strokeWidth="1" className="animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-30" />
-                  )}
-                  <circle cx="0" cy="0" r="4" fill={hoveredState === node.id ? "#1A1917" : "#C9A84C"} />
-                  <circle cx="0" cy="0" r="1.5" fill={hoveredState === node.id ? "#C9A84C" : "#0A0A0A"} />
-                </g>
-              ))}
             </svg>
           </div>
         </div>

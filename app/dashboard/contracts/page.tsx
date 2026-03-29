@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import {
   FileText, MapPin, Shield, ExternalLink, Tag,
   ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
-  TrendingUp, AlertCircle,
+  AlertCircle,
 } from "lucide-react";
 
 
@@ -130,7 +130,7 @@ export default function ContractsPage() {
       )
     : contracts;
 
-  const isPro = plan === "pro";
+
 
   return (
     <>
@@ -156,7 +156,8 @@ export default function ContractsPage() {
               { href:"/dashboard", label:"Overview" },
               { href:"/dashboard/contracts", label:"Contracts", active:true },
               { href:"/dashboard/profile", label:"Profile" },
-              { href:"/dashboard/billing", label:"Billing" },
+              { href:"/dashboard/competitors", label:"Competitors" },
+              { href:"/dashboard/team", label:"Team" },
             ].map(n => (
               <Link key={n.href} href={n.href}
                 style={{ padding:"6px 12px", borderRadius:"8px", fontSize:"0.8125rem", textDecoration:"none",
@@ -214,20 +215,7 @@ export default function ContractsPage() {
             </button>
           </div>
 
-          {/* Pro upsell banner */}
-          {!isPro && plan !== null && (
-            <div style={{ background:"linear-gradient(135deg, #2A2318, #252320)", border:"1px solid #C9A84C20", borderRadius:"12px", padding:"0.875rem 1.25rem", display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1.25rem", flexWrap:"wrap", gap:"0.75rem" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-                <TrendingUp size={15} color="#C9A84C" />
-                <span style={{ fontSize:"0.8375rem", color:"#A8A29E" }}>
-                  <strong style={{ color:"#F7F5F0" }}>Pro plan</strong> — 4× daily scans, all 50 states, unlimited NAICS, competitor tracking
-                </span>
-              </div>
-              <Link href="/pricing" style={{ padding:"6px 14px", background:"#C9A84C", color:"#1C1917", borderRadius:"7px", fontWeight:700, fontSize:"0.78125rem", textDecoration:"none", whiteSpace:"nowrap" }}>
-                Upgrade →
-              </Link>
-            </div>
-          )}
+
 
           {/* Contract table */}
           <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", overflow:"hidden" }}>

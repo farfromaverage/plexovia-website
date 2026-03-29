@@ -47,11 +47,8 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
 }
 
 // ── Plan mapping from LemonSqueezy variant name → Plexovia plan name ─────────
-function getPlanFromVariantName(variantName: string): 'essential' | 'pro' | 'enterprise' {
-  const name = variantName.toLowerCase()
-  if (name.includes('pro')) return 'pro'
-  if (name.includes('enterprise')) return 'enterprise'
-  return 'essential'
+function getPlanFromVariantName(variantName?: string): 'active' {
+  return 'active'
 }
 
 // ── Main Handler ─────────────────────────────────────────────────────────────

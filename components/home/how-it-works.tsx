@@ -9,7 +9,7 @@ const steps = [
     number: "01",
     title:  "Tell us your NAICS codes and states",
     body:
-      "Set up takes under three minutes. Enter the NAICS codes your firm bids under and choose your states. Essential covers 7 states. Pro covers all 50. You never touch a search bar again.",
+      "Set up takes under three minutes. Enter the NAICS codes your firm bids under and choose your states. We cover all 50 states. You never touch a search bar again.",
   },
   {
     number: "02",
@@ -21,7 +21,7 @@ const steps = [
     number: "03",
     title:  "Scored matches land in your inbox. No login required.",
     body:
-      "Every matching contract gets a score from 0 to 100. Essential subscribers get one digest per morning. Pro subscribers get up to 4 alerts per day. You read, you decide, you bid.",
+      "Every matching contract gets a score from 0 to 100. You get one digest per morning. You read, you decide, you bid.",
   },
 ];
 

@@ -72,25 +72,7 @@ function CompetitorRow({ c, rank }: { c: Competitor; rank: number }) {
   );
 }
 
-/* ─── Plan gate ───────────────────────────────────────────────────── */
-function ProGate() {
-  return (
-    <div style={{ padding:"4rem 2rem", textAlign:"center", maxWidth:"420px", margin:"0 auto" }}>
-      <div style={{ width:56, height:56, borderRadius:14, background:"#C9A84C18", border:"1px solid #C9A84C30", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 1.5rem" }}>
-        <Lock size={24} color="#C9A84C" />
-      </div>
-      <h2 style={{ fontWeight:700, fontSize:"1.25rem", color:"#F7F5F0", margin:"0 0 0.5rem", letterSpacing:"-0.02em" }}>
-        Pro Feature
-      </h2>
-      <p style={{ fontSize:"0.9rem", color:"#6B6560", lineHeight:1.6, margin:"0 0 1.75rem" }}>
-        Competitor tracking shows every company winning contracts in your NAICS codes — their win rates, total award values, and latest wins.
-      </p>
-      <Link href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"10px 22px", background:"#C9A84C", color:"#1C1917", borderRadius:"9px", fontWeight:700, fontSize:"0.875rem", textDecoration:"none" }}>
-        <Zap size={14} /> Upgrade to Pro
-      </Link>
-    </div>
-  );
-}
+
 
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function CompetitorsPage() {
@@ -132,7 +114,6 @@ export default function CompetitorsPage() {
 
   useEffect(() => {
     if (plan === null) return;      // wait for plan to load
-    if (plan !== "pro" && plan !== "enterprise") { setLoading(false); return; }
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, days]);
@@ -157,9 +138,9 @@ export default function CompetitorsPage() {
             {[
               { href:"/dashboard", label:"Overview" },
               { href:"/dashboard/contracts", label:"Contracts" },
-              { href:"/dashboard/competitors", label:"Competitors", active:true },
               { href:"/dashboard/profile", label:"Profile" },
-              { href:"/dashboard/billing", label:"Billing" },
+              { href:"/dashboard/competitors", label:"Competitors", active:true },
+              { href:"/dashboard/team", label:"Team" },
             ].map(n => (
               <Link key={n.href} href={n.href}
                 style={{ padding:"6px 12px", borderRadius:"8px", fontSize:"0.8125rem", textDecoration:"none",
@@ -169,20 +150,11 @@ export default function CompetitorsPage() {
               </Link>
             ))}
           </nav>
-          {plan === "pro" && (
-            <span style={{ padding:"3px 9px", background:"#2A2318", border:"1px solid #C9A84C40", borderRadius:999, fontSize:"0.72rem", fontWeight:700, color:"#C9A84C", flexShrink:0 }}>
-              PRO
-            </span>
-          )}
         </header>
 
         <main className="cc-main">
 
-          {/* Not Pro → gate */}
-          {plan !== null && plan !== "pro" && plan !== "enterprise" ? (
-            <ProGate />
-          ) : (
-            <>
+          <>
               {/* Title + controls */}
               <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"1.5rem", flexWrap:"wrap", gap:"1rem" }}>
                 <div>
@@ -270,7 +242,6 @@ export default function CompetitorsPage() {
                 )}
               </div>
             </>
-          )}
         </main>
       </div>
     </>
