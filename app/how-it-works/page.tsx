@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
 
 export const metadata: Metadata = {
   title: "How Plexovia Works | Government Contract Monitoring",
@@ -70,24 +71,6 @@ const steps = [
   },
 ];
 
-const advancedFeatures = [
-  {
-    title: "Competitor tracking",
-    body: "Enter competitor vendor names. Plexovia shows you every federal award they have received in your NAICS codes over the past year. You see who is winning, how often, and at what dollar amounts.",
-  },
-  {
-    title: "Weekly bid calendar",
-    body: "Every Sunday morning you receive a calendar of contracts closing in the next 7 days. Sorted by score. You plan your week around what is actually worth pursuing instead of reacting to whatever appeared last.",
-  },
-  {
-    title: "Weekly performance digest",
-    body: "Every Monday you receive a summary of last week. How many contracts matched your profile. How many you viewed. How the numbers compare to the prior week. A simple signal whether your coverage is working.",
-  },
-  {
-    title: "AI match explanation",
-    body: "Every match includes a short AI-generated paragraph explaining exactly why it scored the way it did. Which NAICS code matched. Which keyword triggered a bonus. Which set-aside added weight. You spend time on the right ones.",
-  },
-];
 
 const faqs = [
   {
@@ -280,46 +263,8 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* ADVANCED FEATURES SPOTLIGHT */}
-      <section style={{ backgroundColor: "#1C1917", padding: "6rem 1.5rem" }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-          <div style={{ maxWidth: "560px", marginBottom: "3.5rem" }}>
-            <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.6875rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--accent)", display: "block", marginBottom: "0.75rem" }}>
-              Everything Included
-            </span>
-            <h2 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 700, fontSize: "clamp(1.75rem, 3vw, 2.5rem)", letterSpacing: "-0.04em", color: "#F5F3EE", lineHeight: 1.1, marginBottom: "0.875rem" }}>
-              Built for teams that are serious about winning.
-            </h2>
-            <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "1rem", color: "#6B6560", lineHeight: 1.7 }}>
-              The Plexovia Intelligence system unlocks advanced features designed for BD teams actively pursuing contracts in multiple states.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
-            {advancedFeatures.map((feat) => (
-              <div key={feat.title} style={{ backgroundColor: "#222120", border: "1px solid #2E2C2A", borderRadius: "var(--radius-md)", padding: "1.75rem" }}>
-                <h3 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: "#F5F3EE", marginBottom: "0.75rem" }}>
-                  {feat.title}
-                </h3>
-                <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.9375rem", color: "#6B6560", lineHeight: 1.7 }}>
-                  {feat.body}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: "3rem", paddingTop: "3rem", borderTop: "1px solid #2E2C2A", display: "flex", gap: "1rem", flexWrap: "wrap" as const, alignItems: "center" }}>
-            <Link href="/auth/signup" id="hiw-pro-cta" className="btn-gold"
-              style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", backgroundColor: "var(--accent)", color: "#1C1917" }}>
-              Start Free Trial
-              <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-            <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.875rem", color: "#4A4845" }}>
-              $299 per month. No long-term commitments. Cancel anytime.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* THE HIDDEN COST CALCULATOR */}
+      <MissedOpportunityCalc />
 
       {/* FAQ */}
       <section style={{ padding: "5rem 1.5rem" }}>
