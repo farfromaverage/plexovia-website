@@ -17,7 +17,10 @@ export default function AetherFlowHero() {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
+    // The fluid physics focal point
     const mouse = { x: null as number | null, y: null as number | null, radius: 250 };
+    // The actual hardware cursor
+    const targetMouse = { x: null as number | null, y: null as number | null };
 
     class Particle {
       x: number;
@@ -86,8 +89,13 @@ export default function AetherFlowHero() {
         let y = Math.random() * (ch - size * 2) + size;
         let directionX = Math.random() * 1.0 - 0.5; // Slightly faster
         let directionY = Math.random() * 1.0 - 0.5;
+        
+        // DEPTH FIELD: Tie base opacity to size.
+        // Small dots (far away) become fainter. Large dots (close) stay strong.
+        let baseAlpha = Math.max(0.15, (size - 1) / 2.5 * 0.85);
+        
         // Deep Charcoal for base particles against the white parchment
-        let color = 'rgba(28, 25, 23, 0.8)'; 
+        let color = `rgba(28, 25, 23, ${baseAlpha.toFixed(2)})`; 
         particles.push(new Particle(x, y, directionX, directionY, size, color));
       }
     }
@@ -114,6 +122,7 @@ export default function AetherFlowHero() {
       let opacityValue = 1;
       let cw = canvas.width;
       let ch = canvas.height;
+      const now = Date.now();
       
       for (let a = 0; a < particles.length; a++) {
         for (let b = a; b < particles.length; b++) {
@@ -130,6 +139,11 @@ export default function AetherFlowHero() {
             let dy_mouse = particles[a].y - (mouse.y || -9999);
             let distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
 
+            // BREATHING: Add an ambient sine wave to the base connection opacity
+            const phase = (now / 2000) + (a * 0.05); // Offset phase so it ripples
+            const breathingVariance = (Math.sin(phase) + 1) / 2; // 0 to 1
+            const baseConnOpacity = opacityValue * (0.12 + (breathingVariance * 0.15));
+
             // Set explicit line properties
             ctx.lineWidth = 1.5; 
             ctx.beginPath();
@@ -139,8 +153,8 @@ export default function AetherFlowHero() {
               ctx.strokeStyle = `rgba(201, 168, 76, ${opacityValue.toFixed(2)})`;
               ctx.lineWidth = 2.0; // Make them slightly thicker to pop out
             } else {
-              // Default lines are subtle grey/charcoal dots connecting
-              ctx.strokeStyle = `rgba(28, 25, 23, ${(opacityValue * 0.25).toFixed(2)})`;
+              // Default lines are subtle grey/charcoal dots connecting with breathing effect
+              ctx.strokeStyle = `rgba(28, 25, 23, ${baseConnOpacity.toFixed(2)})`;
             }
 
             ctx.moveTo(particles[a].x, particles[a].y);
@@ -155,6 +169,21 @@ export default function AetherFlowHero() {
       if (!canvas || !ctx) return;
       animationFrameId = requestAnimationFrame(animate);
       
+      // FLUID MOUSE LERP: Smoothly chase the target cursor
+      if (targetMouse.x !== null && targetMouse.y !== null) {
+        if (mouse.x === null || mouse.y === null) {
+          mouse.x = targetMouse.x;
+          mouse.y = targetMouse.y;
+        } else {
+          // The lower the multiplier, the "heavier" the fluid drag feels
+          mouse.x += (targetMouse.x - mouse.x) * 0.08;
+          mouse.y += (targetMouse.y - mouse.y) * 0.08;
+        }
+      } else {
+         mouse.x = null;
+         mouse.y = null;
+      }
+
       // Clear exactly the canvas dimensions
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -165,15 +194,13 @@ export default function AetherFlowHero() {
     };
 
     const handleMouseMove = (event: MouseEvent) => {
-      // Get exact coordinates relative to the canvas if positioned weirdly, 
-      // but clientX/Y works since the hero covers the top of the window
-      mouse.x = event.clientX;
-      mouse.y = event.clientY;
+      targetMouse.x = event.clientX;
+      targetMouse.y = event.clientY;
     };
 
     const handleMouseOut = () => {
-      mouse.x = null;
-      mouse.y = null;
+      targetMouse.x = null;
+      targetMouse.y = null;
     };
 
     window.addEventListener('mousemove', handleMouseMove);
