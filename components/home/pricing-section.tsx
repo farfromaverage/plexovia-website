@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Check, ArrowRight, Mail } from "lucide-react";
 import { fadeInUp, stagger } from "@/lib/motion";
+import HeroEmailMockup from "./hero-email-mockup";
 
 /* ─────────────────────────────────────────────────────────
    PricingSection — 2 tiers + Enterprise callout
@@ -398,6 +399,24 @@ export default function PricingSection() {
               </div>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* ── Mockup Display ── */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          style={{ marginBottom: "4rem" }}
+        >
+          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+            <h3 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 600, fontSize: "1.25rem", color: "var(--pub-text)" }}>
+              The Intelligence Delivered
+            </h3>
+            <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.9375rem", color: "var(--pub-muted)", marginTop: "0.25rem" }}>
+              See what lands in your inbox every morning at 6 AM.
+            </p>
+          </div>
+          <HeroEmailMockup layout="horizontal" />
         </motion.div>
 
         {/* ── Enterprise callout ── */}

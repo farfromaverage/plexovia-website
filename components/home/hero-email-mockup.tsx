@@ -62,7 +62,7 @@ function ProcessStep({ icon: Icon, text, active, completed, delay }: { icon: any
 }
 
 /* ── Main Component ────────────────────────────────────────────── */
-export default function HeroEmailMockup() {
+export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "vertical" | "horizontal" }) {
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Parallax float effect
@@ -98,7 +98,7 @@ export default function HeroEmailMockup() {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       style={{ y: floatY }}
-      className="relative w-full max-w-[580px] select-none mx-auto lg:mx-0 group z-10 perspective-[1200px]"
+      className={`relative w-full ${layout === "horizontal" ? "max-w-[1000px]" : "max-w-[580px]"} select-none mx-auto lg:mx-0 group z-10 perspective-[1200px]`}
       aria-hidden="true"
     >
       {/* Intense glow matching the dark premium theme */}
@@ -142,13 +142,17 @@ export default function HeroEmailMockup() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="relative z-20 p-6 w-full bg-[#141210] min-h-[460px] overflow-hidden">
+        <div className={`relative z-20 p-6 w-full bg-[#141210] min-h-[460px] overflow-hidden ${
+          layout === "horizontal" ? "flex flex-col md:flex-row gap-6 md:items-start" : ""
+        }`}>
           
           {/* Subtle noise texture */}
           <div className="absolute inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')" }} />
 
           {/* Scanning HUD */}
-          <div className="relative z-10 bg-[#1A1815]/80 backdrop-blur-md border border-[#2A2621] p-5 rounded-[16px] shadow-lg mb-6 flex flex-col gap-4">
+          <div className={`relative z-10 bg-[#1A1815]/80 backdrop-blur-md border border-[#2A2621] p-5 rounded-[16px] shadow-lg flex flex-col gap-4 ${
+            layout === "horizontal" ? "md:w-1/3 md:mb-0 mb-6 shrink-0" : "mb-6"
+          }`}>
             <h3 className="text-[10px] font-black text-[#6B6560] uppercase tracking-[0.15em] flex items-center gap-2">
               <Zap size={10} className="text-[#C9A84C]" /> System Operation
             </h3>
@@ -190,13 +194,14 @@ export default function HeroEmailMockup() {
           </div>
 
           {/* AI Matches */}
-          <AnimatePresence>
-            {phase >= 4 && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-4 relative z-20"
-              >
+          <div className={layout === "horizontal" ? "md:w-2/3 flex-1" : ""}>
+            <AnimatePresence>
+              {phase >= 4 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-4 relative z-20 w-full"
+                >
                 {mockMatches.map((match, i) => (
                   <motion.div
                     key={match.id}
@@ -265,8 +270,9 @@ export default function HeroEmailMockup() {
                 ))}
 
               </motion.div>
-            )}
-          </AnimatePresence>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </motion.div>
     </motion.div>
