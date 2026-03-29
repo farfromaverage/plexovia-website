@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import { fadeInUp, stagger } from "@/lib/motion";
-import HeroEmailMockup from "./hero-email-mockup";
 
 export default function Hero() {
   const trustPoints = [
@@ -38,11 +37,11 @@ export default function Hero() {
       />
 
       <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+        <div className="flex flex-col items-center text-center gap-12 lg:gap-16">
 
-          {/* ── Left: copy ── */}
+          {/* ── Center: copy ── */}
           <motion.div
-            className="flex-1 max-w-2xl lg:max-w-none w-full"
+            className="flex-1 max-w-3xl w-full flex flex-col items-center"
             initial="hidden"
             animate="visible"
             variants={stagger}
@@ -84,7 +83,7 @@ export default function Hero() {
               variants={fadeInUp}
               className="
                 text-lg sm:text-xl text-[#6B6560]
-                leading-relaxed max-w-xl mb-8
+                leading-relaxed max-w-2xl mb-8
               "
             >
               Plexovia replaces hours of manual searching with an automated advantage. We monitor SAM.gov and all 50 state portals, score opportunities based on your NAICS codes, and deliver the exact contracts you can actually win straight to your inbox.
@@ -119,7 +118,7 @@ export default function Hero() {
             {/* Trust signals */}
             <motion.ul
               variants={stagger}
-              className="flex flex-col sm:flex-row flex-wrap gap-x-5 gap-y-2"
+              className="flex flex-col sm:flex-row flex-wrap justify-center gap-x-5 gap-y-2"
               role="list"
             >
               {trustPoints.map((point) => (
@@ -137,16 +136,6 @@ export default function Hero() {
                 </motion.li>
               ))}
             </motion.ul>
-          </motion.div>
-
-          {/* ── Right: floating email mockup ── */}
-          <motion.div
-            className="flex-shrink-0 w-full max-w-md mx-auto lg:mx-0"
-            initial={{ opacity: 0, x: 32 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <HeroEmailMockup />
           </motion.div>
         </div>
       </div>

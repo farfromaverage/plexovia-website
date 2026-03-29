@@ -32,8 +32,25 @@ export default function CoverageMap() {
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const mapRef = useRef<SVGSVGElement>(null);
+  const [stateData, setStateData] = useState(STATE_CONTRACT_DATA);
+
   useEffect(() => {
-    // Keep empty or remove if not needed
+    // Live update simulation
+    const interval = setInterval(() => {
+      setStateData(prev => {
+        const keys = Object.keys(prev);
+        // pick 2 random states to increment
+        const r1 = keys[Math.floor(Math.random() * keys.length)];
+        const r2 = keys[Math.floor(Math.random() * keys.length)];
+        
+        return {
+          ...prev,
+          [r1]: prev[r1] + Math.floor(Math.random() * 3) + 1,
+          [r2]: prev[r2] + Math.floor(Math.random() * 2) + 1,
+        }
+      });
+    }, 2800);
+    return () => clearInterval(interval);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -153,7 +170,7 @@ export default function CoverageMap() {
               <div className="flex items-center gap-2">
                 <span className="flex h-1.5 w-1.5 rounded-full bg-[#16A34A] animate-pulse"></span>
                 <span className="text-[13px] leading-tight text-[#8A8580] tracking-wide" style={{ fontFamily: "'Geist Mono', monospace" }}>
-                  <strong className="font-semibold text-[#E8C06A]">{STATE_CONTRACT_DATA[hoveredState].toLocaleString()}</strong> contracts detected
+                  <strong className="font-semibold text-[#E8C06A]">{stateData[hoveredState].toLocaleString()}</strong> contracts detected
                 </span>
               </div>
             </div>

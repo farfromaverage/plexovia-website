@@ -29,6 +29,39 @@ const mockMatches = [
   },
 ];
 
+const matchTemplates = [
+  {
+    score: 95,
+    title: "Healthcare IT Modernization & Support",
+    agency: "Department of Veterans Affairs",
+    value: "Est. $3.0M - $6.5M",
+    dueDate: "June 15, 2026",
+    naics: "541512",
+    insight: "Strong SDVOSB match. 'Health IT' keyword detected 8 times in SOW.",
+    setAside: "SDVOSB",
+  },
+  {
+    score: 88,
+    title: "Logistics and Supply Chain Management System",
+    agency: "Defense Logistics Agency",
+    value: "Est. $5.0M - $10.0M",
+    dueDate: "July 22, 2026",
+    naics: "541519",
+    insight: "Past performance indicates high probability for DLA contracts. Enterprise systems alignment.",
+    setAside: "Small Business",
+  },
+  {
+    score: 93,
+    title: "Base Security Systems Upgrade",
+    agency: "Department of the Air Force",
+    value: "Est. $1.5M - $3.5M",
+    dueDate: "May 25, 2026",
+    naics: "541512",
+    insight: "Security clearance preferred. Perfect match for your active physical security capabilities.",
+    setAside: "8(a) Competitive",
+  }
+];
+
 /* ── HUD Process Step ────────────────────────────────────────────── */
 function ProcessStep({ icon: Icon, text, active, completed, delay }: { icon: any, text: string, active: boolean, completed: boolean, delay: number }) {
   return (
@@ -82,6 +115,8 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
   };
 
   const [phase, setPhase] = useState(0);
+  const [activeMatches, setActiveMatches] = useState(mockMatches);
+  const [scannedCount, setScannedCount] = useState(14832);
 
   useEffect(() => {
     const sequence = [
@@ -92,6 +127,22 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
     ];
     return () => sequence.forEach(clearTimeout);
   }, []);
+
+  useEffect(() => {
+    if (phase < 4) return;
+    
+    // Live feed simulation
+    const interval = setInterval(() => {
+      setActiveMatches(prev => {
+        const template = matchTemplates[Math.floor(Math.random() * matchTemplates.length)];
+        const newMatch = { ...template, id: `live-${Date.now()}` };
+        return [newMatch, ...prev].slice(0, 3);
+      });
+      setScannedCount(prev => prev + Math.floor(Math.random() * 5) + 1);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [phase]);
 
   return (
     <motion.div
@@ -183,10 +234,10 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
                  >
                    <span className="flex items-center gap-2 text-[#C9A84C] font-semibold text-[13px]">
                      <Sparkles size={14} />
-                     2 High-Value Matches Found
+                     {activeMatches.length} High-Value Matches Found
                    </span>
                    <span className="text-[11px] font-mono text-[#8A8580] bg-[#141210] px-2 py-1 rounded border border-[#2A2621]">
-                     {mockMatches.length} / 14,832 Scanned
+                     {scannedCount.toLocaleString()} Scanned
                    </span>
                  </motion.div>
               )}
@@ -202,7 +253,7 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
                   animate={{ opacity: 1 }}
                   className="space-y-4 relative z-20 w-full"
                 >
-                {mockMatches.map((match, i) => (
+                {activeMatches.map((match, i) => (
                   <motion.div
                     key={match.id}
                     layout

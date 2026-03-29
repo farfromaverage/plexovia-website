@@ -22,8 +22,14 @@ function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; su
   const ref   = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
+  const hasAnimated = useRef(false);
+
   useEffect(() => {
     if (!inView) return;
+    if (hasAnimated.current) {
+      setDisplay(value);
+      return;
+    }
     const duration   = 1800;
     const startTime  = performance.now();
     const easeOut    = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -32,7 +38,11 @@ function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; su
       const elapsed  = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       setDisplay(Math.round(easeOut(progress) * value));
-      if (progress < 1) requestAnimationFrame(tick);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        hasAnimated.current = true;
+      }
     }
 
     requestAnimationFrame(tick);
@@ -73,6 +83,17 @@ export default function StatsBar() {
       }
     }
     loadStats();
+
+    // Live increment effect
+    const interval = setInterval(() => {
+      setLiveStats(prev => prev.map(stat => 
+        stat.label.includes('scanned') 
+          ? { ...stat, value: stat.value + Math.floor(Math.random() * 4) + 1 } 
+          : stat
+      ));
+    }, 3800);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
