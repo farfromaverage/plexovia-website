@@ -79,19 +79,13 @@ export default function StatsBar() {
           { value: hrs,                                                       label: 'hours since last update',     suffix: 'h ago' },
         ]);
       } catch {
-        // Silently keep initialStats on error
+        // Silently keep current stats on error
       }
     }
     loadStats();
 
-    // Live increment effect
-    const interval = setInterval(() => {
-      setLiveStats(prev => prev.map(stat => 
-        stat.label.includes('scanned') 
-          ? { ...stat, value: stat.value + Math.floor(Math.random() * 4) + 1 } 
-          : stat
-      ));
-    }, 3800);
+    // Poll live from the backend every 15 seconds instead of faking the increments
+    const interval = setInterval(loadStats, 15000);
 
     return () => clearInterval(interval);
   }, []);

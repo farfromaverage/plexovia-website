@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usaMapDimensions } from "@/lib/usa-map-dimensions";
 import { MapPin, Crosshair, Radar } from "lucide-react";
 
-// Live proxy data (to be replaced with live Supabase stats when Engine is deployed)
-const STATE_CONTRACT_DATA: Record<string, number> = {
+// Fallback proxy data (used if live Supabase stats fail)
+const FALLBACK_STATE_DATA: Record<string, number> = {
   CA: 3140, NY: 2845, TX: 2600, FL: 2150, VA: 1850, PA: 1720, IL: 1650,
   OH: 1540, GA: 1480, NC: 1420, MI: 1390, NJ: 1320, WA: 1250, MA: 1110,
   MD: 1045, AZ: 980,  CO: 950,  IN: 910,  TN: 890,  MO: 850,  WI: 820,
@@ -32,24 +32,26 @@ export default function CoverageMap() {
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const mapRef = useRef<SVGSVGElement>(null);
-  const [stateData, setStateData] = useState(STATE_CONTRACT_DATA);
+  const [stateData, setStateData] = useState<Record<string, number>>(FALLBACK_STATE_DATA);
 
   useEffect(() => {
-    // Live update simulation
-    const interval = setInterval(() => {
-      setStateData(prev => {
-        const keys = Object.keys(prev);
-        // pick 2 random states to increment
-        const r1 = keys[Math.floor(Math.random() * keys.length)];
-        const r2 = keys[Math.floor(Math.random() * keys.length)];
-        
-        return {
-          ...prev,
-          [r1]: prev[r1] + Math.floor(Math.random() * 3) + 1,
-          [r2]: prev[r2] + Math.floor(Math.random() * 2) + 1,
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/engine-stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.contracts_by_state && Object.keys(data.contracts_by_state).length > 0) {
+            setStateData(data.contracts_by_state);
+          }
         }
-      });
-    }, 2800);
+      } catch (e) {
+        // keep fallback
+      }
+    }
+
+    fetchStats();
+    // Poll every 15 seconds to keep it truly live from engine
+    const interval = setInterval(fetchStats, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -170,7 +172,7 @@ export default function CoverageMap() {
               <div className="flex items-center gap-2">
                 <span className="flex h-1.5 w-1.5 rounded-full bg-[#16A34A] animate-pulse"></span>
                 <span className="text-[13px] leading-tight text-[#8A8580] tracking-wide" style={{ fontFamily: "'Geist Mono', monospace" }}>
-                  <strong className="font-semibold text-[#E8C06A]">{stateData[hoveredState].toLocaleString()}</strong> contracts detected
+                  <strong className="font-semibold text-[#E8C06A]">{stateData[hoveredState]?.toLocaleString() || "0"}</strong> contracts detected
                 </span>
               </div>
             </div>

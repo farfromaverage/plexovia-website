@@ -11,8 +11,8 @@
 
 import { NextResponse } from 'next/server'
 
-// Cache this route on the CDN for 5 minutes — stats don't change per-second
-export const revalidate = 300
+// Cache this route on the CDN for 15 seconds for near real-time updates without killing the DB
+export const revalidate = 15
 
 export async function GET() {
   const engineUrl = process.env.RAILWAY_API_URL
@@ -39,6 +39,8 @@ export async function GET() {
       states_covered: 50,
       last_run_at: null,
       portals_monitored: 51,
+      contracts_by_state: {},
+      recent_contracts: [],
       _fallback: true,
     })
   }

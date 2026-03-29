@@ -115,8 +115,8 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
   };
 
   const [phase, setPhase] = useState(0);
-  const [activeMatches, setActiveMatches] = useState(mockMatches);
-  const [scannedCount, setScannedCount] = useState(14832);
+  const [activeMatches, setActiveMatches] = useState<any[]>([]);
+  const [scannedCount, setScannedCount] = useState(0);
 
   useEffect(() => {
     const sequence = [
@@ -129,20 +129,45 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
   }, []);
 
   useEffect(() => {
-    if (phase < 4) return;
-    
-    // Live feed simulation
-    const interval = setInterval(() => {
-      setActiveMatches(prev => {
-        const template = matchTemplates[Math.floor(Math.random() * matchTemplates.length)];
-        const newMatch = { ...template, id: `live-${Date.now()}` };
-        return [newMatch, ...prev].slice(0, 3);
-      });
-      setScannedCount(prev => prev + Math.floor(Math.random() * 5) + 1);
-    }, 4500);
+    async function fetchMatches() {
+      try {
+        const res = await fetch('/api/engine-stats');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        
+        if (data.total_contracts) {
+          setScannedCount(data.total_contracts);
+        }
 
+        if (data.recent_contracts && data.recent_contracts.length > 0) {
+          const fresh = data.recent_contracts.slice(0, 3).map((row: any, i: number) => ({
+            id: `real-${i}`,
+            score: 99 - i, // Visual indicator of high match
+            title: row.title || "Federal Opportunity",
+            agency: row.agency || "Government Agency",
+            value: row.value_max ? `Est. Up to $${Math.max(1, Math.round(row.value_max / 1000000))}M` : "Value: Undisclosed",
+            dueDate: row.deadline ? new Date(row.deadline).toLocaleDateString() : "TBD",
+            naics: row.naics_code || "Multiple",
+            insight: row.set_aside 
+              ? `Priority match for ${row.set_aside}. NAICS aligned.` 
+              : "Algorithm signals high relevance based on core capability matrix.",
+            setAside: row.set_aside || "Unrestricted",
+          }));
+          setActiveMatches(fresh);
+        } else {
+          setActiveMatches(mockMatches);
+        }
+      } catch (e) {
+        setActiveMatches(mockMatches);
+        setScannedCount(15847);
+      }
+    }
+
+    fetchMatches();
+    // Refresh to see if new contracts land
+    const interval = setInterval(fetchMatches, 15000);
     return () => clearInterval(interval);
-  }, [phase]);
+  }, []);
 
   return (
     <motion.div
