@@ -21,7 +21,11 @@ export default function AetherFlowHero() {
     // ── Mobile detection (once, at mount) ──────────────────────────────
     const isMobile = window.innerWidth < 768;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x to avoid GPU overload
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x for sharp rendering
+
+    // Logical (CSS pixel) dimensions — updated on resize, used for all particle math
+    let logicalW = 0;
+    let logicalH = 0;
 
     // The fluid physics focal point
     const mouse = { x: null as number | null, y: null as number | null, radius: isMobile ? 150 : 250 };
@@ -53,7 +57,7 @@ export default function AetherFlowHero() {
         ctx.fill();
       }
 
-      update(cw: number, ch: number) {
+      update(cw: number, ch: number, dt: number) {
         if (!canvas) return;
         if (this.x > cw || this.x < 0) {
           this.directionX = -this.directionX;
@@ -76,8 +80,9 @@ export default function AetherFlowHero() {
           }
         }
 
-        this.x += this.directionX;
-        this.y += this.directionY;
+        // Delta-time movement: consistent speed regardless of frame rate
+        this.x += this.directionX * dt;
+        this.y += this.directionY * dt;
         this.draw();
       }
     }
@@ -85,9 +90,8 @@ export default function AetherFlowHero() {
     function init() {
       if (!canvas) return;
       particles = [];
-      // Use CSS dimensions (not canvas.width which includes DPR scaling)
-      const cw = canvas.clientWidth;
-      const ch = canvas.clientHeight;
+      const cw = logicalW;
+      const ch = logicalH;
 
       // Mobile: fewer particles to preserve battery + CPU headroom
       // Desktop: ~230 at 1920×1080, Mobile: ~20 at 375×800
@@ -102,10 +106,9 @@ export default function AetherFlowHero() {
         let size = Math.random() * 2.5 + 1;
         let x = Math.random() * (cw - size * 2) + size;
         let y = Math.random() * (ch - size * 2) + size;
-        // Mobile: slightly slower particles for smoother feel on lower FPS
-        const speedMultiplier = isMobile ? 0.6 : 1.0;
-        let directionX = (Math.random() * 1.0 - 0.5) * speedMultiplier;
-        let directionY = (Math.random() * 1.0 - 0.5) * speedMultiplier;
+        // Same speed on all devices — delta-time in update() handles consistency
+        let directionX = Math.random() * 1.0 - 0.5;
+        let directionY = Math.random() * 1.0 - 0.5;
 
         // DEPTH FIELD: Tie base opacity to size
         let baseAlpha = Math.max(0.15, (size - 1) / 2.5 * 0.85);
@@ -114,24 +117,36 @@ export default function AetherFlowHero() {
       }
     }
 
+    // Track last known width to prevent scroll-triggered re-init on mobile.
+    // Mobile browsers fire 'resize' when the address bar hides/shows (height change).
+    // Re-init on height change = particles teleport to random positions = broken.
+    let lastCanvasWidth = 0;
+
     const resizeCanvas = () => {
       if (!canvas) return;
       const parent = canvas.parentElement;
       const w = parent ? parent.clientWidth : window.innerWidth;
       const h = parent ? parent.clientHeight : window.innerHeight;
 
-      // Scale canvas buffer for sharp rendering on high-DPI screens
+      const widthChanged = Math.abs(w - lastCanvasWidth) > 1;
+
+      // Store logical dimensions for particle math
+      logicalW = w;
+      logicalH = h;
+
+      // Scale canvas buffer for crisp rendering on high-DPI screens.
+      // DO NOT set inline style.width/height — Tailwind's w-full h-full
+      // handles CSS display sizing. Inline styles conflict on iOS/Android.
       canvas.width = w * dpr;
       canvas.height = h * dpr;
 
-      // Keep CSS size at layout dimensions
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-
-      // Scale context so drawing coords match CSS pixels
+      // Scale context so drawing coords match CSS (logical) pixels
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      init();
+      if (widthChanged || particles.length === 0) {
+        lastCanvasWidth = w;
+        init();
+      }
     };
 
     // Defer resize slightly to ensure container dims are ready
@@ -141,8 +156,8 @@ export default function AetherFlowHero() {
     const connect = () => {
       if (!canvas || !ctx) return;
       let opacityValue = 1;
-      const cw = canvas.clientWidth;
-      const ch = canvas.clientHeight;
+      const cw = logicalW;
+      const ch = logicalH;
       const now = Date.now();
 
       // Mobile: shorter connection distance (smaller screen = tighter web)
@@ -193,17 +208,20 @@ export default function AetherFlowHero() {
       }
     };
 
-    // ── Frame throttling for mobile (target ~30fps instead of 60fps) ──
+    // ── Delta-time animation: consistent speed on all devices ──
     let lastFrameTime = 0;
-    const targetInterval = isMobile ? 33 : 0; // 33ms ≈ 30fps on mobile, 0 = uncapped on desktop
 
     const animate = (timestamp: number = 0) => {
       if (!canvas || !ctx) return;
       animationFrameId = requestAnimationFrame(animate);
 
-      // Skip frame if we're ahead of schedule (mobile throttle)
-      if (targetInterval > 0 && timestamp - lastFrameTime < targetInterval) return;
+      // Delta time in "frame units" (1.0 = 16.67ms = 60fps baseline)
+      // This ensures particles move at the same visual speed whether
+      // the device runs at 30fps, 60fps, or 120fps.
+      const rawDt = lastFrameTime === 0 ? 16.67 : timestamp - lastFrameTime;
       lastFrameTime = timestamp;
+      // Clamp dt to prevent huge jumps after tab switches or scroll pauses
+      const dt = Math.min(rawDt, 50) / 16.67;
 
       // FLUID MOUSE LERP: Smoothly chase the target cursor
       if (!isTouchDevice && targetMouse.x !== null && targetMouse.y !== null) {
@@ -219,11 +237,11 @@ export default function AetherFlowHero() {
         mouse.y = null;
       }
 
-      // Clear using CSS dimensions (DPR handled by transform)
-      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      // Clear the canvas (logical dimensions — DPR handled by transform)
+      ctx.clearRect(0, 0, logicalW, logicalH);
 
       for (let i = 0; i < particles.length; i++) {
-        particles[i].update(canvas.clientWidth, canvas.clientHeight);
+        particles[i].update(logicalW, logicalH, dt);
       }
       connect();
     };
