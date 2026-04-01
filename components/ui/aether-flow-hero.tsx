@@ -17,8 +17,14 @@ export default function AetherFlowHero() {
 
     let animationFrameId: number;
     let particles: Particle[] = [];
+
+    // ── Mobile detection (once, at mount) ──────────────────────────────
+    const isMobile = window.innerWidth < 768;
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x to avoid GPU overload
+
     // The fluid physics focal point
-    const mouse = { x: null as number | null, y: null as number | null, radius: 250 };
+    const mouse = { x: null as number | null, y: null as number | null, radius: isMobile ? 150 : 250 };
     // The actual hardware cursor
     const targetMouse = { x: null as number | null, y: null as number | null };
 
@@ -56,8 +62,8 @@ export default function AetherFlowHero() {
           this.directionY = -this.directionY;
         }
 
-        // Mouse collision detection
-        if (mouse.x !== null && mouse.y !== null) {
+        // Mouse collision detection (skip on touch-only devices — no cursor to react to)
+        if (!isTouchDevice && mouse.x !== null && mouse.y !== null) {
           let dx = mouse.x - this.x;
           let dy = mouse.y - this.y;
           let distance = Math.sqrt(dx * dx + dy * dy);
@@ -79,23 +85,31 @@ export default function AetherFlowHero() {
     function init() {
       if (!canvas) return;
       particles = [];
-      let cw = canvas.width;
-      let ch = canvas.height;
-      let numberOfParticles = (cw * ch) / 9000;
-      
+      // Use CSS dimensions (not canvas.width which includes DPR scaling)
+      const cw = canvas.clientWidth;
+      const ch = canvas.clientHeight;
+
+      // Mobile: fewer particles to preserve battery + CPU headroom
+      // Desktop: ~230 at 1920×1080, Mobile: ~20 at 375×800
+      const densityDivisor = isMobile ? 15000 : 9000;
+      let numberOfParticles = (cw * ch) / densityDivisor;
+
+      // Hard cap: mobile 30, desktop 200
+      const maxParticles = isMobile ? 30 : 200;
+      numberOfParticles = Math.min(numberOfParticles, maxParticles);
+
       for (let i = 0; i < numberOfParticles; i++) {
-        let size = Math.random() * 2.5 + 1; // Slightly larger for better visibility
+        let size = Math.random() * 2.5 + 1;
         let x = Math.random() * (cw - size * 2) + size;
         let y = Math.random() * (ch - size * 2) + size;
-        let directionX = Math.random() * 1.0 - 0.5; // Slightly faster
-        let directionY = Math.random() * 1.0 - 0.5;
-        
-        // DEPTH FIELD: Tie base opacity to size.
-        // Small dots (far away) become fainter. Large dots (close) stay strong.
+        // Mobile: slightly slower particles for smoother feel on lower FPS
+        const speedMultiplier = isMobile ? 0.6 : 1.0;
+        let directionX = (Math.random() * 1.0 - 0.5) * speedMultiplier;
+        let directionY = (Math.random() * 1.0 - 0.5) * speedMultiplier;
+
+        // DEPTH FIELD: Tie base opacity to size
         let baseAlpha = Math.max(0.15, (size - 1) / 2.5 * 0.85);
-        
-        // Deep Charcoal for base particles against the white parchment
-        let color = `rgba(28, 25, 23, ${baseAlpha.toFixed(2)})`; 
+        let color = `rgba(28, 25, 23, ${baseAlpha.toFixed(2)})`;
         particles.push(new Particle(x, y, directionX, directionY, size, color));
       }
     }
@@ -103,57 +117,71 @@ export default function AetherFlowHero() {
     const resizeCanvas = () => {
       if (!canvas) return;
       const parent = canvas.parentElement;
-      if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-      } else {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      }
+      const w = parent ? parent.clientWidth : window.innerWidth;
+      const h = parent ? parent.clientHeight : window.innerHeight;
+
+      // Scale canvas buffer for sharp rendering on high-DPI screens
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+
+      // Keep CSS size at layout dimensions
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+
+      // Scale context so drawing coords match CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
       init();
     };
-    
-    // Defer resize setup slightly to ensure container dims are ready
+
+    // Defer resize slightly to ensure container dims are ready
     setTimeout(resizeCanvas, 50);
     window.addEventListener('resize', resizeCanvas);
 
     const connect = () => {
       if (!canvas || !ctx) return;
       let opacityValue = 1;
-      let cw = canvas.width;
-      let ch = canvas.height;
+      const cw = canvas.clientWidth;
+      const ch = canvas.clientHeight;
       const now = Date.now();
-      
+
+      // Mobile: shorter connection distance (smaller screen = tighter web)
+      const connectionArea = isMobile
+        ? (cw / 5) * (ch / 5)
+        : (cw / 7) * (ch / 7);
+
       for (let a = 0; a < particles.length; a++) {
         for (let b = a; b < particles.length; b++) {
           let dx = particles[a].x - particles[b].x;
           let dy = particles[a].y - particles[b].y;
           let distance = dx * dx + dy * dy;
 
-          if (distance < (cw / 7) * (ch / 7)) {
+          if (distance < connectionArea) {
             opacityValue = 1 - distance / 22000;
             if (opacityValue < 0) opacityValue = 0;
             if (opacityValue > 1) opacityValue = 1;
 
-            let dx_mouse = particles[a].x - (mouse.x || -9999);
-            let dy_mouse = particles[a].y - (mouse.y || -9999);
-            let distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
-
-            // BREATHING: Add an ambient sine wave to the base connection opacity
-            const phase = (now / 2000) + (a * 0.05); // Offset phase so it ripples
-            const breathingVariance = (Math.sin(phase) + 1) / 2; // 0 to 1
+            // BREATHING: ambient sine wave
+            const phase = (now / 2000) + (a * 0.05);
+            const breathingVariance = (Math.sin(phase) + 1) / 2;
             const baseConnOpacity = opacityValue * (0.12 + (breathingVariance * 0.15));
 
-            // Set explicit line properties
-            ctx.lineWidth = 1.5; 
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            
-            if (mouse.x !== null && mouse.y !== null && distance_mouse < mouse.radius) {
-              // Interactive lines turn Bright Gold when cursor is near
-              ctx.strokeStyle = `rgba(201, 168, 76, ${opacityValue.toFixed(2)})`;
-              ctx.lineWidth = 2.0; // Make them slightly thicker to pop out
+
+            if (!isTouchDevice && mouse.x !== null && mouse.y !== null) {
+              let dx_mouse = particles[a].x - mouse.x;
+              let dy_mouse = particles[a].y - mouse.y;
+              let distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
+
+              if (distance_mouse < mouse.radius) {
+                // Interactive lines turn Bright Gold when cursor is near
+                ctx.strokeStyle = `rgba(201, 168, 76, ${opacityValue.toFixed(2)})`;
+                ctx.lineWidth = 2.0;
+              } else {
+                ctx.strokeStyle = `rgba(28, 25, 23, ${baseConnOpacity.toFixed(2)})`;
+              }
             } else {
-              // Default lines are subtle grey/charcoal dots connecting with breathing effect
               ctx.strokeStyle = `rgba(28, 25, 23, ${baseConnOpacity.toFixed(2)})`;
             }
 
@@ -165,34 +193,42 @@ export default function AetherFlowHero() {
       }
     };
 
-    const animate = () => {
+    // ── Frame throttling for mobile (target ~30fps instead of 60fps) ──
+    let lastFrameTime = 0;
+    const targetInterval = isMobile ? 33 : 0; // 33ms ≈ 30fps on mobile, 0 = uncapped on desktop
+
+    const animate = (timestamp: number = 0) => {
       if (!canvas || !ctx) return;
       animationFrameId = requestAnimationFrame(animate);
-      
+
+      // Skip frame if we're ahead of schedule (mobile throttle)
+      if (targetInterval > 0 && timestamp - lastFrameTime < targetInterval) return;
+      lastFrameTime = timestamp;
+
       // FLUID MOUSE LERP: Smoothly chase the target cursor
-      if (targetMouse.x !== null && targetMouse.y !== null) {
+      if (!isTouchDevice && targetMouse.x !== null && targetMouse.y !== null) {
         if (mouse.x === null || mouse.y === null) {
           mouse.x = targetMouse.x;
           mouse.y = targetMouse.y;
         } else {
-          // The lower the multiplier, the "heavier" the fluid drag feels
           mouse.x += (targetMouse.x - mouse.x) * 0.08;
           mouse.y += (targetMouse.y - mouse.y) * 0.08;
         }
       } else {
-         mouse.x = null;
-         mouse.y = null;
+        mouse.x = null;
+        mouse.y = null;
       }
 
-      // Clear exactly the canvas dimensions
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Clear using CSS dimensions (DPR handled by transform)
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
       for (let i = 0; i < particles.length; i++) {
-        particles[i].update(canvas.width, canvas.height);
+        particles[i].update(canvas.clientWidth, canvas.clientHeight);
       }
       connect();
     };
 
+    // Only attach mouse listeners on non-touch devices
     const handleMouseMove = (event: MouseEvent) => {
       targetMouse.x = event.clientX;
       targetMouse.y = event.clientY;
@@ -203,15 +239,19 @@ export default function AetherFlowHero() {
       targetMouse.y = null;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseout', handleMouseOut);
+    if (!isTouchDevice) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseout', handleMouseOut);
+    }
 
     animate();
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseout', handleMouseOut);
+      if (!isTouchDevice) {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseout', handleMouseOut);
+      }
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -236,12 +276,12 @@ export default function AetherFlowHero() {
   ];
 
   return (
-    <div className="relative min-h-[90vh] w-full flex flex-col items-center justify-center overflow-hidden px-5 sm:px-8 lg:px-12" aria-label="Hero">
-      
+    <div className="relative min-h-[90svh] w-full flex flex-col items-center justify-center overflow-hidden px-5 sm:px-8 lg:px-12" aria-label="Hero">
+
       {/* PERFECTLY ISOLATED BACKGROUND STACK */}
-      {/* 
-        We use z-0 to establish a solid ground layer stacking context. 
-        This prevents anything from falling 'behind' the body tag's white background. 
+      {/*
+        We use z-0 to establish a solid ground layer stacking context.
+        This prevents anything from falling 'behind' the body tag's white background.
       */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         {/* Layer 1: Parchment Gradient */}
@@ -252,11 +292,12 @@ export default function AetherFlowHero() {
         />
         {/* Layer 2: Texture Grain */}
         <div className="grain absolute inset-0 w-full h-full mix-blend-multiply opacity-50" aria-hidden="true" />
-        
+
         {/* Layer 3: Interactive Canvas exactly filling the container */}
-        <canvas 
-          ref={canvasRef} 
-          className="absolute inset-0 w-full h-full block" 
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full block"
+          style={{ willChange: 'contents' }}
         />
       </div>
 
@@ -308,7 +349,7 @@ export default function AetherFlowHero() {
                 leading-relaxed max-w-2xl mb-10
               "
             >
-              Plexovia’s AI monitors all 50 state portals and SAM.gov simultaneously. We filter the noise, score solicitations against your exact capabilities, and deliver only the highest-value opportunities you have an unfair advantage to win.
+              Plexovia's AI monitors all 50 state portals and SAM.gov simultaneously. We filter the noise, score solicitations against your exact capabilities, and deliver only the highest-value opportunities you have an unfair advantage to win.
             </motion.p>
 
             {/* CTA group */}
@@ -325,7 +366,7 @@ export default function AetherFlowHero() {
                 Start Free Trial
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              
+
               <Link
                 href="/pricing"
                 className="
