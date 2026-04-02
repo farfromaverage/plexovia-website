@@ -157,8 +157,12 @@ export default function CoverageMap() {
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
             className="fixed pointer-events-none z-[100] px-5 py-4 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center gap-4 border border-[#3A3835] bg-[#111110]/95"
             style={{
-              left: mousePos.x + 24,
-              top: mousePos.y + 24,
+              // Flip horizontally when cursor is in the right 60% of viewport
+              // Flip vertically when cursor is in the bottom 30% of viewport
+              left:      mousePos.x < window.innerWidth * 0.6  ? mousePos.x + 16 : undefined,
+              right:     mousePos.x >= window.innerWidth * 0.6 ? window.innerWidth - mousePos.x + 16 : undefined,
+              top:       mousePos.y < window.innerHeight * 0.7  ? mousePos.y + 16 : undefined,
+              bottom:    mousePos.y >= window.innerHeight * 0.7 ? window.innerHeight - mousePos.y + 16 : undefined,
             }}
           >
             <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-[#C9A84C]/30 bg-[#C9A84C]/10">
