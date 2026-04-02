@@ -78,7 +78,7 @@ export default function CoverageMap() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C9A84C]"></span>
               </span>
               <span className="text-[12px] uppercase tracking-widest text-[#E8C06A] font-semibold" style={{ fontFamily: "'Geist Mono', monospace" }}>
-                Live SAM.gov Telemetry
+                Nationwide Coverage
               </span>
             </div>
             
