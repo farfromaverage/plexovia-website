@@ -66,8 +66,8 @@ export default function AetherFlowHero() {
           this.directionY = -this.directionY;
         }
 
-        // Mouse collision detection (skip on touch-only devices — no cursor to react to)
-        if (!isTouchDevice && mouse.x !== null && mouse.y !== null) {
+        // Interaction: particles repel from cursor/finger
+        if (mouse.x !== null && mouse.y !== null) {
           let dx = mouse.x - this.x;
           let dy = mouse.y - this.y;
           let distance = Math.sqrt(dx * dx + dy * dy);
@@ -184,7 +184,7 @@ export default function AetherFlowHero() {
             ctx.lineWidth = 1.5;
             ctx.beginPath();
 
-            if (!isTouchDevice && mouse.x !== null && mouse.y !== null) {
+            if (mouse.x !== null && mouse.y !== null) {
               let dx_mouse = particles[a].x - mouse.x;
               let dy_mouse = particles[a].y - mouse.y;
               let distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
@@ -223,14 +223,16 @@ export default function AetherFlowHero() {
       // Clamp dt to prevent huge jumps after tab switches or scroll pauses
       const dt = Math.min(rawDt, 50) / 16.67;
 
-      // FLUID MOUSE LERP: Smoothly chase the target cursor
-      if (!isTouchDevice && targetMouse.x !== null && targetMouse.y !== null) {
+      // FLUID LERP: Smoothly chase the cursor or finger
+      if (targetMouse.x !== null && targetMouse.y !== null) {
         if (mouse.x === null || mouse.y === null) {
           mouse.x = targetMouse.x;
           mouse.y = targetMouse.y;
         } else {
-          mouse.x += (targetMouse.x - mouse.x) * 0.08;
-          mouse.y += (targetMouse.y - mouse.y) * 0.08;
+          // Touch gets faster lerp (0.15) for responsive feel, mouse gets smooth drag (0.08)
+          const lerpSpeed = isTouchDevice ? 0.15 : 0.08;
+          mouse.x += (targetMouse.x - mouse.x) * lerpSpeed;
+          mouse.y += (targetMouse.y - mouse.y) * lerpSpeed;
         }
       } else {
         mouse.x = null;
@@ -246,7 +248,7 @@ export default function AetherFlowHero() {
       connect();
     };
 
-    // Only attach mouse listeners on non-touch devices
+    // Mouse listeners
     const handleMouseMove = (event: MouseEvent) => {
       targetMouse.x = event.clientX;
       targetMouse.y = event.clientY;
@@ -257,19 +259,44 @@ export default function AetherFlowHero() {
       targetMouse.y = null;
     };
 
-    if (!isTouchDevice) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseout', handleMouseOut);
-    }
+    // Touch listeners — map finger position to same targetMouse coords
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (touch) {
+        targetMouse.x = touch.clientX;
+        targetMouse.y = touch.clientY;
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (touch) {
+        targetMouse.x = touch.clientX;
+        targetMouse.y = touch.clientY;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      targetMouse.x = null;
+      targetMouse.y = null;
+    };
+
+    // Attach all interaction listeners
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseout', handleMouseOut);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
+    canvas.addEventListener('touchend', handleTouchEnd);
 
     animate();
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      if (!isTouchDevice) {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseout', handleMouseOut);
-      }
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseout', handleMouseOut);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -314,8 +341,8 @@ export default function AetherFlowHero() {
         {/* Layer 3: Interactive Canvas exactly filling the container */}
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full block"
-          style={{ willChange: 'contents' }}
+          className="absolute inset-0 w-full h-full block pointer-events-auto"
+          style={{ willChange: 'contents', touchAction: 'pan-y' }}
         />
       </div>
 
