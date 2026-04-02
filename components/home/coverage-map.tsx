@@ -86,12 +86,12 @@ export default function CoverageMap() {
               className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium"
               style={{ color: "#F5F3EE" }}
             >
-              Monitor <br />
-              <span style={{ color: "var(--accent)" }}>All 50 States.</span><br />
-              Zero Blind Spots.
+              Every Contract.<br />
+              <span style={{ color: "var(--accent)" }}>Every State.</span><br />
+              Every Day.
             </h2>
             <p className="text-lg leading-relaxed mt-4" style={{ color: "#8A8580" }}>
-              Plexovia deeply integrates with standalone state procurement portals and <strong className="font-medium text-white" style={{ color: "#FFFFFF" }}>SAM.gov</strong> to build a comprehensive, high-velocity opportunity pipeline.
+              Contracts are posted across hundreds of portals daily. Most get missed simply because no one was watching. Plexovia watches all of them, automatically, every night.
             </p>
           </div>
 
@@ -100,11 +100,11 @@ export default function CoverageMap() {
             <div className="flex items-center gap-3">
               <Radar className="w-5 h-5 text-[#C9A84C]" />
               <h3 className="text-sm font-semibold uppercase tracking-widest" style={{ color: "#C9A84C", fontFamily: "'Geist Mono', monospace" }}>
-                Coverage Allocation
+                Full National Reach
               </h3>
             </div>
             <p className="text-base leading-relaxed" style={{ color: "#D6D3CD" }}>
-              Get automated coverage across <strong className="font-semibold" style={{ color: "#FFFFFF" }}>all 50 active states</strong>. Unrestricted nationwide pipeline generation with no limits on your footprint.
+              Every active state portal. Federal contracts from SAM.gov. County systems. DC, Puerto Rico, and Guam. <strong className="font-semibold" style={{ color: "#FFFFFF" }}>Same subscription, full access, no caps.</strong> You will not lose a bid because a portal you did not know about posted it first.
             </p>
           </div>
         </div>
