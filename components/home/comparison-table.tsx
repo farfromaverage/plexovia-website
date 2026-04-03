@@ -45,12 +45,12 @@ const ROWS: Row[] = [
   },
   {
     feature:     "AI match score (0–100) and reasoning",
-    plexovia:    { type: "check" },
+    plexovia:    { type: "text", value: "Score 0–100 + plain-English reason per contract", highlight: true },
     alternative: { type: "minus" },
   },
   {
     feature:     "Email delivery. No login required.",
-    plexovia:    { type: "check" },
+    plexovia:    { type: "text", value: "Full digest in your inbox by 6 AM, no login ever", highlight: true },
     alternative: { type: "minus" },
   },
   {
@@ -60,8 +60,13 @@ const ROWS: Row[] = [
   },
   {
     feature:     "Annual contract required",
-    plexovia:    { type: "text", value: "Month-to-month, cancel anytime", highlight: true },
+    plexovia:    { type: "text", value: "Monthly billing, cancel anytime", highlight: true },
     alternative: { type: "text", value: "Yes, most require 1 year" },
+  },
+  {
+    feature:     "Starting price",
+    plexovia:    { type: "text", value: "$299 per month, everything included", highlight: true },
+    alternative: { type: "text", value: "$500 to $1,200+ per month" },
   },
   {
     feature:     "Free trial",
@@ -177,7 +182,7 @@ export default function ComparisonTable() {
               maxWidth:      "520px",
             }}
           >
-            What Plexovia gives you that nothing else does.
+            Why contractors switch to Plexovia.
           </h2>
           <p
             style={{
@@ -187,7 +192,7 @@ export default function ComparisonTable() {
               lineHeight: 1.6,
             }}
           >
-            No annual contract. No confusing tiers. No login required to use the product.
+            No annual contract. No confusing tiers. No login required to use the product. See exactly what you get versus manually doing it yourself.
           </p>
         </motion.div>
 
@@ -256,7 +261,7 @@ export default function ComparisonTable() {
                     borderBottom:"1px solid var(--pub-border)",
                   }}
                 >
-                  Typical Alternative
+                  Without Plexovia
                 </th>
               </tr>
             </thead>
@@ -316,25 +321,7 @@ export default function ComparisonTable() {
           </table>
         </motion.div>
 
-        {/* Source note */}
-        <p
-          style={{
-            fontFamily: "var(--font-inter), sans-serif",
-            fontSize:   "0.75rem",
-            color:      "var(--pub-faint)",
-            marginTop:  "0.875rem",
-            textAlign:  "right",
-          }}
-        >
-          Pricing based on publicly listed rates as of March 2026. Full comparison at{" "}
-          <a
-            href="/pricing"
-            style={{ color: "var(--pub-muted)", textDecoration: "underline", textUnderlineOffset: "2px" }}
-          >
-            /pricing
-          </a>
-          .
-        </p>
+
 
       </div>
     </section>

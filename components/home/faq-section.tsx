@@ -16,6 +16,11 @@ import { fadeInUp, stagger } from "@/lib/motion";
 
 const FAQS = [
   {
+    id: "faq-0",
+    q:  "SAM.gov is free. Why would I pay $299 per month?",
+    a:  "SAM.gov is a data source. It lists contracts but does not filter, score, or alert you. To use it effectively, you need to log in daily, set up searches manually per NAICS code, check each state portal separately, and repeat that process every single day. Most contractors spend 2 to 4 hours doing this, and still miss contracts posted on state or county portals that SAM.gov does not cover. Plexovia replaces that entire process. You set your profile once. Every morning, you receive a scored digest of exactly what changed overnight, ranked by how well each contract matches your business. The question is not whether SAM.gov is free. The question is what 2 to 4 hours of your time is worth every day.",
+  },
+  {
     id: "faq-1",
     q:  "Do I have to log in to a dashboard every day to see results?",
     a:  "No. That is the entire point. Every contract matching your NAICS codes arrives in your email inbox. No portal, no dashboard, no login required. You get a comprehensive email digest every morning. Your inbox is your interface.",
@@ -23,24 +28,25 @@ const FAQS = [
   {
     id: "faq-2",
     q:  "What states and portals do you actually monitor?",
-    a:  "We monitor SAM.gov for all federal contracts, plus all 50 state portals, major county portals, and territories (DC, Puerto Rico, Guam). Every user gets full coverage. If your specific county portal is not yet indexed, email support@plexovia.com and we will confirm coverage within one business day.",
+    a:  "We cover all 50 states, SAM.gov, major county portals, DC, Puerto Rico, and Guam. If your specific county portal is not yet indexed, tell us and we will confirm coverage within one business day.",
   },
   {
     id: "faq-3",
     q:  "How accurate is the AI match score?",
-    a:  "The score (0 to 100) is calculated from four signals: your NAICS codes, your custom keywords, set-aside eligibility, and geographic match. A score above 70 means the contract matches your primary NAICS code, is located in your target state, and contains your keywords. A score of 40 to 69 means a partial match. You also see a plain-English explanation per contract showing exactly which signals fired and which did not. Contractors consistently find that contracts scoring above 75 represent their strongest opportunities and are worth the full proposal investment.",
+    a:  "The score (0 to 100) is calculated from your NAICS codes, custom keywords, set-aside eligibility, and geographic match. Above 70 means the contract matches your primary NAICS, location, and keywords. You also get a plain-English explanation per contract so you know exactly which signals fired and which did not. No guesswork.",
   },
   {
     id: "faq-4",
-    q:  "What happens to my credit card after the 7-day trial?",
-    a:  "Nothing surprises you. You will receive a reminder email on Day 6 of your trial. On Day 8, your card is charged for your first monthly or annual billing cycle, whichever you selected at signup. If you cancel before Day 8, you are not charged. Cancellation takes under 60 seconds from your account dashboard. If you do not find a single contract worth bidding in 7 days, cancel. You pay nothing.",
+    q:  "What happens after my trial, and can I cancel at any time?",
+    a:  "You receive a reminder email on Day 6. On Day 8, your card is charged for your first billing cycle. If you cancel before Day 8, you pay nothing. After that, cancellation takes under 60 seconds from your billing page. No phone call, no support ticket, no lock-in. If you cancel mid-cycle, you keep access until your paid period ends.",
   },
   {
     id: "faq-5",
-    q:  "Can I cancel or change my plan at any time?",
-    a:  "Yes. Our single plan is month-to-month or annual. No long-term lock-in. No phone call required to cancel. You cancel directly from your account settings. The cancel button is on the billing page, not buried behind a support ticket. If you cancel mid-cycle, you keep access until your paid period ends.",
+    q:  "Is my NAICS profile and tracking data kept private?",
+    a:  "Yes. Your NAICS codes, custom keywords, states, and set-aside eligibility are never shared, sold, or visible to other users. Competitors cannot see what you are tracking. Your profile is used solely to generate your personal contract digest. We do not aggregate, benchmark, or expose individual account configurations.",
   },
 ] as const;
+
 
 /* JSON-LD FAQ schema */
 const JSONLD = {
@@ -240,7 +246,7 @@ export default function FAQSection() {
               >
                 support@plexovia.com
               </a>
-              . We respond within 48 hours.
+              . Priority support, 8-hour response included in your plan.
             </p>
 
             <Link
@@ -269,6 +275,89 @@ export default function FAQSection() {
             ))}
           </motion.div>
         </div>
+      </section>
+
+      {/* ── Closing CTA — catches engaged buyers before footer ── */}
+      <section
+        aria-label="Start your free trial"
+        style={{
+          backgroundColor: "var(--pub-surface)",
+          borderTop:        "1px solid var(--pub-border)",
+          padding:          "4rem 1.5rem",
+          textAlign:        "center",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+          style={{ maxWidth: "560px", margin: "0 auto" }}
+        >
+          <p
+            style={{
+              fontFamily:    "var(--font-inter), sans-serif",
+              fontSize:      "clamp(1.375rem, 2.5vw, 1.875rem)",
+              fontWeight:    700,
+              letterSpacing: "-0.03em",
+              lineHeight:    1.2,
+              color:         "var(--pub-text)",
+              marginBottom:  "0.625rem",
+            }}
+          >
+            Your competitors started their morning with a contract lead. Did you?
+          </p>
+          <p
+            style={{
+              fontFamily:   "var(--font-inter), sans-serif",
+              fontSize:     "0.9375rem",
+              color:        "var(--pub-muted)",
+              lineHeight:   1.65,
+              marginBottom: "1.75rem",
+            }}
+          >
+            7-day free trial. Full access. No charge until Day 8.
+          </p>
+          <Link
+            href="/signup"
+            style={{
+              display:         "inline-flex",
+              alignItems:      "center",
+              justifyContent:  "center",
+              gap:             "0.5rem",
+              backgroundColor: "var(--pub-text)",
+              color:           "var(--pub-bg)",
+              fontFamily:      "var(--font-inter), sans-serif",
+              fontSize:        "0.9375rem",
+              fontWeight:      600,
+              padding:         "0.875rem 2rem",
+              borderRadius:    "var(--radius-pill)",
+              textDecoration:  "none",
+              letterSpacing:   "-0.01em",
+              transition:      "opacity 0.15s ease, transform 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+            }}
+          >
+            Start Free Trial
+          </Link>
+          <p
+            style={{
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize:   "0.8125rem",
+              color:      "var(--pub-faint)",
+              marginTop:  "0.875rem",
+            }}
+          >
+            Cancel anytime. No commitment.
+          </p>
+        </motion.div>
       </section>
     </>
   );

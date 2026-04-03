@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PricingSection from "@/components/home/pricing-section";
 import ComparisonTable from "@/components/home/comparison-table";
 import FAQSection from "@/components/home/faq-section";
-import FinalCTA from "@/components/home/final-cta";
+import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
 import Footer from "@/components/home/footer";
 
 export const metadata: Metadata = {
@@ -15,8 +15,8 @@ export default function PricingPage() {
     <div style={{ backgroundColor: "var(--pub-bg)", paddingTop: "4rem" }}>
       <PricingSection />
       <ComparisonTable />
+      <MissedOpportunityCalc />
       <FAQSection />
-      <FinalCTA />
       <Footer />
     </div>
   );

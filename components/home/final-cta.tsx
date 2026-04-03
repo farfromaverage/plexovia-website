@@ -99,7 +99,7 @@ export default function FinalCTA() {
             margin:     "0 auto 2.25rem",
           }}
         >
-          Set up takes three minutes. Credit card required. No charge until Day 8.
+          Setup takes three minutes. No charge until Day 8.
           Your first scored digest arrives tomorrow morning.
         </motion.p>
 
@@ -150,8 +150,8 @@ export default function FinalCTA() {
           </Link>
 
           {/* Secondary — ghost text link */}
-          <Link
-            href="/pricing"
+          <a
+            href="#pricing"
             style={{
               fontFamily:     "var(--font-inter), sans-serif",
               fontSize:       "0.875rem",
@@ -167,8 +167,8 @@ export default function FinalCTA() {
               (e.currentTarget as HTMLAnchorElement).style.color = "#6B6560";
             }}
           >
-            View full feature list at /pricing →
-          </Link>
+            See what is included →
+          </a>
         </motion.div>
 
       </div>

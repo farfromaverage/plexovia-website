@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Activity, AlertTriangle, Calculator, TrendingDown } from "lucide-react";
+
+/* ─────────────────────────────────────────────────────────
+   MissedOpportunityCalc
+   - Light theme, inline styles, CSS variables
+   - Gold accent (urgency, not alarm)
+   - Fully responsive: stacks on mobile
+   - Slider thumbs properly centered cross-browser
+───────────────────────────────────────────────────────── */
 
 function useAnimatedNumber(value: number) {
   const [display, setDisplay] = useState(value);
@@ -13,12 +21,10 @@ function useAnimatedNumber(value: number) {
     const startTime = performance.now();
 
     function tick(now: number) {
-      const elapsed = now - startTime;
+      const elapsed  = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutCubic
-      const ease = 1 - Math.pow(1 - progress, 3);
+      const ease     = 1 - Math.pow(1 - progress, 3);
       setDisplay(Math.round(startValue + (value - startValue) * ease));
-
       if (progress < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
@@ -28,10 +34,246 @@ function useAnimatedNumber(value: number) {
   return display;
 }
 
+/* ──────────────────────────────────────────────────────────
+   CSS injected once:
+   1. Slider thumb — 44px input height so margin-top math
+      centers thumb (22px) on the 6px track perfectly.
+      thumb_margin_top = -(thumb_height - track_height) / 2
+                       = -(22 - 6) / 2 = -8px
+      => thumb center = 22px = 44px input center ✓
+   2. Responsive — card stacks single column below 720px
+   3. Media query for sliders panel border direction
+────────────────────────────────────────────────────────── */
+const CALC_CSS = `
+  /* Range input */
+  .calc-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 44px;
+    background: transparent;
+    outline: none;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .calc-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 99px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .calc-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pub-bg);
+    border: 2px solid var(--accent);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    margin-top: -8px;
+  }
+  .calc-slider::-moz-range-track {
+    height: 6px;
+    border-radius: 99px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .calc-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pub-bg);
+    border: 2px solid var(--accent);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .calc-slider:hover::-webkit-slider-thumb,
+  .calc-slider:focus::-webkit-slider-thumb,
+  .calc-slider:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 5px rgba(201,168,76,0.18), 0 2px 8px rgba(0,0,0,0.15);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .calc-slider:hover::-moz-range-thumb,
+  .calc-slider:focus::-moz-range-thumb,
+  .calc-slider:active::-moz-range-thumb {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 5px rgba(201,168,76,0.18), 0 2px 8px rgba(0,0,0,0.15);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Responsive card layout */
+  .calc-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .calc-sliders-panel {
+    border-right: 1px solid var(--pub-border);
+    border-bottom: none;
+  }
+
+  @media (max-width: 720px) {
+    .calc-card-grid {
+      grid-template-columns: 1fr;
+    }
+    .calc-sliders-panel {
+      border-right: none;
+      border-bottom: 1px solid var(--pub-border);
+    }
+  }
+`;
+
+/* ── Reusable slider row ── */
+function SliderRow({
+  id,
+  label,
+  hint,
+  icon,
+  displayValue,
+  fillPct,
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  id:           string;
+  label:        string;
+  hint:         string;
+  icon:         React.ReactNode;
+  displayValue: string;
+  fillPct:      number;
+  min:          number;
+  max:          number;
+  step:         number;
+  value:        number;
+  onChange:     (v: number) => void;
+  ariaLabel:    string;
+}) {
+  return (
+    <div>
+      {/* Label row */}
+      <div
+        style={{
+          display:        "flex",
+          justifyContent: "space-between",
+          alignItems:     "flex-start",
+          marginBottom:   "0.625rem",
+          gap:            "1rem",
+        }}
+      >
+        <div>
+          <label
+            htmlFor={id}
+            style={{
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize:   "0.9375rem",
+              fontWeight: 600,
+              color:      "var(--pub-text)",
+              display:    "flex",
+              alignItems: "center",
+              gap:        "0.5rem",
+              cursor:     "pointer",
+            }}
+          >
+            {icon}
+            {label}
+          </label>
+          <p
+            style={{
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize:   "0.8125rem",
+              color:      "var(--pub-faint)",
+              marginTop:  "0.2rem",
+            }}
+          >
+            {hint}
+          </p>
+        </div>
+        <span
+          style={{
+            fontFamily:    "var(--font-geist-mono), monospace",
+            fontSize:      "1.25rem",
+            fontWeight:    600,
+            color:         "var(--accent)",
+            letterSpacing: "-0.02em",
+            whiteSpace:    "nowrap",
+            flexShrink:    0,
+          }}
+        >
+          {displayValue}
+        </span>
+      </div>
+
+      {/* Slider track + input
+          Container height = 44px (touch target + input height).
+          Track overlays centered with top:50% + translateY(-50%).
+          Input also 44px so thumb margin-top:-8px centers it. */}
+      <div style={{ position: "relative", height: "44px" }}>
+        {/* Track background */}
+        <div
+          style={{
+            position:        "absolute",
+            left:            0,
+            right:           0,
+            top:             "50%",
+            transform:       "translateY(-50%)",
+            height:          "6px",
+            borderRadius:    "99px",
+            backgroundColor: "var(--pub-border)",
+            pointerEvents:   "none",
+          }}
+        />
+        {/* Track fill */}
+        <div
+          style={{
+            position:        "absolute",
+            left:            0,
+            top:             "50%",
+            transform:       "translateY(-50%)",
+            height:          "6px",
+            borderRadius:    "99px",
+            backgroundColor: "var(--accent)",
+            width:           `${fillPct}%`,
+            transition:      "width 0.08s ease",
+            pointerEvents:   "none",
+          }}
+        />
+        {/* Actual input — 44px height, transparent */}
+        <input
+          id={id}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="calc-slider"
+          style={{ position: "absolute", inset: 0, zIndex: 2 }}
+          aria-label={ariaLabel}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Main component ── */
 export default function MissedOpportunityCalc() {
-  const [contractValue, setContractValue] = useState(120000);
+  const [contractValue,  setContractValue]  = useState(120000);
   const [missedPerMonth, setMissedPerMonth] = useState(3);
-  const [liveScanned, setLiveScanned] = useState(15847);
+  const [liveScanned,    setLiveScanned]    = useState(15847);
+
+  const ref    = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
 
   useEffect(() => {
     async function fetchStats() {
@@ -41,235 +283,271 @@ export default function MissedOpportunityCalc() {
           const data = await res.json();
           if (data.total_contracts) setLiveScanned(data.total_contracts);
         }
-      } catch {
-        // Fallback to initial value
-      }
+      } catch { /* fallback */ }
     }
     fetchStats();
   }, []);
-  
-  const annualLoss = contractValue * missedPerMonth * 12;
+
+  const annualLoss  = contractValue * missedPerMonth * 12;
   const displayLoss = useAnimatedNumber(annualLoss);
 
+  const valueFillPct  = ((contractValue  - 10000) / 490000) * 100;
+  const missedFillPct = ((missedPerMonth - 1)      / 9)      * 100;
+
   return (
-    <section className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-[#0C0B0A] relative overflow-hidden border-t border-[rgba(255,255,255,0.05)]">
-      {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] sm:w-[800px] sm:h-[400px] bg-[rgba(201,168,76,0.08)] blur-[100px] sm:blur-[120px] pointer-events-none rounded-[100%]" />
+    <section
+      ref={ref}
+      aria-label="Impact calculator"
+      style={{
+        backgroundColor: "var(--pub-surface-2)",
+        borderTop:       "1px solid var(--pub-border)",
+        padding:         "5rem 1.5rem",
+      }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: CALC_CSS }} />
 
-      <style dangerouslySetInnerHTML={{__html: `
-        .dark-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 100%;
-          background: transparent;
-          outline: none;
-          margin: 0;
-          padding: 0;
-        }
-        .dark-slider::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 6px;
-          cursor: pointer;
-          background: transparent;
-          border-radius: 99px;
-        }
-        .dark-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: #1C1917;
-          border: 2px solid #D6D3D1;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-          transition: all 0.15s ease;
-          margin-top: -9px;
-        }
-        .dark-slider::-moz-range-track {
-          width: 100%;
-          height: 6px;
-          cursor: pointer;
-          background: transparent;
-          border-radius: 99px;
-        }
-        .dark-slider::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: #1C1917;
-          border: 2px solid #D6D3D1;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-          transition: all 0.15s ease;
-        }
-        .dark-slider:focus::-webkit-slider-thumb, .dark-slider:active::-webkit-slider-thumb {
-          transform: scale(1.15);
-          border-color: var(--accent);
-          background: var(--accent);
-        }
-        .dark-slider:focus::-moz-range-thumb, .dark-slider:active::-moz-range-thumb {
-          transform: scale(1.15);
-          border-color: var(--accent);
-          background: var(--accent);
-        }
-      `}} />
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-      <div className="mx-auto max-w-5xl relative z-10">
-        <div className="mb-12 md:mb-16 max-w-3xl mx-auto text-center flex flex-col items-center">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full bg-[rgba(201,168,76,0.1)] border border-[rgba(201,168,76,0.2)]"
-          >
-            <Calculator size={14} className="text-[var(--accent)]" />
-            <span className="font-mono text-xs font-semibold tracking-widest uppercase text-[var(--accent)]">
-              Impact Calculator
-            </span>
-          </motion.div>
-          <motion.h2 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6 leading-tight"
-            style={{ color: "#F5F3EE" }}
-          >
-            Your competitors are winning the contracts you never see.
-          </motion.h2>
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-base sm:text-lg text-[#A8A29E] leading-relaxed max-w-2xl"
-          >
-            Over <strong className="text-white font-medium">{liveScanned.toLocaleString()}</strong> new government contracts were published in just the last 7 days. 
-            While you rely on manual searches to check dozens of scattered portals, relevant opportunities are slipping through the cracks, and your competitors are capitalizing on them. Let's calculate the exact cost of losing those bids.
-          </motion.p>
-        </div>
-
-        <motion.div 
+        {/* ── Section header ── */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="bg-[#1C1917] border border-[rgba(255,255,255,0.08)] rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row"
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+          style={{ textAlign: "center", marginBottom: "3rem" }}
         >
-          {/* Controls Side (Left Half) */}
-          <div className="w-full lg:w-1/2 p-6 sm:p-10 lg:p-12 lg:border-r border-[rgba(255,255,255,0.08)] flex flex-col justify-center space-y-10 sm:space-y-12">
-            
-            {/* Average Contract Value Slider */}
-            <div className="relative group">
-              <div className="flex justify-between items-end mb-6">
-                <div>
-                  <label htmlFor="comp-value" className="text-base font-medium text-[#F5F3EE] flex items-center gap-2">
-                    <Activity size={18} className="text-[#6B6560]" />
-                    Average contract value
-                  </label>
-                  <p className="text-sm text-[#6B6560] mt-1">What is a typical win worth?</p>
-                </div>
-                <span className="font-mono text-2xl text-[var(--accent)] font-semibold tracking-tight">
-                  ${contractValue.toLocaleString()}
-                </span>
-              </div>
-              <div className="relative flex items-center h-6 w-full mb-2">
-                <div className="absolute inset-x-0 h-[6px] rounded-full bg-[rgba(255,255,255,0.1)] pointer-events-none" />
-                <div 
-                  className="absolute left-0 h-[6px] rounded-full bg-[var(--accent)] pointer-events-none shadow-[0_0_10px_rgba(201,168,76,0.3)]"
-                  style={{ width: `${((contractValue - 10000) / 490000) * 100}%` }}
-                />
-                <input
-                  id="comp-value"
-                  type="range"
-                  min="10000"
-                  max="500000"
-                  step="10000"
-                  value={contractValue}
-                  onChange={(e) => setContractValue(Number(e.target.value))}
-                  className="dark-slider relative z-10 block w-full"
-                  aria-label="Average contract value slider"
-                />
-              </div>
+          <span
+            aria-hidden="true"
+            style={{
+              display:       "inline-flex",
+              alignItems:    "center",
+              gap:           "0.375rem",
+              fontFamily:    "var(--font-geist-mono), monospace",
+              fontSize:      "0.6875rem",
+              fontWeight:    500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color:         "var(--accent)",
+              marginBottom:  "1rem",
+            }}
+          >
+            <Calculator size={13} aria-hidden="true" />
+            Impact Calculator
+          </span>
+
+          <h2
+            style={{
+              fontFamily:    "var(--font-inter), sans-serif",
+              fontWeight:    700,
+              fontSize:      "clamp(1.625rem, 3vw, 2.5rem)",
+              letterSpacing: "-0.04em",
+              lineHeight:    1.1,
+              color:         "var(--pub-text)",
+              marginBottom:  "0.75rem",
+            }}
+          >
+            Calculate what manual contract searching costs you each year.
+          </h2>
+
+          <p
+            style={{
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize:   "1rem",
+              color:      "var(--pub-muted)",
+              lineHeight: 1.65,
+              maxWidth:   "600px",
+              margin:     "0 auto",
+            }}
+          >
+            Over{" "}
+            <strong style={{ color: "var(--pub-text)", fontWeight: 600 }}>
+              {liveScanned.toLocaleString()}
+            </strong>{" "}
+            new government contracts were published in the last 7 days.
+            Adjust the sliders to see what missed opportunities cost your business each year.
+          </p>
+        </motion.div>
+
+        {/* ── Calculator card ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+          style={{
+            backgroundColor: "var(--pub-surface)",
+            border:          "1px solid var(--pub-border)",
+            borderRadius:    "var(--radius-md)",
+            overflow:        "hidden",
+          }}
+        >
+          <div className="calc-card-grid">
+
+            {/* ── Left: sliders ── */}
+            <div
+              className="calc-sliders-panel"
+              style={{
+                padding:        "2.5rem",
+                display:        "flex",
+                flexDirection:  "column",
+                justifyContent: "center",
+                gap:            "2.5rem",
+              }}
+            >
+              <SliderRow
+                id="calc-value"
+                label="Average contract value"
+                hint="What is a typical win worth?"
+                icon={<Activity size={16} style={{ color: "var(--pub-faint)", flexShrink: 0 }} aria-hidden="true" />}
+                displayValue={`$${contractValue.toLocaleString()}`}
+                fillPct={valueFillPct}
+                min={10000}
+                max={500000}
+                step={10000}
+                value={contractValue}
+                onChange={setContractValue}
+                ariaLabel="Average contract value"
+              />
+
+              <SliderRow
+                id="calc-missed"
+                label="Opportunities missed per month"
+                hint="Based on industry averages"
+                icon={<AlertTriangle size={16} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden="true" />}
+                displayValue={String(missedPerMonth)}
+                fillPct={missedFillPct}
+                min={1}
+                max={10}
+                step={1}
+                value={missedPerMonth}
+                onChange={setMissedPerMonth}
+                ariaLabel="Missed opportunities per month"
+              />
             </div>
 
-            {/* Bids Missed Slider */}
-            <div className="relative group mt-8">
-              <div className="flex justify-between items-end mb-6">
-                <div>
-                  <label htmlFor="missed-bids" className="text-base font-medium text-[#F5F3EE] flex items-center gap-2">
-                    <AlertTriangle size={18} className="text-[var(--alert)]" />
-                    Opportunities you likely miss each month
-                  </label>
-                  <p className="text-sm text-[#6B6560] mt-1">Based on industry averages and your inputs</p>
-                </div>
-                <span className="font-mono text-2xl text-[var(--accent)] font-semibold tracking-tight">
-                  {missedPerMonth}
-                </span>
-              </div>
-              <div className="relative flex items-center h-6 w-full mb-2">
-                <div className="absolute inset-x-0 h-[6px] rounded-full bg-[rgba(255,255,255,0.1)] pointer-events-none" />
-                <div 
-                  className="absolute left-0 h-[6px] rounded-full bg-[var(--accent)] pointer-events-none shadow-[0_0_10px_rgba(201,168,76,0.3)]" 
-                  style={{ width: `${((missedPerMonth - 1) / 9) * 100}%` }}
-                />
-                <input
-                  id="missed-bids"
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value={missedPerMonth}
-                  onChange={(e) => setMissedPerMonth(Number(e.target.value))}
-                  className="dark-slider relative z-10 block w-full"
-                  aria-label="Missed bids per month slider"
-                />
-              </div>
-            </div>
-            
-          </div>
-
-          {/* Value Display Side (Right Half) */}
-          <div className="w-full lg:w-1/2 p-6 sm:p-10 lg:p-12 bg-gradient-to-br from-[#1C1917] to-[#111110] relative flex flex-col justify-center">
-            {/* Internal glow for right panel */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="bg-red-500/10 p-2 rounded-full border border-red-500/20">
-                <TrendingDown size={16} className="text-red-400" />
-              </div>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "#A8A29E" }}>
-                Estimated revenue lost to missed opportunities
-              </h3>
-            </div>
-            
-            <div className="flex items-baseline gap-1 relative z-10 overflow-visible whitespace-nowrap mb-10">
-              <span className="text-red-400 text-3xl font-semibold">
-                $
-              </span>
-              <motion.span 
-                key={displayLoss}
-                initial={{ opacity: 0.8, y: -2 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-[#F5F3EE] text-5xl sm:text-6xl tabular-nums font-mono font-bold tracking-tighter"
+            {/* ── Right: result ── */}
+            <div
+              style={{
+                padding:         "2.5rem",
+                display:         "flex",
+                flexDirection:   "column",
+                justifyContent:  "center",
+                backgroundColor: "var(--accent-bg-pub)",
+              }}
+            >
+              {/* Label */}
+              <div
+                style={{
+                  display:     "flex",
+                  alignItems:  "center",
+                  gap:         "0.625rem",
+                  marginBottom: "1.25rem",
+                }}
               >
-                {displayLoss.toLocaleString()}
-              </motion.span>
+                <div
+                  style={{
+                    backgroundColor: "rgba(201,168,76,0.15)",
+                    padding:         "0.5rem",
+                    borderRadius:    "50%",
+                    border:          "1px solid rgba(201,168,76,0.25)",
+                    display:         "flex",
+                    alignItems:      "center",
+                    justifyContent:  "center",
+                    flexShrink:      0,
+                  }}
+                >
+                  <TrendingDown size={16} style={{ color: "var(--accent)" }} aria-hidden="true" />
+                </div>
+                <span
+                  style={{
+                    fontFamily:    "var(--font-geist-mono), monospace",
+                    fontSize:      "0.6875rem",
+                    fontWeight:    600,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color:         "var(--pub-muted)",
+                  }}
+                >
+                  Estimated annual revenue at risk
+                </span>
+              </div>
+
+              {/* Animated number */}
+              <div
+                style={{
+                  display:     "flex",
+                  alignItems:  "baseline",
+                  gap:         "0.2rem",
+                  marginBottom: "1.75rem",
+                  flexWrap:    "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize:   "clamp(1.5rem, 3vw, 1.75rem)",
+                    fontWeight: 700,
+                    color:      "var(--accent)",
+                    lineHeight: 1,
+                  }}
+                >
+                  $
+                </span>
+                <motion.span
+                  key={displayLoss}
+                  initial={{ opacity: 0.7, y: -3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                  style={{
+                    fontFamily:    "var(--font-geist-mono), monospace",
+                    fontSize:      "clamp(2.25rem, 6vw, 3.5rem)",
+                    fontWeight:    700,
+                    letterSpacing: "-0.04em",
+                    color:         "var(--pub-text)",
+                    lineHeight:    1,
+                  }}
+                >
+                  {displayLoss.toLocaleString()}
+                </motion.span>
+              </div>
+
+              {/* Copy */}
+              <div
+                style={{
+                  borderTop:     "1px solid var(--pub-border)",
+                  paddingTop:    "1.5rem",
+                  display:       "flex",
+                  flexDirection: "column",
+                  gap:           "0.625rem",
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize:   "0.9375rem",
+                    color:      "var(--pub-muted)",
+                    lineHeight: 1.65,
+                    margin:     0,
+                  }}
+                >
+                  These are contracts your competitors are finding while you search manually.
+                </p>
+                <p
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize:   "0.9375rem",
+                    fontWeight: 600,
+                    color:      "var(--accent)",
+                    lineHeight: 1.65,
+                    margin:     0,
+                  }}
+                >
+                  Plexovia surfaces every matching opportunity so nothing slips through.
+                </p>
+              </div>
             </div>
-            
-            <div className="pt-8 border-t border-[rgba(255,255,255,0.08)] relative z-10 space-y-4">
-              <p className="text-[#D6D3D1] text-base leading-relaxed font-medium">
-                This is revenue you didn't even know existed.
-              </p>
-              <p className="text-[#D6D3D1] text-base leading-relaxed font-medium">
-                While you're manually searching, competitors are finding and winning these contracts faster.
-              </p>
-              <p className="text-[var(--accent)] text-base leading-relaxed font-semibold">
-                Plexovia ensures you never miss them again.
-              </p>
-            </div>
+
           </div>
         </motion.div>
+
       </div>
     </section>
   );

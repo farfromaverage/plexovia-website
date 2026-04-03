@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle } from "lucide-react";
-import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
 
 export const metadata: Metadata = {
   title: "How Plexovia Works | Government Contract Monitoring",
@@ -263,8 +262,6 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-
-      <MissedOpportunityCalc />
 
       {/* FAQ */}
       <section style={{ padding: "5rem 1.5rem" }}>
