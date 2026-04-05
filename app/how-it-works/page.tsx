@@ -295,7 +295,7 @@ export default function HowItWorksPage() {
                 key={step.number}
                 style={{
                   display:             "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
                   gap:                 "4rem",
                   padding:             "4rem 0",
                   borderBottom:        idx < steps.length - 1 ? "1px solid var(--pub-border)" : "none",
@@ -764,7 +764,7 @@ export default function HowItWorksPage() {
       {/* FINAL CTA */}
       <section
         style={{
-          backgroundColor: "var(--pub-surface)",
+          backgroundColor: "var(--pub-bg)",
           borderTop:       "1px solid var(--pub-border)",
           padding:         "6rem 1.5rem",
           textAlign:       "center",
