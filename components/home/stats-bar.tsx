@@ -63,7 +63,7 @@ export default function StatsBar() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const res = await fetch('/api/engine-stats');
+        const res = await fetch(`/api/engine-stats?t=${Date.now()}`);
         if (!res.ok) return;
         const data = await res.json();
 

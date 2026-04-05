@@ -86,7 +86,7 @@ function LiveStats() {
   const [stats, setStats] = useState<{ total: number | null }>({ total: null });
   
   useEffect(() => {
-    fetch('/api/engine-stats')
+    fetch(`/api/engine-stats?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.total_contracts !== undefined) {

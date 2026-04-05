@@ -131,7 +131,7 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
   useEffect(() => {
     async function fetchMatches() {
       try {
-        const res = await fetch('/api/engine-stats');
+        const res = await fetch(`/api/engine-stats?t=${Date.now()}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         

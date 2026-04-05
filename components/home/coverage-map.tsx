@@ -37,7 +37,7 @@ export default function CoverageMap() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch('/api/engine-stats');
+        const res = await fetch(`/api/engine-stats?t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           if (data.contracts_by_state && Object.keys(data.contracts_by_state).length > 0) {

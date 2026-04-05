@@ -278,7 +278,7 @@ export default function MissedOpportunityCalc() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch("/api/engine-stats");
+        const res = await fetch(`/api/engine-stats?t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           if (data.total_contracts) setLiveScanned(data.total_contracts);
