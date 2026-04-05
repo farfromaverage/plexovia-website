@@ -286,12 +286,12 @@ export default function FAQSection({
         </div>
       </section>
 
-      {/* Closing CTA — catches engaged buyers before footer */}
+      {/* Closing CTA catches engaged buyers before footer */}
       {!hideCta && (
       <section
         aria-label="Start your free trial"
         style={{
-          backgroundColor: "var(--pub-surface)",
+          backgroundColor: "var(--pub-bg)",
           borderTop:        "1px solid var(--pub-border)",
           padding:          "4rem 1.5rem",
           textAlign:        "center",
