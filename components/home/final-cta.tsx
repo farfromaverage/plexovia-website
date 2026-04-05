@@ -18,10 +18,10 @@ export default function FinalCTA() {
     <section
       aria-label="Get started with Plexovia"
       style={{
-        backgroundColor: "#111110",
+        backgroundColor: "var(--pub-bg)",
         padding:         "6rem 1.5rem",
         textAlign:       "center",
-        borderTop:       "1px solid rgba(255,255,255,0.06)",
+        borderTop:       "1px solid var(--pub-border)",
       }}
     >
       <div style={{ maxWidth: "720px", margin: "0 auto" }}>
@@ -71,7 +71,7 @@ export default function FinalCTA() {
             fontSize:      "clamp(2rem, 4.5vw, 3.25rem)",
             letterSpacing: "-0.05em",
             lineHeight:    1.08,
-            color:         "#F5F3EE",
+            color:         "var(--pub-text)",
             marginBottom:  "1.25rem",
           }}
         >
@@ -93,7 +93,7 @@ export default function FinalCTA() {
             fontSize:   "1.0625rem",
             fontWeight: 400,
             lineHeight: 1.65,
-            color:      "#8A8580",
+            color:      "var(--pub-muted)",
             marginBottom: "2.25rem",
             maxWidth:   "560px",
             margin:     "0 auto 2.25rem",
@@ -116,7 +116,7 @@ export default function FinalCTA() {
             gap:            "1rem",
           }}
         >
-          {/* Primary — parchment button on dark bg */}
+          {/* Primary — inverted button on light bg */}
           <Link
             href="/auth/signup"
             id="final-cta-btn"
@@ -126,8 +126,8 @@ export default function FinalCTA() {
               gap:             "0.5rem",
               padding:         "0.875rem 2rem",
               borderRadius:    "var(--radius-pill)",
-              backgroundColor: "#F7F5F0",
-              color:           "#1C1917",
+              backgroundColor: "var(--pub-text)",
+              color:           "var(--pub-bg)",
               fontFamily:      "var(--font-inter), sans-serif",
               fontSize:        "1rem",
               fontWeight:      600,

@@ -380,9 +380,9 @@ export default function AetherFlowHero() {
                 text-[#1C1917] font-semibold leading-[1.1] mb-6 tracking-tight
               "
             >
-              Stop searching.
+              Your competitors are winning contracts.
               <br />
-              Start <span className="text-[#C9A84C]">winning</span> contracts.
+              Because they <span className="text-[#C9A84C]">found out</span> first.
             </motion.h1>
 
             {/* Subline */}
@@ -394,7 +394,7 @@ export default function AetherFlowHero() {
                 leading-relaxed max-w-2xl mb-10
               "
             >
-              Plexovia's AI monitors all 50 state portals and SAM.gov simultaneously. We filter the noise, score solicitations against your exact capabilities, and deliver only the highest-value opportunities you have an unfair advantage to win.
+              Plexovia automatically monitors SAM.gov and all 50 state portals every night. By 6:00 AM, you receive a ruthlessly-filtered, AI-scored digest of the exact contracts you have an unfair advantage to win.
             </motion.p>
 
             {/* CTA group */}
@@ -413,14 +413,14 @@ export default function AetherFlowHero() {
               </Link>
 
               <Link
-                href="/pricing"
+                href="/how-it-works"
                 className="
                   text-sm font-bold text-[#8A8580]
                   hover:text-[#1C1917] transition-colors
                   underline decoration-[#E2DDD6] underline-offset-4
                 "
               >
-                See pricing
+                See exactly how it works &rarr;
               </Link>
             </motion.div>
 
