@@ -23,8 +23,33 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
+  const schema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "Plexovia",
+        "url": "https://plexovia.com"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Plexovia",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "WebBrowser",
+        "url": "https://plexovia.com",
+        "description": "Government contract intelligence and matching system",
+        "offers": {
+          "@type": "Offer",
+          "price": "299",
+          "priceCurrency": "USD"
+        }
+      }
+    ]
+  };
+
   return (
     <div style={{ backgroundColor: "var(--pub-bg)" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <Hero />
       <SocialProofBar />
       <StatsBar />

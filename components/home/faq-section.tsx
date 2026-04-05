@@ -172,12 +172,22 @@ export default function FAQSection({
   const toggle = (id: string) =>
     setOpenId((prev) => (prev === id ? null : id));
 
+  const dynamicJsonLd = {
+    "@context": "https://schema.org",
+    "@type":    "FAQPage",
+    mainEntity: displayFaqs.map((faq) => ({
+      "@type":        "Question",
+      name:           faq.q,
+      acceptedAnswer: { "@type": "Answer", text: faq.a },
+    })),
+  };
+
   return (
     <>
       {/* JSON-LD SEO */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSONLD) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dynamicJsonLd) }}
       />
 
       <section

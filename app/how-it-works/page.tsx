@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     description:
       "Set your NAICS codes in minutes. We scan every portal every night and deliver ranked matches to your inbox by 6 AM.",
     url: "https://plexovia.com/how-it-works",
+    images: [{ url: "https://plexovia.com/og-how-it-works.jpg", width: 1200, height: 630 }],
   },
 };
 
@@ -100,8 +101,33 @@ const faqs = [
 ];
 
 export default function HowItWorksPage() {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to automate government contract monitoring with Plexovia",
+    "description": "Three steps to set up automated nightly scanning of SAM.gov and state procurement portals.",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "name": "Build your profile",
+        "text": "Add your NAICS codes and location preferences once. Replaces manual tracking."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Engine scans portals",
+        "text": "Our engine pulls directly from SAM.gov and 50 state portals every night."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Delivery of matches",
+        "text": "Ranked matches, scored from 0 to 100, are delivered to your inbox at 6 AM."
+      }
+    ]
+  };
+
   return (
     <div style={{ backgroundColor: "var(--pub-bg)" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       {/* HERO */}
       <section

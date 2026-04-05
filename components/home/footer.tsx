@@ -80,6 +80,40 @@ function FooterCol({
   );
 }
 
+import { useState, useEffect } from "react";
+
+function LiveStats() {
+  const [stats, setStats] = useState<{ total: number | null }>({ total: null });
+  
+  useEffect(() => {
+    fetch('/api/engine-stats')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.total_contracts !== undefined) {
+          setStats({ total: data.total_contracts });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div style={{ marginTop: "2rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <span style={{ fontSize: "0.6875rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#A8A29E", fontFamily: "var(--font-geist-mono)" }}>
+        System Status
+      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]"></span>
+        </span>
+        <span style={{ fontFamily: "var(--font-geist-mono)", color: "var(--accent)", fontSize: "0.875rem" }}>
+          {stats.total !== null ? `${stats.total.toLocaleString()} active contracts` : 'connecting...'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
@@ -155,6 +189,8 @@ export default function Footer() {
           >
             Start free trial
           </Link>
+          
+          <LiveStats />
         </div>
 
         {/* Column 2 — Product */}

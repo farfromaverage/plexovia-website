@@ -85,13 +85,20 @@ export default function Nav() {
       style={{ background, backdropFilter, borderBottom }}
       role="banner"
     >
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[var(--pub-surface)] focus:text-[var(--pub-text)] focus:border focus:border-[var(--pub-border)] focus:rounded-md focus:shadow-sm"
+      >
+        Skip to content
+      </a>
+
       <nav className="max-w-[1200px] mx-auto px-6 h-16 flex items-center relative" aria-label="Main navigation">
         {/* ── Wordmark ── */}
         <Link href="/" aria-label="Plexovia homepage" className="no-underline z-10">
           <span
             className="flex items-center text-[1.45rem] font-bold tracking-tighter"
             style={{
-              fontFamily: "var(--font-playfair), Georgia, serif",
+              fontFamily: "var(--font-inter), sans-serif",
               lineHeight: 1,
             }}
           >
