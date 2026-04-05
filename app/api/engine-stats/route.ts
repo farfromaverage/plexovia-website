@@ -11,8 +11,9 @@
 
 import { NextResponse } from 'next/server'
 
-// Cache this route on the CDN for 15 seconds for near real-time updates without killing the DB
-export const revalidate = 15
+// Force dynamic rendering to bypass Vercel static cache sticking on stale data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
   const engineUrl = process.env.RAILWAY_API_URL
@@ -22,6 +23,7 @@ export async function GET() {
   try {
     const res = await fetch(`${engineUrl}/api/stats`, {
       headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
       // 5s timeout via AbortController
       signal: AbortSignal.timeout(5000),
     })
