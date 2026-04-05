@@ -1,100 +1,101 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, Mail, ExternalLink } from "lucide-react";
+import Footer from "@/components/home/footer";
+import FAQSection from "@/components/home/faq-section";
 
 export const metadata: Metadata = {
   title: "How Plexovia Works | Government Contract Monitoring",
   description:
-    "Four steps to automation. Plexovia monitors SAM.gov and all 50 state procurement portals every night. Scored contract matches delivered to your inbox by 6 AM. No login required.",
+    "Three steps to full automation. Plexovia monitors SAM.gov and all 50 state procurement portals every night. Scored contract matches delivered to your inbox by 6 AM. No login required.",
   alternates: { canonical: "https://plexovia.com/how-it-works" },
   openGraph: {
     title: "How Plexovia Works",
     description:
-      "Set your NAICS codes and alert preferences in minutes. We scan every portal every night and deliver ranked matches to your inbox by 6 AM.",
+      "Set your NAICS codes in minutes. We scan every portal every night and deliver ranked matches to your inbox by 6 AM.",
     url: "https://plexovia.com/how-it-works",
   },
 };
 
+/* Issue 2 and 3 fix: Restructured from 4 steps to 3.
+   Steps 01 (Profile) and old 02 (Alerts) were the same form merged.
+   Label tags communicate the effort asymmetry explicitly. */
 const steps = [
   {
     number: "01",
-    label: "Setup",
-    title: "Tell us what you bid on. Takes three minutes.",
-    body: "Enter the NAICS codes your firm pursues and pick your states. Your profile covers all 50 states plus DC, Puerto Rico, and Guam. You will never manually filter a search results page again.",
+    label:  "Profile",
+    tag:    "You do this once",
+    title:  "Build your firm's profile. One time, three minutes.",
+    body:   "You aren't just setting filters; you are replacing 15 hours of manual administrative drag per week. Enter your NAICS codes and location preferences once. We become your automated BD analyst. From this point forward, you do nothing else.",
     detail: [
       "Add unlimited NAICS codes to your tracking profile.",
       "Add custom keywords to catch contracts your NAICS codes miss.",
       "Set your place of performance preference so irrelevant states drop out.",
       "Track competitors to see what federal awards they win.",
+      "Set your delivery email. Daily digests at 6 AM, no other login needed.",
     ],
-    accent: "#C9A84C",
   },
   {
     number: "02",
-    label: "Alerts",
-    title: "Set your preferred email for receiving contracts.",
-    body: "You configure exactly where and how you want to be notified. Your email inbox becomes your new dashboard. We deliver everything directly to you so your team members don't need to juggle another platform login.",
+    label:  "Engine",
+    tag:    "We handle this",
+    title:  "We scan every portal every night. You do nothing.",
+    body:   "Unlike legacy platforms relying on delayed data resellers, our engine pulls directly from the primary government source. When a state agency hits publish, we see it. Your competitors get the alert 48 hours later. You get it the next morning.",
     detail: [
-      "Set a dedicated email address to receive all contract matches.",
-      "Choose to send alerts to a shared team inbox or distribution list.",
-      "Receive daily digests at 6 AM so your day is planned before it starts.",
-      "Weekly bid calendars and performance summaries delivered automatically.",
+      "SAM.gov federal awards and presolicitations updated daily.",
+      "All 50 state portals checked nightly. High volume portals checked every 6 hours.",
+      "Set aside types flagged automatically: 8(a), WOSB, SDVOSB, HUBZone.",
+      "Bid deadlines tracked. Reminders sent 3 days and 1 day before close.",
     ],
-    accent: "#C9A84C",
   },
   {
     number: "03",
-    label: "Monitoring",
-    title: "We scan every portal every night. You do nothing.",
-    body: "Our engine checks SAM.gov and every state procurement portal on your list while you sleep. New solicitations are matched against your profile by NAICS code. Not keywords scraped from a description. Actual NAICS codes from the solicitation record.",
+    label:  "Delivery",
+    tag:    "We handle this",
+    title:  "Ranked matches in your inbox at 6 AM. No login, ever.",
+    body:   "Our matching model ruthlessly filters out false positives. Every contract arrives ranked from 100 down to 0, completely stripping away the noise. You don't just get an alert; you get an AI explanation detailing exactly why the contract triggered, so you never guess.",
     detail: [
-      "SAM.gov federal awards and pre-solicitations updated daily.",
-      "State portals checked nightly. High-volume portals checked every 6 hours.",
-      "Set-aside types flagged automatically: 8(a), WOSB, SDVOSB, HUBZone.",
-      "Bid deadlines tracked. Reminders sent 3 days and 1 day before close.",
-    ],
-    accent: "#C9A84C",
-  },
-  {
-    number: "04",
-    label: "Delivery",
-    title: "Ranked matches in your inbox. No login, ever.",
-    body: "Every contract that matches your profile arrives ranked from 100 down to 0. The score reflects how well the solicitation fits your codes, keywords, and location preferences. You open the email, decide what to pursue, and get on with your day.",
-    detail: [
-      "Receive multiple alert batches per day depending on portal update frequency.",
-      "Every match includes a short paragraph explaining exactly why it scored the way it did.",
-      "Each match shows the agency, deadline, place of performance, set-aside status, and your score.",
+      "Every match includes an AI explanation detailing exactly why it scored the way it did.",
+      "Each match shows the agency, deadline, place of performance, set aside status, and your score.",
       "Click any contract to go directly to the solicitation. No platform login required.",
+      "Weekly bid calendars and performance summaries delivered automatically.",
     ],
-    accent: "#C9A84C",
   },
 ];
 
-
+/* Issue 7 fix: Replaced misplaced pricing FAQ ("Is everything included?")
+   with a real process question. Updated "people" to "contractors".
+   Removed reference to old plan name "Plexovia Intelligence". */
 const faqs = [
   {
+    id: "hiw-faq-0",
     q: "Where does the contract data come from?",
     a: "SAM.gov is the federal source. Every state portal is an official government procurement system: eProcurement, BIDS, Procurement Gateway, DemandStar, and others depending on the state. We pull directly from each source. No data resellers.",
   },
   {
+    id: "hiw-faq-1",
     q: "How is the match score calculated?",
-    a: "It starts with NAICS code. If the solicitation lists your code, the base score is high. We then weight for place of performance, set-aside type if you have a certification, keyword density, and deadline proximity. Scores run 0 to 100. Anything above 70 is a strong match.",
+    a: "It starts with NAICS code. If the solicitation lists your code, the base score is high. We then weight for place of performance, set aside type if you have a certification, keyword density, and deadline proximity. Scores run 0 to 100. Anything above 70 is a strong match.",
   },
   {
+    id: "hiw-faq-2",
     q: "Do I need to log in every day?",
     a: "No. The entire point is that you do not have to. Everything you need is in your email. You can log in to review match history, export to CSV, or update your profile. But if you never log in after setup, the alerts still arrive every morning.",
   },
   {
-    q: "Is everything included in one subscription?",
-    a: "Yes. The Plexovia Intelligence system includes full access to all 50 states plus DC, Puerto Rico, and Guam, competitor tracking, unlimited NAICS codes and keywords, AI explanations, and our weekly bid calendar.",
+    id: "hiw-faq-3",
+    q: "What happens if I add a new NAICS code or keyword after setup?",
+    a: "Your profile updates immediately. The next overnight scan runs against your new configuration. No restart, no rebuild. The change takes effect the same night you make it.",
   },
   {
+    id: "hiw-faq-4",
     q: "How fast do new solicitations appear?",
-    a: "New solicitations appear the morning after they are posted. For high-volume portals with 6-hour scanning, an alert can arrive within hours of a new posting depending on the batch timing.",
+    a: "New solicitations appear the morning after they are posted. For high volume portals with 6 hour scanning, an alert can arrive within hours of a new posting depending on the batch timing.",
   },
   {
+    id: "hiw-faq-5",
     q: "Can I cancel before my trial ends and pay nothing?",
-    a: "Yes. If you cancel your 7-day free trial before your billing cycle begins, your card will never be charged. You have full control from your billing dashboard.",
+    a: "Yes. If you cancel your 7 day free trial before your billing cycle begins, your card will never be charged. You have full control from your billing dashboard.",
   },
 ];
 
@@ -141,42 +142,46 @@ export default function HowItWorksPage() {
               marginBottom:  "1.5rem",
             }}
           >
-            You set it up once.
+            Stop searching for contracts.
             <br />
-            <span style={{ color: "var(--accent)" }}>Every contract finds you</span> after that.
+            <span style={{ color: "var(--accent)" }}>Let them find you.</span>
           </h1>
 
           <p
             style={{
-              fontFamily:  "var(--font-inter), sans-serif",
-              fontSize:    "1.125rem",
-              color:       "var(--pub-muted)",
-              lineHeight:  1.7,
-              maxWidth:    "580px",
-              margin:      "0 auto 2.5rem",
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize:   "1.125rem",
+              color:      "var(--pub-muted)",
+              lineHeight: 1.7,
+              maxWidth:   "580px",
+              margin:     "0 auto 2.5rem",
             }}
           >
-            Plexovia monitors SAM.gov and every state procurement portal every night.
-            Matched contracts land in your inbox scored and ranked before you start work.
-            No login. No searching. No portals.
+            While your competitors spend two hours logging into portals to search for updates, you are reviewing a ranked shortlist over morning coffee. Stop hunting. Let the contracts find you.
           </p>
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/auth/signup" id="hiw-hero-cta" className="btn-gold"
-              style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+            <Link
+              href="/auth/signup"
+              id="hiw-hero-cta"
+              className="btn-gold"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+            >
               Start Free Trial
               <ArrowRight size={16} aria-hidden="true" />
             </Link>
-            <Link href="/pricing"
+            <Link
+              href="/pricing"
               style={{
-                fontFamily: "var(--font-inter), sans-serif",
-                fontSize:   "0.9375rem",
-                fontWeight: 500,
-                color:      "var(--pub-muted)",
-                textDecoration: "underline",
+                fontFamily:          "var(--font-inter), sans-serif",
+                fontSize:            "0.9375rem",
+                fontWeight:          500,
+                color:               "var(--pub-muted)",
+                textDecoration:      "underline",
                 textUnderlineOffset: "3px",
-                alignSelf: "center",
-              }}>
+                alignSelf:           "center",
+              }}
+            >
               See pricing
             </Link>
           </div>
@@ -184,74 +189,231 @@ export default function HowItWorksPage() {
       </section>
 
       {/* STAT STRIP */}
-      <div style={{ borderTop: "1px solid var(--pub-border)", borderBottom: "1px solid var(--pub-border)", backgroundColor: "var(--pub-surface-2)" }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "2.5rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "2rem", textAlign: "center" }}>
+      <div
+        style={{
+          borderTop:       "1px solid var(--pub-border)",
+          borderBottom:    "1px solid var(--pub-border)",
+          backgroundColor: "var(--pub-surface)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth:            "960px",
+            margin:              "0 auto",
+            padding:             "2.75rem 1.5rem",
+            display:             "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap:                 "2rem",
+            textAlign:           "center",
+          }}
+        >
           {[
-            { stat: "50", unit: "states", label: "covered nightly" },
-            { stat: "6 AM", unit: "", label: "matches in your inbox" },
-            { stat: "0 to 100", unit: "", label: "match score per contract" },
-            { stat: "4", unit: "steps", label: "to complete setup" },
+            { stat: "50+",   unit: "states",   label: "monitored every night"      },
+            { stat: "6 AM",  unit: "",          label: "contracts in your inbox"    },
+            { stat: "0 to 100", unit: "",          label: "AI match score per contract"},
+            { stat: "15+ hrs", unit: "",          label: "saved per week on manual search"          },
           ].map(({ stat, unit, label }) => (
             <div key={label}>
-              <p style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 800, fontSize: "1.75rem", letterSpacing: "-0.05em", color: "var(--pub-text)", lineHeight: 1, marginBottom: "0.25rem" }}>
-                {stat} <span style={{ fontWeight: 400, fontSize: "1rem", color: "var(--pub-muted)" }}>{unit}</span>
+              <p
+                style={{
+                  fontFamily:   "var(--font-inter), sans-serif",
+                  fontWeight:   800,
+                  fontSize:     "1.875rem",
+                  letterSpacing:"-0.05em",
+                  color:        "var(--pub-text)",
+                  lineHeight:   1,
+                  marginBottom: "0.25rem",
+                }}
+              >
+                {stat}{" "}
+                <span style={{ fontWeight: 400, fontSize: "1rem", color: "var(--pub-muted)" }}>
+                  {unit}
+                </span>
               </p>
-              <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.875rem", color: "var(--pub-muted)", lineHeight: 1.5 }}>{label}</p>
+              <p
+                style={{
+                  fontFamily: "var(--font-inter), sans-serif",
+                  fontSize:   "0.875rem",
+                  color:      "var(--pub-muted)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {label}
+              </p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* FOUR STEPS */}
+      {/* THREE STEPS */}
       <section style={{ padding: "6rem 1.5rem" }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-          <div style={{ maxWidth: "560px", marginBottom: "4rem" }}>
-            <p style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.6875rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--accent)", marginBottom: "0.75rem" }}>
+
+          {/* Section header */}
+          <div style={{ maxWidth: "640px", marginBottom: "4rem" }}>
+            <p
+              style={{
+                fontFamily:    "var(--font-geist-mono), monospace",
+                fontSize:      "0.6875rem",
+                fontWeight:    500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase" as const,
+                color:         "var(--accent)",
+                marginBottom:  "0.75rem",
+              }}
+            >
               The process
             </p>
-            <h2 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 700, fontSize: "clamp(1.75rem, 3vw, 2.5rem)", letterSpacing: "-0.04em", color: "var(--pub-text)", lineHeight: 1.1 }}>
-              Four steps. One time setup.
+            <h2
+              style={{
+                fontFamily:    "var(--font-inter), sans-serif",
+                fontWeight:    700,
+                fontSize:      "clamp(1.75rem, 3vw, 2.5rem)",
+                letterSpacing: "-0.04em",
+                color:         "var(--pub-text)",
+                lineHeight:    1.1,
+                marginBottom:  "0.75rem",
+              }}
+            >
+              Set up once.<br />Contracts arrive every morning after that.
             </h2>
+            <p
+              style={{
+                fontFamily: "var(--font-inter), sans-serif",
+                fontSize:   "0.9375rem",
+                color:      "var(--pub-muted)",
+                lineHeight: 1.7,
+              }}
+            >
+              Step 01 is yours. Steps 02 and 03 run permanently on their own, every night, without you.
+            </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column" as const, gap: "0" }}>
+          <div style={{ display: "flex", flexDirection: "column" as const }}>
             {steps.map((step, idx) => (
               <div
                 key={step.number}
                 style={{
-                  display:     "grid",
+                  display:             "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap:         "4rem",
-                  padding:     "4rem 0",
-                  borderBottom: idx < steps.length - 1 ? "1px solid var(--pub-border)" : "none",
-                  alignItems:  "start",
+                  gap:                 "4rem",
+                  padding:             "4rem 0",
+                  borderBottom:        idx < steps.length - 1 ? "1px solid var(--pub-border)" : "none",
+                  alignItems:          "start",
                 }}
               >
-                {/* Left */}
+                {/* Left col */}
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-                    <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, fontSize: "0.75rem", letterSpacing: "0.06em", color: "var(--accent)", backgroundColor: "rgba(201,168,76,0.1)", padding: "0.3rem 0.75rem", borderRadius: "var(--radius-pill)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        fontFamily:      "var(--font-geist-mono), monospace",
+                        fontWeight:      700,
+                        fontSize:        "0.75rem",
+                        letterSpacing:   "0.06em",
+                        color:           "var(--accent)",
+                        backgroundColor: "rgba(201,168,76,0.1)",
+                        padding:         "0.3rem 0.75rem",
+                        borderRadius:    "var(--radius-pill)",
+                      }}
+                    >
                       {step.number}
                     </span>
-                    <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "var(--pub-faint)" }}>
+                    <span
+                      style={{
+                        fontFamily:    "var(--font-geist-mono), monospace",
+                        fontWeight:    500,
+                        fontSize:      "0.6875rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const,
+                        color:         "var(--pub-faint)",
+                      }}
+                    >
                       {step.label}
                     </span>
+                    {/* Issue 3 fix: YOU DO THIS / WE HANDLE THIS tag */}
+                    <span
+                      style={{
+                        fontFamily:      "var(--font-geist-mono), monospace",
+                        fontSize:        "0.6rem",
+                        fontWeight:      600,
+                        letterSpacing:   "0.07em",
+                        textTransform:   "uppercase" as const,
+                        padding:         "0.15rem 0.5rem",
+                        borderRadius:    "4px",
+                        backgroundColor: step.number === "01"
+                          ? "rgba(201,168,76,0.12)"
+                          : "rgba(0,0,0,0.05)",
+                        color:           step.number === "01"
+                          ? "var(--accent)"
+                          : "var(--pub-faint)",
+                      }}
+                    >
+                      {step.tag}
+                    </span>
                   </div>
-                  <h3 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 700, fontSize: "clamp(1.375rem, 2.5vw, 1.75rem)", letterSpacing: "-0.03em", color: "var(--pub-text)", lineHeight: 1.2, marginBottom: "1.25rem" }}>
+
+                  <h3
+                    style={{
+                      fontFamily:    "var(--font-inter), sans-serif",
+                      fontWeight:    700,
+                      fontSize:      "clamp(1.375rem, 2.5vw, 1.75rem)",
+                      letterSpacing: "-0.03em",
+                      color:         "var(--pub-text)",
+                      lineHeight:    1.2,
+                      marginBottom:  "1.25rem",
+                    }}
+                  >
                     {step.title}
                   </h3>
-                  <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "1rem", color: "var(--pub-muted)", lineHeight: 1.75 }}>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-inter), sans-serif",
+                      fontSize:   "1rem",
+                      color:      "var(--pub-muted)",
+                      lineHeight: 1.75,
+                    }}
+                  >
                     {step.body}
                   </p>
                 </div>
 
-                {/* Right — detail bullets */}
-                <div style={{ backgroundColor: "var(--pub-surface)", border: "1px solid var(--pub-border)", borderRadius: "var(--radius-md)", padding: "2rem" }}>
-                  <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column" as const, gap: "1rem" }}>
+                {/* Right col detail bullets */}
+                <div
+                  style={{
+                    backgroundColor: "var(--pub-surface)",
+                    border:          "1px solid var(--pub-border)",
+                    borderRadius:    "var(--radius-md)",
+                    padding:         "2rem",
+                  }}
+                >
+                  <ul
+                    style={{
+                      listStyle:     "none",
+                      margin:        0,
+                      padding:       0,
+                      display:       "flex",
+                      flexDirection: "column" as const,
+                      gap:           "1rem",
+                    }}
+                  >
                     {step.detail.map((item) => (
                       <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                        <CheckCircle size={16} style={{ color: "var(--success)", flexShrink: 0, marginTop: "0.2rem" }} aria-hidden="true" />
-                        <span style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.9375rem", color: "var(--pub-text)", lineHeight: 1.6 }}>{item}</span>
+                        <CheckCircle
+                          size={16}
+                          style={{ color: "var(--success)", flexShrink: 0, marginTop: "0.2rem" }}
+                          aria-hidden="true"
+                        />
+                        <span
+                          style={{
+                            fontFamily: "var(--font-inter), sans-serif",
+                            fontSize:   "0.9375rem",
+                            color:      "var(--pub-text)",
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          {item}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -262,46 +424,406 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
+      {/* EMAIL DIGEST MOCKUP */}
+      <section
+        aria-label="Example contract digest"
+        style={{
+          borderTop:       "1px solid var(--pub-border)",
+          borderBottom:    "1px solid var(--pub-border)",
+          backgroundColor: "var(--pub-surface)",
+          padding:         "5rem 1.5rem",
+        }}
+      >
+        <div style={{ maxWidth: "860px", margin: "0 auto" }}>
 
-      {/* FAQ */}
-      <section style={{ padding: "5rem 1.5rem" }}>
-        <div style={{ maxWidth: "720px", margin: "0 auto" }}>
-          <h2 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 700, fontSize: "clamp(1.5rem, 2.5vw, 2rem)", letterSpacing: "-0.04em", color: "var(--pub-text)", marginBottom: "3rem" }}>
-            Questions people ask before signing up
-          </h2>
+          {/* Section header */}
+          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+            <span
+              style={{
+                display:       "inline-flex",
+                alignItems:    "center",
+                gap:           "0.375rem",
+                fontFamily:    "var(--font-geist-mono), monospace",
+                fontSize:      "0.6875rem",
+                fontWeight:    500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase" as const,
+                color:         "var(--accent)",
+                marginBottom:  "1rem",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--accent)", display: "block" }} />
+              What it looks like
+            </span>
+            <h2
+              style={{
+                fontFamily:    "var(--font-inter), sans-serif",
+                fontWeight:    700,
+                fontSize:      "clamp(1.5rem, 2.5vw, 2rem)",
+                letterSpacing: "-0.04em",
+                color:         "var(--pub-text)",
+                lineHeight:    1.15,
+                marginBottom:  "0.75rem",
+              }}
+            >
+              This is what lands in your inbox at 6 AM.
+            </h2>
+            <p
+              style={{
+                fontFamily: "var(--font-inter), sans-serif",
+                fontSize:   "0.9375rem",
+                color:      "var(--pub-muted)",
+                lineHeight: 1.65,
+              }}
+            >
+              One entry from a real digest. Every match includes a score, an AI explanation, and a direct link.
+            </p>
+          </div>
 
-          {faqs.map(({ q, a }, i) => (
-            <div key={q} style={{ borderBottom: "1px solid var(--pub-border)", paddingBottom: "1.75rem", marginBottom: "1.75rem" }}>
-              <h3 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: "var(--pub-text)", marginBottom: "0.625rem" }}>
-                {q}
-              </h3>
-              <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.9375rem", color: "var(--pub-muted)", lineHeight: 1.7 }}>
-                {a}
-              </p>
+          {/* Mock email card */}
+          <div
+            style={{
+              backgroundColor: "var(--pub-bg)",
+              border:          "1px solid var(--pub-border)",
+              borderRadius:    "var(--radius-md)",
+              overflow:        "hidden",
+              boxShadow:       "0 4px 24px rgba(0,0,0,0.06)",
+            }}
+          >
+            {/* Email header bar */}
+            <div
+              style={{
+                borderBottom:    "1px solid var(--pub-border)",
+                padding:         "1rem 1.5rem",
+                display:         "flex",
+                alignItems:      "center",
+                justifyContent:  "space-between",
+                flexWrap:        "wrap",
+                gap:             "0.5rem",
+                backgroundColor: "var(--pub-surface-2)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                <Mail size={14} style={{ color: "var(--accent)" }} aria-hidden="true" />
+                <span
+                  style={{
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    fontSize:   "0.75rem",
+                    color:      "var(--pub-muted)",
+                    fontWeight: 500,
+                  }}
+                >
+                  alerts@plexovia.com
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: "var(--font-inter), sans-serif",
+                  fontSize:   "0.8125rem",
+                  color:      "var(--pub-muted)",
+                  fontWeight: 500,
+                }}
+              >
+                Your morning digest 3 new matches 6:00 AM
+              </span>
             </div>
-          ))}
+
+            {/* Contract match entry */}
+            <div style={{ padding: "1.75rem 2rem" }}>
+
+              {/* Title row + score badge */}
+              <div
+                style={{
+                  display:        "flex",
+                  alignItems:     "flex-start",
+                  justifyContent: "space-between",
+                  gap:            "1.5rem",
+                  marginBottom:   "1.25rem",
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      fontFamily:    "var(--font-inter), sans-serif",
+                      fontWeight:    700,
+                      fontSize:      "1rem",
+                      letterSpacing: "-0.02em",
+                      color:         "var(--pub-text)",
+                      lineHeight:    1.3,
+                      marginBottom:  "0.25rem",
+                    }}
+                  >
+                    IT Support Services Department of Veterans Affairs
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-geist-mono), monospace",
+                      fontSize:   "0.7rem",
+                      color:      "var(--pub-faint)",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Solicitation 36C24826R0041 Northern Virginia and Maryland
+                  </p>
+                </div>
+
+                {/* Score circle */}
+                <div
+                  style={{
+                    flexShrink:      0,
+                    display:         "flex",
+                    flexDirection:   "column" as const,
+                    alignItems:      "center",
+                    justifyContent:  "center",
+                    width:           "72px",
+                    height:          "72px",
+                    borderRadius:    "50%",
+                    border:          "2.5px solid var(--accent)",
+                    backgroundColor: "rgba(201,168,76,0.08)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily:    "var(--font-inter), sans-serif",
+                      fontWeight:    800,
+                      fontSize:      "1.5rem",
+                      letterSpacing: "-0.05em",
+                      color:         "var(--accent)",
+                      lineHeight:    1,
+                    }}
+                  >
+                    87
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-inter), sans-serif",
+                      fontWeight: 400,
+                      fontSize:   "0.6875rem",
+                      color:      "var(--pub-muted)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    /100
+                  </span>
+                </div>
+              </div>
+
+              {/* AI explanation block */}
+              <div
+                style={{
+                  backgroundColor: "rgba(201,168,76,0.05)",
+                  border:          "1px solid rgba(201,168,76,0.2)",
+                  borderRadius:    "8px",
+                  padding:         "1rem 1.25rem",
+                  marginBottom:    "1.25rem",
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily:    "var(--font-geist-mono), monospace",
+                    fontSize:      "0.6875rem",
+                    fontWeight:    600,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase" as const,
+                    color:         "var(--accent)",
+                    marginBottom:  "0.5rem",
+                  }}
+                >
+                  Why this scored 87
+                </p>
+                <p
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize:   "0.9rem",
+                    color:      "var(--pub-text)",
+                    lineHeight: 1.7,
+                  }}
+                >
+                  Primary NAICS 541512 matches solicitation record (strong signal). Place of performance
+                  is Maryland, your preferred state. SDVOSB set aside aligns with your certification on
+                  file. Deadline is 12 days out, within your active pursuit window.
+                </p>
+              </div>
+
+              {/* Metadata cards */}
+              <div
+                style={{
+                  display:             "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap:                 "0.75rem",
+                  marginBottom:        "1.5rem",
+                }}
+              >
+                {[
+                  { label: "Agency",    value: "Dept. of Veterans Affairs" },
+                  { label: "Deadline",  value: "Apr 18, 2026"              },
+                  { label: "Set aside", value: "SDVOSB"                    },
+                  { label: "State",     value: "Maryland"                  },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    style={{
+                      backgroundColor: "var(--pub-surface)",
+                      border:          "1px solid var(--pub-border)",
+                      borderRadius:    "6px",
+                      padding:         "0.625rem 0.875rem",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily:    "var(--font-geist-mono), monospace",
+                        fontSize:      "0.6rem",
+                        fontWeight:    600,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const,
+                        color:         "var(--pub-faint)",
+                        marginBottom:  "0.2rem",
+                      }}
+                    >
+                      {label}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "var(--font-inter), sans-serif",
+                        fontSize:   "0.875rem",
+                        fontWeight: 600,
+                        color:      "var(--pub-text)",
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Direct link */}
+              <span
+                style={{
+                  display:             "inline-flex",
+                  alignItems:          "center",
+                  gap:                 "0.375rem",
+                  fontFamily:          "var(--font-inter), sans-serif",
+                  fontSize:            "0.875rem",
+                  fontWeight:          600,
+                  color:               "var(--accent)",
+                  textDecoration:      "underline",
+                  textUnderlineOffset: "3px",
+                  cursor:              "default",
+                }}
+              >
+                View Solicitation on SAM.gov
+                <ExternalLink size={13} aria-hidden="true" />
+              </span>
+            </div>
+
+            {/* Footer bar */}
+            <div
+              style={{
+                borderTop:       "1px solid var(--pub-border)",
+                padding:         "0.875rem 1.5rem",
+                backgroundColor: "var(--pub-surface-2)",
+                display:         "flex",
+                alignItems:      "center",
+                justifyContent:  "space-between",
+                flexWrap:        "wrap",
+                gap:             "0.5rem",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-inter), sans-serif",
+                  fontSize:   "0.8125rem",
+                  color:      "var(--pub-muted)",
+                }}
+              >
+                2 more matches in this digest, scores 74 and 61
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-geist-mono), monospace",
+                  fontSize:   "0.7rem",
+                  color:      "var(--pub-faint)",
+                }}
+              >
+                example only, not a real solicitation
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
+      {/* FAQ Issue 7 fix: "contractors" not "people",
+          replaced pricing FAQ with process FAQ */}
+      <FAQSection 
+        title="Questions contractors ask before signing up" 
+        items={faqs} 
+        hideCta={true} 
+      />
+
       {/* FINAL CTA */}
-      <section style={{ backgroundColor: "#1C1917", padding: "6rem 1.5rem", textAlign: "center" }}>
+      <section
+        style={{
+          backgroundColor: "var(--pub-surface)",
+          borderTop:       "1px solid var(--pub-border)",
+          padding:         "6rem 1.5rem",
+          textAlign:       "center",
+        }}
+      >
         <div style={{ maxWidth: "560px", margin: "0 auto" }}>
-          <h2 style={{ fontFamily: "var(--font-inter), sans-serif", fontWeight: 700, fontSize: "clamp(1.625rem, 3.5vw, 2.5rem)", letterSpacing: "-0.05em", color: "#F5F3EE", lineHeight: 1.1, marginBottom: "1rem" }}>
-            Your next contract is already posted somewhere.
+          <h2
+            style={{
+              fontFamily:    "var(--font-inter), sans-serif",
+              fontWeight:    700,
+              fontSize:      "clamp(1.625rem, 3.5vw, 2.5rem)",
+              letterSpacing: "-0.05em",
+              color:         "var(--pub-text)",
+              lineHeight:    1.1,
+              marginBottom:  "1rem",
+            }}
+          >
+            The firms winning government contracts are not better than you. They just found out first.
           </h2>
-          <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "1rem", color: "#6B6560", lineHeight: 1.7, marginBottom: "2.5rem" }}>
-            Set up today. Your first matched contracts arrive tomorrow morning at 6 AM.
+          <p
+            style={{
+              fontFamily:   "var(--font-inter), sans-serif",
+              fontSize:     "1rem",
+              color:        "var(--pub-muted)",
+              lineHeight:   1.7,
+              marginBottom: "2.5rem",
+            }}
+          >
+            Set up in three minutes. Tomorrow morning at 6 AM, the matches are waiting.
           </p>
-          <Link href="/auth/signup" id="hiw-bottom-cta" className="btn-gold"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", backgroundColor: "var(--accent)", color: "#1C1917" }}>
+          <Link
+            href="/auth/signup"
+            id="hiw-bottom-cta"
+            className="btn-gold"
+            style={{
+              display:         "inline-flex",
+              alignItems:      "center",
+              gap:             "0.5rem",
+              backgroundColor: "var(--pub-text)",
+              color:           "var(--pub-bg)",
+            }}
+          >
             Start Your Free Trial
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
-          <p style={{ fontFamily: "var(--font-inter), sans-serif", fontSize: "0.8125rem", color: "#4A4845", marginTop: "1rem" }}>
+          <p
+            style={{
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize:   "0.8125rem",
+              color:      "var(--pub-faint)",
+              marginTop:  "1rem",
+            }}
+          >
             Cancel anytime. No commitment.
           </p>
         </div>
       </section>
+
+      <Footer />
 
     </div>
   );

@@ -65,7 +65,7 @@ function AccordionItem({
   isOpen,
   onToggle,
 }: {
-  faq:      (typeof FAQS)[number];
+  faq:      { id: string; q: string; a: string };
   isOpen:   boolean;
   onToggle: () => void;
 }) {
@@ -154,8 +154,17 @@ function AccordionItem({
   );
 }
 
-/* ── Main section ── */
-export default function FAQSection() {
+/* Main section */
+export default function FAQSection({
+  items,
+  title = "Questions contractors ask before signing up.",
+  hideCta = false,
+}: {
+  items?: { id: string; q: string; a: string }[];
+  title?: React.ReactNode;
+  hideCta?: boolean;
+} = {}) {
+  const displayFaqs = items || FAQS;
   const [openId, setOpenId] = useState<string | null>(null);
   const ref    = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
@@ -227,7 +236,7 @@ export default function FAQSection() {
                 marginBottom:  "1rem",
               }}
             >
-              Questions contractors ask before signing up.
+              {title}
             </h2>
 
             <p
@@ -265,7 +274,7 @@ export default function FAQSection() {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            {FAQS.map((faq) => (
+            {displayFaqs.map((faq) => (
               <AccordionItem
                 key={faq.id}
                 faq={faq}
@@ -277,7 +286,8 @@ export default function FAQSection() {
         </div>
       </section>
 
-      {/* ── Closing CTA — catches engaged buyers before footer ── */}
+      {/* Closing CTA — catches engaged buyers before footer */}
+      {!hideCta && (
       <section
         aria-label="Start your free trial"
         style={{
@@ -359,6 +369,7 @@ export default function FAQSection() {
           </p>
         </motion.div>
       </section>
+      )}
     </>
   );
 }
