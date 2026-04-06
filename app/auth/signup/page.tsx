@@ -120,19 +120,19 @@ export default function SignupPage() {
     }
 
     if (data.user) {
-      // In a robust implementation, profile creation should be handled via database triggers or secure webhooks.
-      // For this step, we ensure the process goes to success state relying on Supabase DB triggers logic for rows.
       const trialEndsAt = new Date();
       trialEndsAt.setDate(trialEndsAt.getDate() + 7);
       
+      // Save TOS acceptance and trial details immediately so it isn't lost during the email confirmation loop
+      await supabase.from("profiles").update({ 
+          trial_ends_at: trialEndsAt.toISOString(),
+          accepted_tos: true,
+          tos_accepted_at: new Date().toISOString()
+      }).eq("id", data.user.id);
+
       // Edge cases: If session is present immediately (e.g., email confirmation disabled), redirect.
       // Otherwise show success to prompt checking inbox.
       if (data.session) {
-        await supabase.from("profiles").update({ 
-           trial_ends_at: trialEndsAt.toISOString(),
-           accepted_tos: true,
-           tos_accepted_at: new Date().toISOString()
-        }).eq("id", data.user.id);
         router.push("/dashboard");
       } else {
         setSuccess(true);
@@ -155,7 +155,7 @@ export default function SignupPage() {
             <h1 className="font-bold text-2xl tracking-tight text-[var(--app-text)] mb-2">Check your inbox</h1>
             <p className="text-[var(--app-muted)] text-[15px] leading-relaxed">
               Confirmation link sent to <strong className="text-[var(--app-text)] font-semibold">{email}</strong>.<br />
-              Click it to activate your 7-day trial.
+              Click it to verify your account.
             </p>
             <p className="text-[14px] text-[var(--app-muted)] mt-6">
               Already confirmed? <Link href="/auth/login" className="text-[var(--accent)] font-semibold hover:text-[var(--accent-lt)] transition-colors">Sign in &rarr;</Link>
@@ -174,11 +174,8 @@ export default function SignupPage() {
         {/* Header */}
         <div className="text-center mb-7">
           <h1 className="font-bold text-2xl xl:text-[26px] tracking-tight text-[var(--app-text)] mb-2">
-            Start your 7-Day Free Trial
+            Create your account
           </h1>
-          <p className="text-[var(--app-muted)] text-[15px]">
-            No charge until Day 8. Cancel anytime.
-          </p>
         </div>
 
         {/* Google — primary CTA */}
@@ -270,7 +267,7 @@ export default function SignupPage() {
             disabled={loading} 
             className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-2 bg-[var(--accent)] text-[#1C1917] font-bold text-[15px] rounded-xl transition-colors hover:bg-[var(--accent-lt)] disabled:opacity-75 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 size={18} className="animate-spin" /> : <>Start Free Trial <ArrowRight size={17} strokeWidth={2.5} /></>}
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <>Create Account <ArrowRight size={17} strokeWidth={2.5} /></>}
           </button>
         </form>
 

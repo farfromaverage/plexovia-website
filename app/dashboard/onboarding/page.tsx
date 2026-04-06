@@ -77,7 +77,7 @@ const REGIONS: Record<string, string[]> = {
 /* ─── Components ──────────────────────────────────────────────────── */
 
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["Notification Email", "NAICS Codes", "Keywords & Set-asides", "States"];
+  const labels = ["Core Targeting", "Location & Refinements", "Final Details"];
   return (
     <div className="mb-7">
       <div className="flex justify-between items-center mb-2">
@@ -94,34 +94,7 @@ function StepBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-function Step1_Email({ email, setEmail }: { email: string; setEmail: (v: string) => void }) {
-  return (
-    <div className="flex flex-col h-full fade-in">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Where should we send your matches?</h2>
-      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
-        Every morning by 6 AM, we will deliver your scored federal and state contract matches to this address.
-      </p>
-
-      <div>
-        <label htmlFor="pref-email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Notification Email</label>
-        <div className="relative">
-          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
-          <input
-            id="pref-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
-            required
-            className="w-full pl-[38px] pr-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Step2({ selected, setSelected }: { selected: string[]; setSelected: (v: string[]) => void }) {
+function Step1({ selected, setSelected }: { selected: string[]; setSelected: (v: string[]) => void }) {
   const [query, setQuery] = useState("");
   const LIMIT = 999;
 
@@ -263,81 +236,25 @@ function Step2({ selected, setSelected }: { selected: string[]; setSelected: (v:
   );
 }
 
-function Step4({ selected, setSelected }: { selected: string[]; setSelected: (v: string[]) => void }) {
-  const LIMIT = 50;
-
-  function toggleState(state: string) {
-    if (selected.includes(state)) {
-      setSelected(selected.filter((s) => s !== state));
-    } else if (selected.length < LIMIT) {
-      setSelected([...selected, state]);
-    }
-  }
-
-  return (
-    <div className="flex flex-col h-full fade-in">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Which states do you want to monitor?</h2>
-      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-1">
-        Select up to 50 states to monitor.
-        <br />We monitor each state's procurement portal nightly.
-      </p>
-
-      <div className="flex justify-end mb-3">
-        <span className={`text-[13px] font-mono ${selected.length >= LIMIT ? "text-amber-500 font-bold" : "text-[var(--app-muted)]"}`}>
-          {selected.length}/{LIMIT === 50 ? "50" : LIMIT} selected
-        </span>
-      </div>
-
-      <div className="flex-1 max-h-[340px] overflow-y-auto flex flex-col gap-4 pr-2 custom-scroll">
-        {Object.entries(REGIONS).map(([region, states]) => (
-          <div key={region}>
-            <p className="text-[12px] font-bold text-[var(--app-faint)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <MapPin size={12} /> {region}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {states.map((state) => {
-                const isSelected = selected.includes(state);
-                const isDisabled = !isSelected && selected.length >= LIMIT;
-                return (
-                  <button
-                    key={state}
-                    type="button"
-                    onClick={() => toggleState(state)}
-                    disabled={isDisabled}
-                    className={`px-3 py-1.5 rounded-full border text-[13.5px] font-medium transition-all ${
-                      isSelected 
-                        ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
-                        : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
-                    } ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-                  >
-                    {state}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {selected.length >= LIMIT && (
-        <p className="text-[13px] text-amber-500 font-medium mt-3">
-          Limit reached ({LIMIT}/{LIMIT}). Remove a state to add another.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Step3({
-  keywords, setKeywords, company, setCompany, setAsides, setSetAsides,
+function Step2({
+  states, setStates, keywords, setKeywords, setAsides, setSetAsides,
 }: {
+  states: string[]; setStates: (v: string[]) => void;
   keywords: string[]; setKeywords: (v: string[]) => void;
-  company: string; setCompany: (v: string) => void;
   setAsides: string[]; setSetAsides: (v: string[]) => void;
 }) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const keywordLimit = 999;
+  const stateLimit = 50;
+
+  function toggleState(state: string) {
+    if (states.includes(state)) {
+      setStates(states.filter((s) => s !== state));
+    } else if (states.length < stateLimit) {
+      setStates([...states, state]);
+    }
+  }
 
   function clean(raw: string): string {
     return raw.trim().replace(/^["'\s]+|["'.,;\s]+$/g, "").trim().toLowerCase();
@@ -372,40 +289,63 @@ function Step3({
   }
 
   return (
-    <div className="flex flex-col h-full fade-in">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Refine your matches (optional)</h2>
+    <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Location & Refinements</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
-        Keywords let the engine catch contracts beyond your NAICS codes.
-        Press <strong className="text-[var(--accent)] font-semibold">Enter</strong> or <strong className="text-[var(--accent)] font-semibold">comma</strong> to add each keyword.
-        You can also paste a comma-separated list.
+        Narrow your matches down by location, custom keywords, and set-asides to ensure high-quality accuracy.
       </p>
 
-      {/* Company name */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Company name</label>
-        <input
-          type="text"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-          placeholder="Your registered business name"
-          className="w-full px-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-        />
+      {/* Target States */}
+      <div className="mb-6">
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
+          <span className="flex items-center gap-1.5"><MapPin size={14} /> State Monitoring</span>
+          <span className={`font-mono text-[12px] ${states.length >= stateLimit ? "text-amber-500 font-bold" : "text-[var(--app-faint)]"}`}>
+            {states.length}/{stateLimit}
+          </span>
+        </label>
+        <div className="p-4 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-xl max-h-[180px] overflow-y-auto custom-scroll">
+          {Object.entries(REGIONS).map(([region, regionStates]) => (
+            <div key={region} className="mb-3">
+              <p className="text-[11px] font-bold text-[var(--app-faint)] uppercase tracking-wider mb-2">{region}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {regionStates.map((state) => {
+                  const active = states.includes(state);
+                  return (
+                    <button
+                      key={state}
+                      type="button"
+                      onClick={() => toggleState(state)}
+                      disabled={!active && states.length >= stateLimit}
+                      className={`px-2.5 py-1 rounded border text-[12px] font-medium transition-all ${
+                        active 
+                          ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)]" 
+                          : "bg-transparent border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
+                      } ${!active && states.length >= stateLimit ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      {state}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Keywords input */}
-      <div className="mb-5">
-        <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">
-          <Tag size={14} /> Keywords
-          <span className={`ml-auto font-mono text-[12px] ${keywordLimit < 999 && keywords.length >= keywordLimit ? "text-amber-500 font-bold" : "text-[var(--app-faint)]"}`}>
+      <div className="mb-6">
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
+          <span className="flex items-center gap-1.5"><Tag size={14} /> Custom Keywords</span>
+          <span className={`font-mono text-[12px] ${keywordLimit < 999 && keywords.length >= keywordLimit ? "text-amber-500 font-bold" : "text-[var(--app-faint)]"}`}>
             {keywords.length}/{keywordLimit === 999 ? "∞" : keywordLimit}
           </span>
         </label>
         <div
-          className="min-h-[96px] p-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] flex-col rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)]"
+          className="min-h-[80px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] flex-col rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--accent)]"
           onClick={() => inputRef.current?.focus()}
         >
           {keywords.map((kw) => (
-            <span key={kw} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[13px] text-[var(--accent)]">
+            <span key={kw} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[12px] text-[var(--accent)]">
               {kw}
               <button
                 type="button"
@@ -424,27 +364,17 @@ function Step3({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={() => flush()}
-            placeholder={keywords.length === 0 ? "e.g. cybersecurity, cloud, janitorial…" : ""}
-            className="flex-1 min-w-[160px] bg-transparent border-none outline-none text-[var(--app-text)] text-[14px] placeholder-[var(--app-faint)] mt-1"
+            placeholder={keywords.length === 0 ? "e.g. cybersecurity, cloud..." : ""}
+            className="flex-1 min-w-[140px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1"
           />
         </div>
-        <p className="text-[12.5px] text-[var(--app-muted)] mt-2 leading-relaxed">
-          Each word/phrase counts as one keyword. Quotes and commas are stripped.
-        </p>
-        {keywordLimit < 999 && keywords.length >= keywordLimit && (
-          <p className="text-[13px] text-amber-500 font-medium mt-1">Keyword limit reached ({keywordLimit}/{keywordLimit}).</p>
-        )}
       </div>
 
       {/* Set-aside preferences */}
-      <div className="mt-1">
-        <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--app-muted)] mb-1 pl-0.5">
+      <div>
+        <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
           <FileText size={14} /> Set-Aside Preferences
-          <span className="text-[11px] text-[var(--app-faint)] opacity-80 uppercase tracking-widest ml-1">(Optional)</span>
         </label>
-        <p className="text-[13px] text-[var(--app-muted)] mb-3 leading-relaxed">
-          Only show contracts with these designations. Leave empty to see all available.
-        </p>
         <div className="flex flex-wrap gap-2">
           {([
             { code: "8a",     label: "8(a)" },
@@ -460,7 +390,7 @@ function Step3({
                 key={code}
                 type="button"
                 onClick={() => setSetAsides(active ? setAsides.filter(s => s !== code) : [...setAsides, code])}
-                className={`px-3 py-1.5 rounded-full border text-[13.5px] font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-full border text-[13px] font-medium transition-all ${
                   active 
                     ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
                     : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
@@ -476,6 +406,47 @@ function Step3({
   );
 }
 
+function Step3({ email, setEmail, company, setCompany }: { email: string; setEmail: (v: string) => void; company: string; setCompany: (v: string) => void; }) {
+  return (
+    <div className="flex flex-col h-full fade-in">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Final Details</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
+        Every morning by 6 AM, we will deliver your scored federal and state contract matches to this address.
+      </p>
+
+      <div className="mb-5">
+        <label htmlFor="pref-email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Notification Email</label>
+        <div className="relative">
+          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
+          <input
+            id="pref-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            required
+            className="w-full pl-[38px] pr-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Company Name <span className="text-[11px] text-[var(--app-faint)] uppercase tracking-widest ml-1">(Optional)</span></label>
+        <div className="relative">
+          <FileText size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
+          <input
+            type="text"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Your registered business name"
+            className="w-full pl-[38px] pr-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function OnboardingPage() {
   const router = useRouter();
@@ -485,7 +456,6 @@ export default function OnboardingPage() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [setAsides, setSetAsides] = useState<string[]>([]);
   const [company,  setCompany]  = useState("");
-  const [plan,     setPlan]     = useState<string>("trial");
   const [email,    setEmail]    = useState("");
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
@@ -505,7 +475,6 @@ export default function OnboardingPage() {
       if (data.naics_codes?.length)  setNaics(data.naics_codes);
       if (data.states?.length)       setStates(data.states);
       if (data.company_name)         setCompany(data.company_name);
-      if (data.plan)                 setPlan(data.plan);
       if (data.set_aside_preferences?.length) setSetAsides(data.set_aside_preferences);
       
       if (data.keywords?.length) {
@@ -543,7 +512,7 @@ export default function OnboardingPage() {
   }
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-  const canNext = step === 1 ? isValidEmail(email) : step === 2 ? naics.length > 0 : step === 4 ? states.length > 0 : true;
+  const canNext = step === 1 ? naics.length > 0 : step === 2 ? true : isValidEmail(email);
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative">
@@ -554,13 +523,12 @@ export default function OnboardingPage() {
       </div>
 
       <div className="w-full max-w-[580px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl min-h-[580px] flex flex-col">
-        <StepBar current={step} total={4} />
+        <StepBar current={step} total={3} />
 
-        <div className="flex-1 mb-8 overflow-hidden">
-          {step === 1 && <Step1_Email email={email}  setEmail={setEmail} />}
-          {step === 2 && <Step2 selected={naics}    setSelected={setNaics} />}
-          {step === 3 && <Step3 keywords={keywords} setKeywords={setKeywords} company={company} setCompany={setCompany} setAsides={setAsides} setSetAsides={setSetAsides} />}
-          {step === 4 && <Step4 selected={states}   setSelected={setStates} />}
+        <div className="flex-1 mb-8 overflow-hidden h-[340px]">
+          {step === 1 && <Step1 selected={naics}    setSelected={setNaics} />}
+          {step === 2 && <Step2 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} setAsides={setAsides} setSetAsides={setSetAsides} />}
+          {step === 3 && <Step3 email={email}  setEmail={setEmail} company={company} setCompany={setCompany} />}
         </div>
 
         {error && (
@@ -581,7 +549,7 @@ export default function OnboardingPage() {
             </button>
           )}
 
-          {step < 4 ? (
+          {step < 3 ? (
             <button
               type="button"
               onClick={() => setStep((s) => s + 1)}
@@ -599,9 +567,9 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={handleFinish}
-                disabled={saving}
+                disabled={saving || !canNext}
                 className={`flex items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${
-                  saving 
+                  saving || !canNext
                     ? "bg-[var(--accent)]/70 cursor-not-allowed" 
                     : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"
                 }`}

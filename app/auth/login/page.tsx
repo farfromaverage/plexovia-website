@@ -171,7 +171,7 @@ function LoginForm() {
       </form>
 
       <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-6">
-        No account? <Link href="/auth/signup" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Start free trial &rarr;</Link>
+        No account? <Link href="/auth/signup" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Create account &rarr;</Link>
       </p>
       <p className="text-center text-[13px] text-[var(--app-faint)] mt-3">
         Need help? <a href="mailto:support@plexovia.com" className="hover:text-[var(--app-muted)] transition-colors">support@plexovia.com</a>

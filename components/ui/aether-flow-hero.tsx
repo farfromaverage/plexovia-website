@@ -16,7 +16,7 @@ export default function AetherFlowHero() {
     if (!ctx) return;
 
     let animationFrameId: number;
-    let particles: Particle[] = [];
+    let particles: any[] = [];
 
     // ── Mobile detection (once, at mount) ──────────────────────────────
     const isMobile = window.innerWidth < 768;
@@ -32,60 +32,46 @@ export default function AetherFlowHero() {
     // The actual hardware cursor
     const targetMouse = { x: null as number | null, y: null as number | null };
 
-    class Particle {
-      x: number;
-      y: number;
-      directionX: number;
-      directionY: number;
-      size: number;
-      color: string;
-
-      constructor(x: number, y: number, directionX: number, directionY: number, size: number, color: string) {
-        this.x = x;
-        this.y = y;
-        this.directionX = directionX;
-        this.directionY = directionY;
-        this.size = size;
-        this.color = color;
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-      }
-
-      update(cw: number, ch: number, dt: number) {
-        if (!canvas) return;
-        if (this.x > cw || this.x < 0) {
-          this.directionX = -this.directionX;
-        }
-        if (this.y > ch || this.y < 0) {
-          this.directionY = -this.directionY;
-        }
-
-        // Interaction: particles repel from cursor/finger
-        if (mouse.x !== null && mouse.y !== null) {
-          let dx = mouse.x - this.x;
-          let dy = mouse.y - this.y;
-          let distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < mouse.radius + this.size) {
-            const forceDirectionX = dx / distance;
-            const forceDirectionY = dy / distance;
-            const force = (mouse.radius - distance) / mouse.radius;
-            this.x -= forceDirectionX * force * 5;
-            this.y -= forceDirectionY * force * 5;
+    const createParticle = (x: number, y: number, directionX: number, directionY: number, size: number, color: string) => {
+      return {
+        x, y, directionX, directionY, size, color,
+        draw() {
+          if (!ctx) return;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+        },
+        update(cw: number, ch: number, dt: number) {
+          if (!canvas) return;
+          if (this.x > cw || this.x < 0) {
+            this.directionX = -this.directionX;
           }
-        }
+          if (this.y > ch || this.y < 0) {
+            this.directionY = -this.directionY;
+          }
 
-        // Delta-time movement: consistent speed regardless of frame rate
-        this.x += this.directionX * dt;
-        this.y += this.directionY * dt;
-        this.draw();
-      }
-    }
+          // Interaction: particles repel from cursor/finger
+          if (mouse.x !== null && mouse.y !== null) {
+            let dx = mouse.x - this.x;
+            let dy = mouse.y - this.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < mouse.radius + this.size) {
+              const forceDirectionX = dx / distance;
+              const forceDirectionY = dy / distance;
+              const force = (mouse.radius - distance) / mouse.radius;
+              this.x -= forceDirectionX * force * 5;
+              this.y -= forceDirectionY * force * 5;
+            }
+          }
+
+          // Delta-time movement: consistent speed regardless of frame rate
+          this.x += this.directionX * dt;
+          this.y += this.directionY * dt;
+          this.draw();
+        }
+      };
+    };
 
     function init() {
       if (!canvas) return;
@@ -113,7 +99,7 @@ export default function AetherFlowHero() {
         // DEPTH FIELD: Tie base opacity to size
         let baseAlpha = Math.max(0.15, (size - 1) / 2.5 * 0.85);
         let color = `rgba(28, 25, 23, ${baseAlpha.toFixed(2)})`;
-        particles.push(new Particle(x, y, directionX, directionY, size, color));
+        particles.push(createParticle(x, y, directionX, directionY, size, color));
       }
     }
 
@@ -309,7 +295,7 @@ export default function AetherFlowHero() {
       transition: {
         delay: i * 0.1,
         duration: 0.8,
-        ease: "easeInOut",
+        ease: "easeOut" as const,
       },
     }),
   };
