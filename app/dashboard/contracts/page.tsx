@@ -137,9 +137,25 @@ export default function ContractsPage() {
       <style>{`
         .ct-header { border-bottom:1px solid #252320; background:#1C1917; position:sticky; top:0; z-index:50; height:60px; display:flex; align-items:center; padding:0 2rem; gap:1.5rem; }
         .ct-main   { max-width:1100px; margin:0 auto; padding:2rem; }
-        .ct-row    { display:flex; align-items:flex-start; justify-content:space-between; padding:1.125rem 1.5rem; border-bottom:1px solid #252320; gap:1rem; transition:background 0.12s; cursor:default; }
+        .ct-nav    { display:flex; gap:0.25rem; flex:1; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
+        .ct-nav::-webkit-scrollbar { display:none; }
+        .ct-nav-item { white-space:nowrap; }
+        .ct-row    { display:grid; grid-template-columns:80px 1fr 140px 80px 100px 80px; align-items:center; gap:0.75rem; padding:1.125rem 1.5rem; border-bottom:1px solid #252320; transition:background 0.12s; cursor:default; }
         .ct-row:hover { background:#27251F; }
-        @media (max-width:768px) { .ct-header { padding:0 1rem; } .ct-main { padding:1rem; } }
+        .ct-head   { display:grid; grid-template-columns:80px 1fr 140px 80px 100px 80px; padding:0.625rem 1.5rem; border-bottom:1px solid #2D2A26; }
+        .ct-mobile-label { display:none; }
+        @media (max-width:1024px) {
+           .ct-head { grid-template-columns: 80px 1fr 100px 80px; gap:0.75rem; }
+           .ct-row  { grid-template-columns: 80px 1fr 100px 80px; }
+           .ct-hide-md { display: none !important; }
+        }
+        @media (max-width:768px) { 
+          .ct-header { padding:0 1rem; } .ct-main { padding:1rem; } 
+          .ct-head { display: none; }
+          .ct-row { display: flex; flex-direction: column; align-items: stretch; gap: 0.75rem; }
+          .ct-row-right { display: flex; flex-direction: row; align-items: center; justify-content: space-between; border-top: 1px solid #2D2A26; padding-top: 0.75rem; }
+          .ct-hide-mobile { display: none !important; }
+        }
       `}</style>
 
       <div style={{ minHeight:"100vh", background:"#1C1917", fontFamily:"var(--font-inter), sans-serif" }}>
@@ -151,7 +167,7 @@ export default function ContractsPage() {
               <span style={{ color:"#C9A84C" }}>P</span><span style={{ color:"#F7F5F0" }}>lexovia</span>
             </span>
           </Link>
-          <nav style={{ display:"flex", gap:"0.25rem", flex:1 }}>
+          <nav className="ct-nav">
             {[
               { href:"/dashboard", label:"Overview" },
               { href:"/dashboard/contracts", label:"Contracts", active:true },
@@ -160,6 +176,7 @@ export default function ContractsPage() {
               { href:"/dashboard/team", label:"Team" },
             ].map(n => (
               <Link key={n.href} href={n.href}
+                className="ct-nav-item"
                 style={{ padding:"6px 12px", borderRadius:"8px", fontSize:"0.8125rem", textDecoration:"none",
                   color: n.active ? "#C9A84C" : "#6B6560",
                   background: n.active ? "#2A2318" : "transparent" }}>
@@ -220,17 +237,20 @@ export default function ContractsPage() {
           {/* Contract table */}
           <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", overflow:"hidden" }}>
             {/* Table head */}
-            <div style={{ display:"grid", gridTemplateColumns:"80px 1fr 140px 80px 100px 80px", padding:"0.625rem 1.5rem", borderBottom:"1px solid #2D2A26" }}>
-              {["Score","Contract","Agency","State","Value","Deadline"].map(h => (
-                <span key={h} style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>{h}</span>
-              ))}
+            <div className="ct-head">
+              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Score</span>
+              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Contract</span>
+              <span className="ct-hide-md" style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Agency</span>
+              <span className="ct-hide-mobile" style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>State</span>
+              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Value</span>
+              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Deadline</span>
             </div>
 
             {/* Rows */}
             {loading ? (
               <>{[1,2,3,4,5].map(i => (
-                <div key={i} style={{ display:"grid", gridTemplateColumns:"80px 1fr 140px 80px 100px 80px", padding:"1rem 1.5rem", borderBottom:"1px solid #252320", gap:"1rem" }}>
-                  {[1,2,3,4,5,6].map(j => <div key={j} style={{ height:14, background:"#2A2724", borderRadius:4, animation:"pulse 1.4s ease-in-out infinite" }} />)}
+                <div key={i} className="ct-row ct-head">
+                  {[1,2,3,4,5,6].map((j, idx) => <div key={j} className={idx===2?"ct-hide-md":idx===3?"ct-hide-mobile":""} style={{ height:14, background:"#2A2724", borderRadius:4, animation:"pulse 1.4s ease-in-out infinite" }} />)}
                 </div>
               ))}</>
             ) : error ? (
@@ -252,13 +272,16 @@ export default function ContractsPage() {
               </div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className="ct-row"
-                  style={{ display:"grid", gridTemplateColumns:"80px 1fr 140px 80px 100px 80px", alignItems:"center", gap:"0.75rem" }}>
+                <div key={c.id} className="ct-row">
                   {/* Score */}
-                  <div><ScorePill score={c.score} /></div>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <ScorePill score={c.score} />
+                    {/* Only visible on mobile inline */}
+                  </div>
+
                   {/* Title + badges */}
-                  <div style={{ minWidth:0 }}>
-                    <p style={{ fontWeight:600, fontSize:"0.875rem", color:"#F7F5F0", margin:"0 0 4px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.title}</p>
+                  <div style={{ minWidth:0, display: "flex", flexDirection: "column", gap: 3 }}>
+                    <p style={{ fontWeight:600, fontSize:"0.875rem", color:"#F7F5F0", margin:"0 0 2px" }}>{c.title}</p>
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                       <span style={{ fontSize:"0.68rem", padding:"1px 6px", background: c.matchedBy==="naics" ? "#1E211A" : "#1A1E2A", border:`1px solid ${c.matchedBy==="naics" ? "#2A3020" : "#2D3A5A"}`, borderRadius:4, color: c.matchedBy==="naics" ? "#86EFAC" : "#93C5FD", display:"flex", alignItems:"center", gap:3 }}>
                         {c.matchedBy === "naics" ? <FileText size={9}/> : <Tag size={9}/>}{c.matchLabel}
@@ -268,25 +291,31 @@ export default function ContractsPage() {
                       )}
                     </div>
                   </div>
-                  {/* Agency */}
-                  <div style={{ fontSize:"0.78rem", color:"#8A8580", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:4 }}>
+
+                  {/* Agency - hidden on tablet/mobile but inline grouped below title generally */}
+                  <div className="ct-hide-md" style={{ fontSize:"0.78rem", color:"#8A8580", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:4 }}>
                     <Shield size={10} color="#4B5563" style={{ flexShrink:0 }} />{c.agency}
                   </div>
+                  
                   {/* State */}
-                  <div style={{ fontSize:"0.78rem", color:"#8A8580", display:"flex", alignItems:"center", gap:4 }}>
+                  <div className="ct-hide-mobile" style={{ fontSize:"0.78rem", color:"#8A8580", display:"flex", alignItems:"center", gap:4 }}>
                     <MapPin size={10} color="#4B5563" />{c.state}
                   </div>
-                  {/* Value */}
-                  <div style={{ fontSize:"0.8125rem", fontWeight:600, color:"#F7F5F0", fontFamily:"var(--font-geist-mono, monospace)", whiteSpace:"nowrap" }}>{c.value}</div>
-                  {/* Deadline + View */}
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-                    <span style={{ fontSize:"0.72rem", color: c.deadline === "Expired" ? "#F87171" : c.deadline.includes("days") && parseInt(c.deadline) < 7 ? "#FBBF24" : "#6B6560" }}>{c.deadline}</span>
-                    {c.url && (
-                      <a href={c.url} target="_blank" rel="noopener noreferrer"
-                        style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:"0.72rem", color:"#C9A84C", textDecoration:"none" }}>
-                        SAM.gov <ExternalLink size={9} />
-                      </a>
-                    )}
+
+                  <div className="ct-row-right">
+                    {/* Value */}
+                    <div style={{ fontSize:"0.8125rem", fontWeight:600, color:"#F7F5F0", fontFamily:"var(--font-geist-mono, monospace)", whiteSpace:"nowrap" }}>{c.value}</div>
+                    
+                    {/* Deadline + View */}
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+                      <span style={{ fontSize:"0.72rem", color: c.deadline === "Expired" ? "#F87171" : c.deadline.includes("days") && parseInt(c.deadline) < 7 ? "#FBBF24" : "#6B6560" }}>{c.deadline}</span>
+                      {c.url && (
+                        <a href={c.url} target="_blank" rel="noopener noreferrer"
+                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:"0.72rem", color:"#C9A84C", textDecoration:"none" }}>
+                          SAM.gov <ExternalLink size={9} />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))

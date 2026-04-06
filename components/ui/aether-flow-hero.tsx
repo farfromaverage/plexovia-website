@@ -53,9 +53,9 @@ export default function AetherFlowHero() {
 
           // Interaction: particles repel from cursor/finger
           if (mouse.x !== null && mouse.y !== null) {
-            let dx = mouse.x - this.x;
-            let dy = mouse.y - this.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
+            const dx = mouse.x - this.x;
+            const dy = mouse.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
             if (distance < mouse.radius + this.size) {
               const forceDirectionX = dx / distance;
               const forceDirectionY = dy / distance;
@@ -89,16 +89,16 @@ export default function AetherFlowHero() {
       numberOfParticles = Math.min(numberOfParticles, maxParticles);
 
       for (let i = 0; i < numberOfParticles; i++) {
-        let size = Math.random() * 2.5 + 1;
-        let x = Math.random() * (cw - size * 2) + size;
-        let y = Math.random() * (ch - size * 2) + size;
+        const size = Math.random() * 2.5 + 1;
+        const x = Math.random() * (cw - size * 2) + size;
+        const y = Math.random() * (ch - size * 2) + size;
         // Same speed on all devices — delta-time in update() handles consistency
-        let directionX = Math.random() * 1.0 - 0.5;
-        let directionY = Math.random() * 1.0 - 0.5;
+        const directionX = Math.random() * 1.0 - 0.5;
+        const directionY = Math.random() * 1.0 - 0.5;
 
         // DEPTH FIELD: Tie base opacity to size
-        let baseAlpha = Math.max(0.15, (size - 1) / 2.5 * 0.85);
-        let color = `rgba(28, 25, 23, ${baseAlpha.toFixed(2)})`;
+        const baseAlpha = Math.max(0.15, (size - 1) / 2.5 * 0.85);
+        const color = `rgba(28, 25, 23, ${baseAlpha.toFixed(2)})`;
         particles.push(createParticle(x, y, directionX, directionY, size, color));
       }
     }
@@ -153,9 +153,9 @@ export default function AetherFlowHero() {
 
       for (let a = 0; a < particles.length; a++) {
         for (let b = a; b < particles.length; b++) {
-          let dx = particles[a].x - particles[b].x;
-          let dy = particles[a].y - particles[b].y;
-          let distance = dx * dx + dy * dy;
+          const dx = particles[a].x - particles[b].x;
+          const dy = particles[a].y - particles[b].y;
+          const distance = dx * dx + dy * dy;
 
           if (distance < connectionArea) {
             opacityValue = 1 - distance / 22000;
@@ -171,9 +171,9 @@ export default function AetherFlowHero() {
             ctx.beginPath();
 
             if (mouse.x !== null && mouse.y !== null) {
-              let dx_mouse = particles[a].x - mouse.x;
-              let dy_mouse = particles[a].y - mouse.y;
-              let distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
+              const dx_mouse = particles[a].x - mouse.x;
+              const dy_mouse = particles[a].y - mouse.y;
+              const distance_mouse = Math.sqrt(dx_mouse * dx_mouse + dy_mouse * dy_mouse);
 
               if (distance_mouse < mouse.radius) {
                 // Interactive lines turn Bright Gold when cursor is near

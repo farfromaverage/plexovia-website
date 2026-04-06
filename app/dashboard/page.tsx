@@ -9,8 +9,6 @@ import {
   TrendingUp, MapPin, Zap, ArrowUpRight, Shield,
   ExternalLink, Tag, RefreshCw, PenLine, Users, AlertCircle,
 } from "lucide-react";
-import ActivityChart, { ChartDataPoint } from "./components/ActivityChart";
-
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface Profile {
   id: string; email: string | null; company_name: string | null;
@@ -101,13 +99,6 @@ function mapMatch(m: EngineMatch): ContractDisplay {
 }
 
 /* ─── Mock fallback contracts (sample data, shown pre-scan) ─────── */
-const MOCK_CONTRACTS: ContractDisplay[] = [
-  { id:"1", title:"IT Modernization & Cloud Migration Services",        agency:"Dept. of Defense",              naics:"541512", state:"VA", value:"$2.1M – $5M",     posted:"Today",       deadline:"Due in 14 days", score:96, type:"Full & Open",            matchedBy:"naics",   matchLabel:"NAICS 541512",          url:null },
-  { id:"2", title:"Cybersecurity Operations Center (SOC) Support",     agency:"Dept. of Homeland Security",    naics:"541519", state:"MD", value:"$800K – $2M",    posted:"Yesterday",   deadline:"Due in 3 days", score:89, type:"Small Business Set-Aside", matchedBy:"keyword", matchLabel:"Keyword: cybersecurity",url:null },
-  { id:"3", title:"Enterprise Software Development & Integration",     agency:"Dept. of Veterans Affairs",     naics:"541511", state:"TX", value:"$500K – $1.5M",  posted:"2 days ago",  deadline:"Due tomorrow", score:82, type:"SDVOSB Set-Aside",        matchedBy:"naics",   matchLabel:"NAICS 541511",          url:null },
-  { id:"4", title:"Cloud Infrastructure & DevOps Modernization",       agency:"General Services Administration",naics:"518210", state:"DC", value:"$1.2M – $3M",    posted:"3 days ago",  deadline:"Due in 21 days", score:74, type:"Full & Open",            matchedBy:"keyword", matchLabel:"Keyword: cloud",        url:null },
-  { id:"5", title:"Network Security Assessment & Penetration Testing", agency:"Dept. of Energy",               naics:"541519", state:"CO", value:"$300K – $900K",  posted:"4 days ago",  deadline:"Expired", score:68, type:"8(a) Set-Aside",          matchedBy:"keyword", matchLabel:"Keyword: security",    url:null },
-];
 
 /* ─── Components ──────────────────────────────────────────────────── */
 function MatchScore({ score }: { score: number }) {
@@ -133,7 +124,7 @@ function MatchedBadge({ by, label }: { by: string; label: string }) {
 
 function ContractCard({ c }: { c: ContractDisplay }) {
   return (
-    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", padding:"1.125rem 1.5rem", borderBottom:"1px solid #252320", gap:"1rem", transition:"background 0.12s" }}
+    <div className="contract-card-row" style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", padding:"1.125rem 1.5rem", borderBottom:"1px solid #252320", gap:"1rem", transition:"background 0.12s" }}
       onMouseEnter={e => (e.currentTarget.style.background = "#27251F")}
       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
     >
@@ -151,7 +142,7 @@ function ContractCard({ c }: { c: ContractDisplay }) {
           <span style={{ fontSize:"0.78rem", color: c.deadline.includes("Expired") ? "#F87171" : c.deadline.includes("Due today") || c.deadline.includes("Due tomorrow") ? "#FCD34D" : "#6B6560" }}>{c.deadline}</span>
         </div>
       </div>
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
+      <div className="contract-card-right" style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
         <span style={{ fontSize:"0.875rem", fontWeight:600, color:"#F7F5F0", fontFamily:"var(--font-geist-mono, monospace)" }}>{c.value}</span>
         {c.url ? (
           <a href={c.url} target="_blank" rel="noopener noreferrer"
@@ -319,15 +310,6 @@ function FeedSkeleton() {
   );
 }
 
-/* ─── Mock Chart Data ─────────────────────────────────────────────── */
-const MOCK_CHART_DATA: ChartDataPoint[] = Array.from({ length: 14 }).map((_, i) => {
-  const d = new Date();
-  d.setDate(d.getDate() - (13 - i));
-  // Random sine wave baseline + noise
-  const val = Math.floor(25 + Math.sin(i) * 15 + Math.random() * 10);
-  return { date: d.toISOString(), value: val };
-});
-
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const router = useRouter();
@@ -339,7 +321,6 @@ export default function DashboardPage() {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [matchTotal,     setMatchTotal]     = useState(0);
   const [matchError,     setMatchError]     = useState(false);
-  const [hasRealData,    setHasRealData]    = useState(false);
 
   /* ── Fetch real matches from engine via server-side proxy ──────── */
   async function fetchMatches() {
@@ -351,7 +332,6 @@ export default function DashboardPage() {
       const mapped = (json.matches || []).map(mapMatch);
       setMatches(mapped);
       setMatchTotal(json.pagination?.total || 0);
-      setHasRealData(mapped.length > 0);
     } catch {
       setMatchError(true);
     } finally {
@@ -421,8 +401,6 @@ export default function DashboardPage() {
     ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
     : null;
   const isTrial    = !profile?.plan || profile.plan === "trial";
-  const hasPlan     = profile?.plan === "pro" || profile?.plan === "premium" || profile?.plan === "active" || profile?.plan === "professional";
-  const isPaid      = hasPlan;
   const hour        = new Date().getHours();
   const greeting    = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -430,9 +408,9 @@ export default function DashboardPage() {
     ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""} · ${naicsCount} NAICS code${naicsCount !== 1 ? "s" : ""}${keywordCount > 0 ? ` · ${keywordCount} keyword${keywordCount !== 1 ? "s" : ""}` : ""} · Next digest: 6 AM EST`
     : "Complete your setup below to activate contract monitoring";
 
-  const displayContracts = hasRealData ? matches : MOCK_CONTRACTS;
-  const matchCountVal    = matchesLoading ? "…" : hasRealData ? String(matchTotal) : "—";
-  const newThisWeekVal   = matchesLoading ? "…" : hasRealData ? String(matches.filter(m => m.posted === "Today" || m.posted === "Yesterday" || m.posted.includes("days ago")).length) : "—";
+  const hasRealData      = matches.length > 0;
+  const matchCountVal    = matchesLoading ? "…" : String(matchTotal);
+  const newThisWeekVal   = matchesLoading ? "…" : String(matches.filter(m => m.posted === "Today" || m.posted === "Yesterday" || m.posted.includes("days ago")).length);
 
   return (
     <>
@@ -451,6 +429,8 @@ export default function DashboardPage() {
           .db-main    { padding: 1.5rem 1rem; }
           .db-2col    { grid-template-columns: 1fr; }
           .db-signout-label { display: none; }
+          .contract-card-row { flex-direction: column; align-items: stretch !important; gap: 0.75rem !important; }
+          .contract-card-right { flex-direction: row !important; align-items: center !important; justify-content: space-between; width: 100%; border-top: 1px solid #2D2A26; padding-top: 0.75rem; }
         }
         @media (max-width: 480px) { .db-main { padding: 1rem 0.75rem; } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -481,11 +461,6 @@ export default function DashboardPage() {
             ))}
           </nav>
           <div className="db-actions">
-            {!isPaid && (
-              <Link href="/pricing" style={{ display:"flex", alignItems:"center", gap:"5px", padding:"6px 14px", background:"#C9A84C22", border:"1px solid #C9A84C44", borderRadius:"8px", fontSize:"0.78125rem", fontWeight:600, color:"#C9A84C", textDecoration:"none", whiteSpace:"nowrap" }}>
-                <Zap size={12} /> Upgrade
-              </Link>
-            )}
             <button onClick={signOut} style={{ display:"flex", alignItems:"center", gap:"6px", background:"none", border:"1px solid #2D2A26", borderRadius:"8px", padding:"6px 14px", color:"#6B6560", fontSize:"0.8125rem", cursor:"pointer", transition:"color 0.15s, border-color 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.color="#F7F5F0"; e.currentTarget.style.borderColor="#3D3830"; }}
               onMouseLeave={e => { e.currentTarget.style.color="#6B6560"; e.currentTarget.style.borderColor="#2D2A26"; }}>
@@ -537,29 +512,15 @@ export default function DashboardPage() {
               <p style={{ fontSize:"0.875rem", color:"#4ADE80", fontWeight:600, margin:0 }}>Monitoring is active</p>
               <span style={{ width:"1px", height:"14px", background:"#2D4A2D" }} />
               <p style={{ fontSize:"0.8125rem", color:"#6B6560", margin:0 }}>
-                Government portals are scanned nightly. Your <strong style={{ color:"#A8A29E" }}>first match digest arrives tomorrow at 6:00 AM EST</strong>.
+                Government portals are scanned nightly. Your <strong style={{ color:"#A8A29E" }}>next match digest arrives at 6:00 AM EST</strong>.
               </p>
             </div>
           )}
 
-          {/* Chart Section */}
-          <div style={{ background: "#252320", border: "1px solid #2D2A26", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-              <div>
-                <h2 style={{ fontWeight: 700, fontSize: "1rem", color: "#F7F5F0", margin: 0 }}>Matching Volume</h2>
-                <p style={{ fontSize: "0.75rem", color: "#6B6560", margin: "4px 0 0" }}>Historical contract matches over the last 14 days</p>
-              </div>
-              <div style={{ padding: "4px 10px", background: "#1C1917", borderRadius: "6px", border: "1px solid #2D2A26", fontSize: "0.75rem", color: "#A8A29E" }}>
-                14 Days
-              </div>
-            </div>
-            <ActivityChart data={MOCK_CHART_DATA} />
-          </div>
-
           {/* Stat cards */}
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:"1rem", marginBottom:"2rem" }}>
-            <StatCard icon={<FileText size={14} />}   label="Contract Matches" value={matchCountVal}  sub={hasRealData ? `${matchTotal} total matches found` : setupDone ? "Pending first scan" : "Set up profile first"} />
-            <StatCard icon={<TrendingUp size={14} />} label="New This Week"    value={newThisWeekVal} sub={hasRealData ? "From last 7 days" : setupDone ? "Check back after 6 AM" : "Set up profile first"} />
+            <StatCard icon={<FileText size={14} />}   label="Contract Matches" value={matchCountVal}  sub={hasRealData ? `${matchTotal} total matches found` : "Pending scan"} />
+            <StatCard icon={<TrendingUp size={14} />} label="New This Week"    value={newThisWeekVal} sub={hasRealData ? "From last 7 days" : "Pending scan"} />
             <StatCard icon={<MapPin size={14} />}     label="States Active"    value={stateCount > 0 ? String(stateCount) : "—"} sub={stateCount > 0 ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""}` : "Not configured"} />
             <StatCard icon={<Zap size={14} />}        label="NAICS Codes"      value={naicsCount > 0 ? String(naicsCount) : "—"} sub={naicsCount > 0 ? `of unlimited slots used` : "Not configured"} accent />
             <StatCard icon={<Tag size={14} />}        label="Keywords"         value={keywordCount > 0 ? String(keywordCount) : "—"} sub={keywordCount > 0 ? "Active keyword matching" : "None added yet"} />
@@ -574,65 +535,46 @@ export default function DashboardPage() {
                 <div>
                   <h2 style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>Recent Contract Matches</h2>
                   <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"3px 0 0" }}>
-                    {hasRealData ? `Ranked by AI match score · ${matchTotal} total matches` : "Ranked by AI match score · Matched via NAICS codes and keywords"}
+                    Ranked by AI match score · {matchTotal} total
                   </p>
                 </div>
-                <Link href="/dashboard/contracts" style={{ display:"flex", alignItems:"center", gap:"5px", fontSize:"0.8125rem", color:"#C9A84C", textDecoration:"none", fontWeight:600 }}>
-                  View all <ArrowUpRight size={13} />
-                </Link>
+                {hasRealData && (
+                  <Link href="/dashboard/contracts" style={{ display:"flex", alignItems:"center", gap:"5px", fontSize:"0.8125rem", color:"#C9A84C", textDecoration:"none", fontWeight:600 }}>
+                    View all <ArrowUpRight size={13} />
+                  </Link>
+                )}
               </div>
-
-              {/* Banner — only shown when no real data yet */}
-              {!hasRealData && !matchesLoading && !matchError && (
-                <div style={{ padding:"10px 1.5rem", background:"#1A1812", borderBottom:"1px solid #2D2A26", display:"flex", alignItems:"center", gap:"10px" }}>
-                  <span style={{ padding:"2px 8px", background:"#3D3520", border:"1px solid #C9A84C40", borderRadius:"4px", fontSize:"0.68rem", color:"#C9A84C", fontWeight:700, fontFamily:"var(--font-geist-mono, monospace)", letterSpacing:"0.06em", whiteSpace:"nowrap" }}>SAMPLE DATA</span>
-                  <span style={{ fontSize:"0.8125rem", color:"#A8A29E" }}>
-                    Example contracts shown until your first scan completes. Real matches arrive at{" "}
-                    <strong style={{ color:"#F7F5F0" }}>6 AM tomorrow</strong>.
-                  </span>
-                </div>
-              )}
 
               {/* Engine error banner */}
               {matchError && (
                 <div style={{ padding:"10px 1.5rem", background:"#1A1515", borderBottom:"1px solid #2D2A26", display:"flex", alignItems:"center", gap:"8px" }}>
                   <AlertCircle size={14} color="#F87171" />
-                  <span style={{ fontSize:"0.82rem", color:"#F87171" }}>Could not reach engine. Showing sample data.</span>
+                  <span style={{ fontSize:"0.82rem", color:"#F87171" }}>Could not load contracts right now. Please try again later.</span>
                 </div>
               )}
 
               {/* Skeleton or real/mock data */}
-              {matchesLoading
-                ? <FeedSkeleton />
-                : displayContracts.map(c => <ContractCard key={c.id} c={c} />)
-              }
+              {matchesLoading ? (
+                <FeedSkeleton />
+              ) : matches.length > 0 ? (
+                matches.map(c => <ContractCard key={c.id} c={c} />)
+              ) : (
+                <div style={{ padding:"3rem 1.5rem", textAlign:"center" }}>
+                   <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#2A2318", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+                     <FileText size={20} color="#C9A84C" />
+                   </div>
+                   <p style={{ fontWeight: 600, color: "#F7F5F0", margin: "0 0 0.25rem" }}>No matches found</p>
+                   <p style={{ fontSize: "0.8125rem", color: "#6B6560", maxWidth: "250px", margin: "0 auto" }}>
+                     {setupDone ? "We haven't found any contracts matching your profile yet. We will scan again tonight." : "Complete your monitoring profile to discover relevant contracts."}
+                   </p>
+                </div>
+              )}
             </div>
 
             {/* Monitoring panel */}
             <MonitoringPanel profile={profile!} />
           </div>
 
-          {/* Upgrade CTA */}
-          {!hasPlan && (
-            <div style={{ marginTop:"1.5rem", background:"linear-gradient(135deg, #1E1C1A 0%, #252320 100%)", border:"1px solid #2D2A26", borderRadius:"14px", padding:"1.375rem 2rem", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"1rem" }}>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:"1rem" }}>
-                <div style={{ width:"38px", height:"38px", borderRadius:"10px", background:"#C9A84C18", border:"1px solid #C9A84C30", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                  <Zap size={17} color="#C9A84C" />
-                </div>
-                <div>
-                  <p style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>
-                    {daysLeft !== null ? `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : "Start your subscription today"}
-                  </p>
-                  <p style={{ fontSize:"0.8125rem", color:"#6B6560", margin:"4px 0 0" }}>
-                    Activate your subscription to the Plexovia Intelligence system. $299/mo. Cancel anytime.
-                  </p>
-                </div>
-              </div>
-              <Link href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"10px 22px", background:"#C9A84C", color:"#1C1917", borderRadius:"9px", fontWeight:700, fontSize:"0.875rem", textDecoration:"none", whiteSpace:"nowrap" }}>
-                Subscribe Now <ChevronRight size={15} />
-              </Link>
-            </div>
-          )}
         </main>
       </div>
     </>

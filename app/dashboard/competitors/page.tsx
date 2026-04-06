@@ -33,7 +33,7 @@ function fmtDate(d: string | null) {
 /* ─── Competitor row ──────────────────────────────────────────────── */
 function CompetitorRow({ c, rank }: { c: Competitor; rank: number }) {
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 120px 120px 140px", alignItems:"center", gap:"0.75rem", padding:"1rem 1.5rem", borderBottom:"1px solid #252320", transition:"background 0.12s" }}
+    <div className="cmp-row" style={{ alignItems:"center", gap:"0.75rem", padding:"1rem 1.5rem", borderBottom:"1px solid #252320", transition:"background 0.12s" }}
       onMouseEnter={e => (e.currentTarget.style.background = "#27251F")}
       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
     >
@@ -54,17 +54,17 @@ function CompetitorRow({ c, rank }: { c: Competitor; rank: number }) {
         </div>
       </div>
       {/* Awards */}
-      <div style={{ textAlign:"right" }}>
+      <div className="cmp-stat-box" style={{ textAlign:"right" }}>
         <p style={{ fontSize:"0.875rem", fontWeight:600, color:"#F7F5F0", margin:0, fontFamily:"var(--font-geist-mono, monospace)" }}>{c.total_awards}</p>
         <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"2px 0 0" }}>contracts won</p>
       </div>
       {/* Total value */}
-      <div style={{ textAlign:"right" }}>
+      <div className="cmp-stat-box" style={{ textAlign:"right" }}>
         <p style={{ fontSize:"0.875rem", fontWeight:600, color:"#C9A84C", margin:0, fontFamily:"var(--font-geist-mono, monospace)" }}>{fmt$(c.total_value)}</p>
         <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"2px 0 0" }}>awarded</p>
       </div>
       {/* Latest award */}
-      <div style={{ textAlign:"right" }}>
+      <div className="cmp-stat-box" style={{ textAlign:"right" }}>
         <p style={{ fontSize:"0.78rem", color:"#A8A29E", margin:0 }}>{fmtDate(c.latest_award)}</p>
         <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"2px 0 0" }}>latest win</p>
       </div>
@@ -100,7 +100,12 @@ export default function CompetitorsPage() {
     setLoading(true); setError(null);
     try {
       const res = await fetch(`/api/user-competitors?days=${days}&limit=25`);
-      if (res.status === 403) { setError("pro_required"); setLoading(false); return; }
+      if (res.status === 400) {
+        setCompetitors([]);
+        setTotal(0);
+        setLoading(false);
+        return;
+      }
       if (!res.ok) throw new Error();
       const json = await res.json();
       setCompetitors(json.competitors || []);
@@ -122,7 +127,24 @@ export default function CompetitorsPage() {
     <>
       <style>{`
         .cc-header { border-bottom:1px solid #252320; background:#1C1917; position:sticky; top:0; z-index:50; height:60px; display:flex; align-items:center; padding:0 2rem; gap:1.5rem; }
+        .cc-nav    { display:flex; gap:0.25rem; flex:1; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
+        .cc-nav::-webkit-scrollbar { display:none; }
+        .cc-nav-item { white-space:nowrap; }
         .cc-main   { max-width:1100px; margin:0 auto; padding:2rem; }
+        
+        .cmp-head { display:grid; grid-template-columns:40px 1fr 120px 120px 140px; padding:0.625rem 1.5rem; border-bottom:1px solid #2D2A26; }
+        .cmp-row  { display:grid; grid-template-columns:40px 1fr 120px 120px 140px; }
+
+        @media (max-width: 768px) {
+          .cc-header { padding: 0 1rem; }
+          .cc-main   { padding: 1rem; }
+          .cmp-head  { display: none; }
+          .cmp-row { display: flex; flex-direction: column; align-items: flex-start !important; gap: 0.75rem !important; }
+          .cmp-stat-box { display: flex; justify-content: space-between; align-items: center; width: 100%; border-top: 1px solid #252320; padding-top: 0.5rem; text-align: left !important; }
+          .cmp-stat-box > p:last-child { margin-top: 0 !important; text-align: right; }
+          .cmp-stat-box > p:first-child { text-align: left; }
+        }
+
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
       `}</style>
 
@@ -134,7 +156,7 @@ export default function CompetitorsPage() {
               <span style={{ color:"#C9A84C" }}>P</span><span style={{ color:"#F7F5F0" }}>lexovia</span>
             </span>
           </Link>
-          <nav style={{ display:"flex", gap:"0.25rem", flex:1 }}>
+          <nav className="cc-nav">
             {[
               { href:"/dashboard", label:"Overview" },
               { href:"/dashboard/contracts", label:"Contracts" },
@@ -143,6 +165,7 @@ export default function CompetitorsPage() {
               { href:"/dashboard/team", label:"Team" },
             ].map(n => (
               <Link key={n.href} href={n.href}
+                className="cc-nav-item"
                 style={{ padding:"6px 12px", borderRadius:"8px", fontSize:"0.8125rem", textDecoration:"none",
                   color: n.active ? "#C9A84C" : "#6B6560",
                   background: n.active ? "#2A2318" : "transparent" }}>
@@ -205,7 +228,7 @@ export default function CompetitorsPage() {
 
               {/* Table */}
               <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", overflow:"hidden" }}>
-                <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 120px 120px 140px", padding:"0.625rem 1.5rem", borderBottom:"1px solid #2D2A26" }}>
+                <div className="cmp-head">
                   {["#","Company","Contracts","Total Value","Latest Win"].map(h => (
                     <span key={h} style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>{h}</span>
                   ))}
@@ -213,7 +236,7 @@ export default function CompetitorsPage() {
 
                 {loading ? (
                   <>{[1,2,3,4,5].map(i => (
-                    <div key={i} style={{ display:"grid", gridTemplateColumns:"40px 1fr 120px 120px 140px", padding:"1rem 1.5rem", borderBottom:"1px solid #252320", gap:"0.75rem" }}>
+                    <div key={i} className="cmp-row" style={{ padding:"1rem 1.5rem", borderBottom:"1px solid #252320", gap:"0.75rem" }}>
                       {[1,2,3,4,5].map(j => <div key={j} style={{ height:14, background:"#2A2724", borderRadius:4, animation:"pulse 1.4s ease-in-out infinite" }} />)}
                     </div>
                   ))}</>
