@@ -2,6 +2,28 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
+// Helper to reliably ping the Python backend for emails
+async function triggerEngineEmail(endpoint: string, payload: any) {
+  const engineUrl = (process.env.RAILWAY_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const internalKey = process.env.INTERNAL_API_KEY || '';
+  
+  try {
+    const res = await fetch(`${engineUrl}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Key': internalKey
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      console.error(`Engine email ${endpoint} failed with status: ${res.status}`);
+    }
+  } catch (err) {
+    console.error(`Failed to reach engine for ${endpoint}:`, err);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     // Initialize Supabase with service role key to bypass RLS in the webhook
@@ -64,9 +86,7 @@ export async function POST(req: Request) {
     }
 
     switch (eventName) {
-      case 'subscription_created':
-      case 'subscription_updated': {
-        // Update user's plan and subscription details
+      case 'subscription_created': {
         const { error } = await supabase
           .from('profiles')
           .update({
@@ -80,11 +100,38 @@ export async function POST(req: Request) {
           })
           .eq('id', finalUserId);
         if (error) throw new Error(`Supabase Update Error: ${error.message}`);
+        
+        // Trigger welcome email
+        await triggerEngineEmail('/api/internal/welcome-email', {
+          user_email: customerEmail,
+          trial_ends_at: trialEndsAt || new Date(Date.now() + 7*24*60*60*1000).toISOString()
+        });
+        break;
+      }
+
+      case 'subscription_updated': {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            plan: 'Plexovia Intelligence',
+            active: status === 'active' || status === 'on_trial',
+            trial_ends_at: trialEndsAt,
+            plan_expires_at: endsAt,
+            ls_customer_id: customerId,
+            ls_subscription_id: subscriptionId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', finalUserId);
+        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
+        
+        if (status === 'active') {
+          // Send payment success if they converted
+          await triggerEngineEmail('/api/internal/payment-success', { user_email: customerEmail });
+        }
         break;
       }
 
       case 'subscription_cancelled': {
-        // Keep plan active until `endsAt` date
         const { error } = await supabase
           .from('profiles')
           .update({
@@ -94,24 +141,30 @@ export async function POST(req: Request) {
           })
           .eq('id', finalUserId);
         if (error) throw new Error(`Supabase Update Error: ${error.message}`);
+        
+        // Trigger cancelled email
+        await triggerEngineEmail('/api/internal/subscription-cancelled', { user_email: customerEmail });
         break;
       }
 
-      case 'subscription_resumed':
+      case 'subscription_resumed': {
         await supabase
           .from('profiles')
           .update({
             plan: 'Plexovia Intelligence',
             active: true,
-            plan_expires_at: null, // clear expiration since it's resumed
+            plan_expires_at: null,
             updated_at: new Date().toISOString()
           })
           .eq('id', finalUserId);
+        
+        // Trigger payment/subscription resumed effectively as success
+        await triggerEngineEmail('/api/internal/payment-success', { user_email: customerEmail });
         break;
+      }
 
       case 'subscription_expired':
-      case 'subscription_payment_failed':
-        // Mark inactive if payment permanently failed or expired
+      case 'subscription_payment_failed': {
         await supabase
           .from('profiles')
           .update({
@@ -121,12 +174,11 @@ export async function POST(req: Request) {
           .eq('id', finalUserId);
 
         if (eventName === 'subscription_payment_failed') {
-          // Note: In Phase 2D we are required to trigger an email via Resend.
-          // The engine/core/emailer.py or backend can do this, or we can hit the generic resend API here.
-          // For now, logging. The engine cron or an Edge Function can pick up inactive status.
-          console.log(`Payment failed for ${customerEmail}.`);
+          await triggerEngineEmail('/api/internal/payment-failed', { user_email: customerEmail });
+          console.log(`Payment failed mapped and email triggered for ${customerEmail}.`);
         }
         break;
+      }
 
       default:
         console.log(`Unhandled event type: ${eventName}`);
