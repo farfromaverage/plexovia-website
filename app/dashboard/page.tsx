@@ -9,6 +9,7 @@ import {
   TrendingUp, MapPin, Zap, ArrowUpRight, Shield,
   ExternalLink, Tag, RefreshCw, PenLine, Users, AlertCircle,
 } from "lucide-react";
+import ActivityChart, { ChartDataPoint } from "./components/ActivityChart";
 
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface Profile {
@@ -39,7 +40,7 @@ interface EngineMatch {
 
 interface ContractDisplay {
   id: string; title: string; agency: string; naics: string;
-  state: string; value: string; posted: string; score: number;
+  state: string; value: string; posted: string; deadline: string; score: number;
   type: string; matchedBy: "naics" | "keyword"; matchLabel: string;
   url: string | null;
 }
@@ -63,6 +64,16 @@ function formatPosted(d: string | null): string {
   if (days < 7)  return `${days} days ago`;
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
+function formatDeadline(d: string | null): string {
+  if (!d) return "TBD";
+  const ms = new Date(d).getTime() - Date.now();
+  const days = Math.floor(ms / 86400000);
+  if (days < 0) return "Expired";
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+  if (days <= 14) return `Due in ${days} days`;
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 function mapMatch(m: EngineMatch): ContractDisplay {
   const reasons     = m.reasons || [];
   const naicsReason = reasons.find(r => r.startsWith("naics:"));
@@ -81,6 +92,7 @@ function mapMatch(m: EngineMatch): ContractDisplay {
     state:      m.contract.state || "Federal",
     value:      formatValue(m.contract.value_min, m.contract.value_max),
     posted:     formatPosted(m.contract.posted_date),
+    deadline:   formatDeadline(m.contract.deadline),
     score:      m.score,
     type:       m.contract.set_aside || "Full & Open",
     matchedBy, matchLabel,
@@ -90,11 +102,11 @@ function mapMatch(m: EngineMatch): ContractDisplay {
 
 /* ─── Mock fallback contracts (sample data, shown pre-scan) ─────── */
 const MOCK_CONTRACTS: ContractDisplay[] = [
-  { id:"1", title:"IT Modernization & Cloud Migration Services",        agency:"Dept. of Defense",              naics:"541512", state:"VA", value:"$2.1M – $5M",     posted:"Today",       score:96, type:"Full & Open",            matchedBy:"naics",   matchLabel:"NAICS 541512",          url:null },
-  { id:"2", title:"Cybersecurity Operations Center (SOC) Support",     agency:"Dept. of Homeland Security",    naics:"541519", state:"MD", value:"$800K – $2M",    posted:"Yesterday",   score:89, type:"Small Business Set-Aside", matchedBy:"keyword", matchLabel:"Keyword: cybersecurity",url:null },
-  { id:"3", title:"Enterprise Software Development & Integration",     agency:"Dept. of Veterans Affairs",     naics:"541511", state:"TX", value:"$500K – $1.5M",  posted:"2 days ago",  score:82, type:"SDVOSB Set-Aside",        matchedBy:"naics",   matchLabel:"NAICS 541511",          url:null },
-  { id:"4", title:"Cloud Infrastructure & DevOps Modernization",       agency:"General Services Administration",naics:"518210", state:"DC", value:"$1.2M – $3M",    posted:"3 days ago",  score:74, type:"Full & Open",            matchedBy:"keyword", matchLabel:"Keyword: cloud",        url:null },
-  { id:"5", title:"Network Security Assessment & Penetration Testing", agency:"Dept. of Energy",               naics:"541519", state:"CO", value:"$300K – $900K",  posted:"4 days ago",  score:68, type:"8(a) Set-Aside",          matchedBy:"keyword", matchLabel:"Keyword: security",    url:null },
+  { id:"1", title:"IT Modernization & Cloud Migration Services",        agency:"Dept. of Defense",              naics:"541512", state:"VA", value:"$2.1M – $5M",     posted:"Today",       deadline:"Due in 14 days", score:96, type:"Full & Open",            matchedBy:"naics",   matchLabel:"NAICS 541512",          url:null },
+  { id:"2", title:"Cybersecurity Operations Center (SOC) Support",     agency:"Dept. of Homeland Security",    naics:"541519", state:"MD", value:"$800K – $2M",    posted:"Yesterday",   deadline:"Due in 3 days", score:89, type:"Small Business Set-Aside", matchedBy:"keyword", matchLabel:"Keyword: cybersecurity",url:null },
+  { id:"3", title:"Enterprise Software Development & Integration",     agency:"Dept. of Veterans Affairs",     naics:"541511", state:"TX", value:"$500K – $1.5M",  posted:"2 days ago",  deadline:"Due tomorrow", score:82, type:"SDVOSB Set-Aside",        matchedBy:"naics",   matchLabel:"NAICS 541511",          url:null },
+  { id:"4", title:"Cloud Infrastructure & DevOps Modernization",       agency:"General Services Administration",naics:"518210", state:"DC", value:"$1.2M – $3M",    posted:"3 days ago",  deadline:"Due in 21 days", score:74, type:"Full & Open",            matchedBy:"keyword", matchLabel:"Keyword: cloud",        url:null },
+  { id:"5", title:"Network Security Assessment & Penetration Testing", agency:"Dept. of Energy",               naics:"541519", state:"CO", value:"$300K – $900K",  posted:"4 days ago",  deadline:"Expired", score:68, type:"8(a) Set-Aside",          matchedBy:"keyword", matchLabel:"Keyword: security",    url:null },
 ];
 
 /* ─── Components ──────────────────────────────────────────────────── */
@@ -136,6 +148,7 @@ function ContractCard({ c }: { c: ContractDisplay }) {
           <span style={{ fontSize:"0.78rem", color:"#6B6560", display:"flex", alignItems:"center", gap:"4px" }}><Shield size={11} color="#4B5563"/>{c.agency}</span>
           <span style={{ fontSize:"0.78rem", color:"#6B6560", display:"flex", alignItems:"center", gap:"4px" }}><MapPin size={11} color="#4B5563"/>{c.state}</span>
           <span style={{ fontSize:"0.78rem", color:"#6B6560" }}>{c.posted}</span>
+          <span style={{ fontSize:"0.78rem", color: c.deadline.includes("Expired") ? "#F87171" : c.deadline.includes("Due today") || c.deadline.includes("Due tomorrow") ? "#FCD34D" : "#6B6560" }}>{c.deadline}</span>
         </div>
       </div>
       <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px", flexShrink:0 }}>
@@ -305,6 +318,15 @@ function FeedSkeleton() {
     </>
   );
 }
+
+/* ─── Mock Chart Data ─────────────────────────────────────────────── */
+const MOCK_CHART_DATA: ChartDataPoint[] = Array.from({ length: 14 }).map((_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() - (13 - i));
+  // Random sine wave baseline + noise
+  const val = Math.floor(25 + Math.sin(i) * 15 + Math.random() * 10);
+  return { date: d.toISOString(), value: val };
+});
 
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
@@ -519,6 +541,20 @@ export default function DashboardPage() {
               </p>
             </div>
           )}
+
+          {/* Chart Section */}
+          <div style={{ background: "#252320", border: "1px solid #2D2A26", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+              <div>
+                <h2 style={{ fontWeight: 700, fontSize: "1rem", color: "#F7F5F0", margin: 0 }}>Matching Volume</h2>
+                <p style={{ fontSize: "0.75rem", color: "#6B6560", margin: "4px 0 0" }}>Historical contract matches over the last 14 days</p>
+              </div>
+              <div style={{ padding: "4px 10px", background: "#1C1917", borderRadius: "6px", border: "1px solid #2D2A26", fontSize: "0.75rem", color: "#A8A29E" }}>
+                14 Days
+              </div>
+            </div>
+            <ActivityChart data={MOCK_CHART_DATA} />
+          </div>
 
           {/* Stat cards */}
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:"1rem", marginBottom:"2rem" }}>
