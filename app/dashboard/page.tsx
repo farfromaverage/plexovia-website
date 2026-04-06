@@ -41,6 +41,8 @@ interface ContractDisplay {
   state: string; value: string; posted: string; deadline: string; score: number;
   type: string; matchedBy: "naics" | "keyword"; matchLabel: string;
   url: string | null;
+  rawPosted: string | null;
+  rawMatchedAt: string | null;
 }
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
@@ -74,8 +76,8 @@ function formatDeadline(d: string | null): string {
 }
 function mapMatch(m: EngineMatch): ContractDisplay {
   const reasons     = m.reasons || [];
-  const naicsReason = reasons.find(r => r.startsWith("naics:"));
-  const kwReason    = reasons.find(r => r.startsWith("keyword:"));
+  const naicsReason = reasons.find((r: string) => r.startsWith("naics:"));
+  const kwReason    = reasons.find((r: string) => r.startsWith("keyword:"));
   const matchedBy   = naicsReason ? "naics" : "keyword";
   const matchLabel  = naicsReason
     ? `NAICS ${naicsReason.replace("naics:", "")}`
@@ -95,6 +97,8 @@ function mapMatch(m: EngineMatch): ContractDisplay {
     type:       m.contract.set_aside || "Full & Open",
     matchedBy, matchLabel,
     url:        m.contract.url || null,
+    rawPosted:  m.contract.posted_date || null,
+    rawMatchedAt: m.matched_at || null,
   };
 }
 
@@ -325,8 +329,8 @@ export default function DashboardPage() {
   /* ── Fetch real matches from engine via server-side proxy ──────── */
   async function fetchMatches() {
     try {
-      // Same-origin proxy — no CORS, no NEXT_PUBLIC env needed
-      const res = await fetch('/api/user-matches?per_page=10');
+      // Same-origin proxy — no CORS, no NEXT_PUBLIC env needed (fetch 50 for the chart)
+      const res = await fetch('/api/user-matches?per_page=50');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const mapped = (json.matches || []).map(mapMatch);
@@ -412,6 +416,28 @@ export default function DashboardPage() {
   const matchCountVal    = matchesLoading ? "…" : String(matchTotal);
   const newThisWeekVal   = matchesLoading ? "…" : String(matches.filter(m => m.posted === "Today" || m.posted === "Yesterday" || m.posted.includes("days ago")).length);
 
+  /* ── Generate simple 14-day chart data ────────────────────────────── */
+  const chartDays = 14;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const chartData = Array.from({ length: chartDays }).map((_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (chartDays - 1 - i));
+    return { date: d, count: 0 };
+  });
+
+  matches.forEach(m => {
+    if (!m.rawPosted && !m.rawMatchedAt) return;
+    const matchDate = new Date(m.rawPosted || m.rawMatchedAt!);
+    matchDate.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - matchDate.getTime()) / 86400000);
+    if (diff >= 0 && diff < chartDays) {
+      chartData[chartDays - 1 - diff].count++;
+    }
+  });
+
+  const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
   return (
     <>
       <style>{`
@@ -424,6 +450,14 @@ export default function DashboardPage() {
         .db-main     { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
         .db-2col     { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; align-items: start; }
         .db-signout-label { display: inline; }
+        
+        /* Bar chart animations and styles */
+        .analytics-bar-wrapper { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; transition: opacity 0.2s; position: relative; }
+        .analytics-bar { width: 100%; max-width: 16px; background: #2D2A26; border-radius: 3px 3px 0 0; transition: background 0.2s, height 0.6s cubic-bezier(0.16, 1, 0.3, 1); min-height: 4px; }
+        .analytics-bar-wrapper:hover .analytics-bar { background: #C9A84C; }
+        .analytics-tooltip { opacity: 0; pointer-events: none; position: absolute; bottom: calc(100% + 4px); background: #252320; border: 1px solid #3D3830; color: #F7F5F0; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); white-space: nowrap; transition: opacity 0.2s; z-index: 10; font-family: var(--font-geist-mono, monospace); }
+        .analytics-bar-wrapper:hover .analytics-tooltip { opacity: 1; }
+
         @media (max-width: 768px) {
           .db-header  { padding: 0 1rem; gap: 0.75rem; }
           .db-main    { padding: 1.5rem 1rem; }
@@ -530,45 +564,84 @@ export default function DashboardPage() {
           <div className="db-2col">
 
             {/* Contract feed */}
-            <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", overflow:"hidden" }}>
-              <div style={{ padding:"1.125rem 1.5rem", borderBottom:"1px solid #2D2A26", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div>
-                  <h2 style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>Recent Contract Matches</h2>
-                  <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"3px 0 0" }}>
-                    Ranked by AI match score · {matchTotal} total
-                  </p>
+            <div style={{ display:"flex", flexDirection:"column", gap:"1.5rem" }}>
+              
+              {/* Analytics Timeline Chart */}
+              <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", padding:"1.25rem 1.5rem" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1.25rem" }}>
+                   <div>
+                     <h2 style={{ fontWeight:700, fontSize:"0.875rem", color:"#F7F5F0", margin:0, textTransform:"uppercase", letterSpacing:"0.05em" }}>Match Volume</h2>
+                     <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"3px 0 0" }}>Daily breakdown over the last {chartDays} days</p>
+                   </div>
+                   <div style={{ fontWeight:700, fontSize:"1.25rem", color:"#C9A84C", letterSpacing:"-0.03em" }}>
+                     +{hasRealData ? chartData.reduce((acc, curr) => acc + curr.count, 0) : 0}
+                   </div>
                 </div>
-                {hasRealData && (
-                  <Link href="/dashboard/contracts" style={{ display:"flex", alignItems:"center", gap:"5px", fontSize:"0.8125rem", color:"#C9A84C", textDecoration:"none", fontWeight:600 }}>
-                    View all <ArrowUpRight size={13} />
-                  </Link>
-                )}
+                
+                <div style={{ height:"90px", display:"flex", alignItems:"flex-end", gap:"4px", paddingBottom:"10px", borderBottom:"1px dashed #3D3830" }}>
+                  {hasRealData ? chartData.map((d, i) => {
+                    const heightPercent = maxCount === 0 ? 0 : Math.max((d.count / maxCount) * 100, 4);
+                    return (
+                      <div key={i} className="analytics-bar-wrapper">
+                        <div className="analytics-tooltip">
+                          {d.count} match{d.count !== 1 && "es"}<br/>
+                          <span style={{ color:"#A8A29E" }}>{d.date.toLocaleDateString("en-US", { month:"short", day:"numeric" })}</span>
+                        </div>
+                        <div className="analytics-bar" style={{ height: `${heightPercent}%`, background: d.count > 0 ? (i === chartDays - 1 ? "#C9A84C" : "#F7F5F0") : "#2D2A26" }} />
+                      </div>
+                    );
+                  }) : chartData.map((_, i) => (
+                    <div key={i} className="analytics-bar-wrapper">
+                      <div className="analytics-bar" style={{ height: "4px" }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px", fontSize:"0.65rem", color:"#6B6560", textTransform:"uppercase", fontWeight:600 }}>
+                   <span>{chartData[0].date.toLocaleDateString("en-US", { month:"short", day:"numeric" })}</span>
+                   <span>Today</span>
+                </div>
               </div>
 
-              {/* Engine error banner */}
-              {matchError && (
-                <div style={{ padding:"10px 1.5rem", background:"#1A1515", borderBottom:"1px solid #2D2A26", display:"flex", alignItems:"center", gap:"8px" }}>
-                  <AlertCircle size={14} color="#F87171" />
-                  <span style={{ fontSize:"0.82rem", color:"#F87171" }}>Could not load contracts right now. Please try again later.</span>
+              <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", overflow:"hidden" }}>
+                <div style={{ padding:"1.125rem 1.5rem", borderBottom:"1px solid #2D2A26", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div>
+                    <h2 style={{ fontWeight:700, fontSize:"0.9375rem", color:"#F7F5F0", margin:0 }}>Recent Contract Matches</h2>
+                    <p style={{ fontSize:"0.72rem", color:"#6B6560", margin:"3px 0 0" }}>
+                      Ranked by AI match score · Showing latest 10
+                    </p>
+                  </div>
+                  {hasRealData && (
+                    <Link href="/dashboard/contracts" style={{ display:"flex", alignItems:"center", gap:"5px", fontSize:"0.8125rem", color:"#C9A84C", textDecoration:"none", fontWeight:600 }}>
+                      View all <ArrowUpRight size={13} />
+                    </Link>
+                  )}
                 </div>
-              )}
 
-              {/* Skeleton or real/mock data */}
-              {matchesLoading ? (
-                <FeedSkeleton />
-              ) : matches.length > 0 ? (
-                matches.map(c => <ContractCard key={c.id} c={c} />)
-              ) : (
-                <div style={{ padding:"3rem 1.5rem", textAlign:"center" }}>
-                   <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#2A2318", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-                     <FileText size={20} color="#C9A84C" />
-                   </div>
-                   <p style={{ fontWeight: 600, color: "#F7F5F0", margin: "0 0 0.25rem" }}>No matches found</p>
-                   <p style={{ fontSize: "0.8125rem", color: "#6B6560", maxWidth: "250px", margin: "0 auto" }}>
-                     {setupDone ? "We haven't found any contracts matching your profile yet. We will scan again tonight." : "Complete your monitoring profile to discover relevant contracts."}
-                   </p>
-                </div>
-              )}
+                {/* Engine error banner */}
+                {matchError && (
+                  <div style={{ padding:"10px 1.5rem", background:"#1A1515", borderBottom:"1px solid #2D2A26", display:"flex", alignItems:"center", gap:"8px" }}>
+                    <AlertCircle size={14} color="#F87171" />
+                    <span style={{ fontSize:"0.82rem", color:"#F87171" }}>Could not load contracts right now. Please try again later.</span>
+                  </div>
+                )}
+
+                {/* Skeleton or real/mock data */}
+                {matchesLoading ? (
+                  <FeedSkeleton />
+                ) : matches.length > 0 ? (
+                  matches.slice(0, 10).map(c => <ContractCard key={c.id} c={c} />)
+                ) : (
+                  <div style={{ padding:"3rem 1.5rem", textAlign:"center" }}>
+                     <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#2A2318", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+                       <FileText size={20} color="#C9A84C" />
+                     </div>
+                     <p style={{ fontWeight: 600, color: "#F7F5F0", margin: "0 0 0.25rem" }}>No matches found</p>
+                     <p style={{ fontSize: "0.8125rem", color: "#6B6560", maxWidth: "250px", margin: "0 auto" }}>
+                       {setupDone ? "We haven't found any contracts matching your profile yet. We will scan again tonight." : "Complete your monitoring profile to discover relevant contracts."}
+                     </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Monitoring panel */}
