@@ -22,13 +22,14 @@ const PLANS = [
   {
     id:           "professional",
     name:         "Full Coverage",
-    monthly:      299,
-    yearly:       2490,
-    perMonthYr:   208,
-    savePercent:  31,
+    monthly:      249,
+    yearly:       1990,
+    perMonthYr:   166,
+    savePercent:  33,
     tagline:      "Everything included. No hidden upgrades. Built for individuals and teams.",
     audience:     "Individuals and teams. Scale by adding more seats as your team grows.",
     features: [
+      "AI Forecasting with 7 Predictive Core Features. Predict budget curves and expose RFIs months in advance.",
       "SAM.gov plus all 50 states, county portals, DC, Puerto Rico and Guam. Monitored overnight, in your inbox by 6 AM.",
       "Unlimited NAICS codes and keywords. No caps, no add-ons, no upgrades.",
       "AI match score with a plain-English reason per contract. Know what to bid before you read it.",
@@ -43,7 +44,7 @@ const PLANS = [
 ] as const;
 
 /* Yearly savings banner for toggle */
-const SAVE_BADGE = "Save 31%";
+const SAVE_BADGE = "Save 33%";
 
 export default function PricingSection() {
   const [billing, setBilling] = useState<BillingCycle>("monthly");

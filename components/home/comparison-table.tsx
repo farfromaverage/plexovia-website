@@ -29,6 +29,11 @@ interface Row {
 
 const ROWS: Row[] = [
   {
+    feature:     "AI Forecasting with 7 Predictive Core Features",
+    plexovia:    { type: "text", value: "Predictive budget curves mapped to your NAICS", highlight: true },
+    alternative: { type: "minus" },
+  },
+  {
     feature:     "Time required per day",
     plexovia:    { type: "text", value: "Under 5 min (read your email)", highlight: true },
     alternative: { type: "text", value: "2 to 4 hours of manual searching" },
@@ -65,7 +70,7 @@ const ROWS: Row[] = [
   },
   {
     feature:     "Starting price",
-    plexovia:    { type: "text", value: "$299 per month, everything included", highlight: true },
+    plexovia:    { type: "text", value: "$249 per month, everything included", highlight: true },
     alternative: { type: "text", value: "$500 to $1,200+ per month" },
   },
   {

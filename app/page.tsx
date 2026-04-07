@@ -3,6 +3,7 @@ import Hero from "@/components/home/hero";
 import SocialProofBar from "@/components/home/social-proof-bar";
 import StatsBar from "@/components/home/stats-bar";
 import CoverageMap from "@/components/home/coverage-map";
+import AIForecastingSection from "@/components/home/ai-forecasting-section";
 import FAQSection from "@/components/home/faq-section";
 import FinalCTA from "@/components/home/final-cta";
 import Footer from "@/components/home/footer";
@@ -40,7 +41,7 @@ export default function LandingPage() {
         "description": "Government contract intelligence and matching system",
         "offers": {
           "@type": "Offer",
-          "price": "299",
+          "price": "249",
           "priceCurrency": "USD"
         }
       }
@@ -54,6 +55,7 @@ export default function LandingPage() {
       <SocialProofBar />
       <StatsBar />
       <CoverageMap />
+      <AIForecastingSection />
       <FAQSection />
       <FinalCTA />
       <Footer />
