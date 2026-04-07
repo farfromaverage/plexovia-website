@@ -162,6 +162,7 @@ export default function CompetitorsPage() {
               { href:"/dashboard/contracts", label:"Contracts" },
               { href:"/dashboard/profile", label:"Profile" },
               { href:"/dashboard/competitors", label:"Competitors", active:true },
+              { href:"/dashboard/forecasts", label:"AI Forecasts" },
               { href:"/dashboard/team", label:"Team" },
             ].map(n => (
               <Link key={n.href} href={n.href}

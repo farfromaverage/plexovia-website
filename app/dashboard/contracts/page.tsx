@@ -173,6 +173,7 @@ export default function ContractsPage() {
               { href:"/dashboard/contracts", label:"Contracts", active:true },
               { href:"/dashboard/profile", label:"Profile" },
               { href:"/dashboard/competitors", label:"Competitors" },
+              { href:"/dashboard/forecasts", label:"AI Forecasts" },
               { href:"/dashboard/team", label:"Team" },
             ].map(n => (
               <Link key={n.href} href={n.href}

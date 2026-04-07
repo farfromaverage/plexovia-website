@@ -484,7 +484,8 @@ export default function DashboardPage() {
               { href:"/dashboard/contracts",       label:"Contracts", icon:<FileText size={14} /> },
               { href:"/dashboard/profile",         label:"Profile",   icon:<Settings size={14} /> },
               { href:"/dashboard/competitors",     label:"Competitors", icon:<Shield size={14} /> },
-              { href:"/dashboard/team", label:"Team", icon:<Users size={14} /> },
+              { href:"/dashboard/forecasts",       label:"AI Forecasts", icon:<Zap size={14} /> },
+              { href:"/dashboard/team",            label:"Team",      icon:<Users size={14} /> },
             ].map(({ href, label, icon }) => (
               <Link key={href} href={href}
                 className={`db-nav-link${pathname === href ? " active" : ""}`}
