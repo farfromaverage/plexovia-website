@@ -220,7 +220,7 @@ function Step1({ selected, setSelected }: { selected: string[]; setSelected: (v:
             <p className="text-[14px] text-[var(--app-muted)]">No codes match your search.</p>
             {/^\d+$/.test(trimmed) && trimmed.length < 6 && (
               <p className="text-[13px] text-[var(--app-faint)] mt-1.5">
-                NAICS codes are 6 digits — keep typing ({6 - trimmed.length} more)
+                NAICS codes are 6 digits. Keep typing ({6 - trimmed.length} more)
               </p>
             )}
           </div>

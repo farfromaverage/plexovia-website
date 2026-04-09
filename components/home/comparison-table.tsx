@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { Check, Minus } from "lucide-react";
+import { Check, Minus, ArrowRight } from "lucide-react";
 import { fadeInUp } from "@/lib/motion";
 
 /* ─────────────────────────────────────────────────────────
@@ -49,8 +50,8 @@ const ROWS: Row[] = [
     alternative: { type: "text", value: "Keywords only / strict limits" },
   },
   {
-    feature:     "AI match score (0–100) and reasoning",
-    plexovia:    { type: "text", value: "Score 0–100 + plain-English reason per contract", highlight: true },
+    feature:     "AI match score (0 to 100) and reasoning",
+    plexovia:    { type: "text", value: "Score 0 to 100 + plain-English reason per contract", highlight: true },
     alternative: { type: "minus" },
   },
   {
@@ -326,7 +327,26 @@ export default function ComparisonTable() {
           </table>
         </motion.div>
 
-
+        {/* CTA bar — H2: conversion exit after highest-persuasion section */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          style={{
+            textAlign: "center",
+            marginTop: "2.5rem",
+          }}
+        >
+          <Link
+            href="/auth/signup"
+            id="comparison-cta"
+            className="btn-gold"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            Every feature. Every state. $249/month.
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </motion.div>
 
       </div>
     </section>

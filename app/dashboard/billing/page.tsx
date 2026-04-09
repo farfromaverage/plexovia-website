@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ExternalLink, ArrowLeft, CreditCard, Calendar, Zap, AlertCircle } from "lucide-react";
+import { ExternalLink, CreditCard, Calendar, Zap, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 const PLAN_DETAILS = {
@@ -15,13 +15,13 @@ const PLAN_DETAILS = {
   },
   active: {
     name: "Plexovia Intelligence",
-    price: "$299/mo",
+    price: "$249/mo",
     color: "#4ADE80",
     features: ["All 50 states", "Unlimited NAICS codes", "Daily email digest", "Competitor tracking", "Match explanations", "90-day history"],
   },
   cancelled: {
     name: "Cancelled",
-    price: "—",
+    price: "N/A",
     color: "#F87171",
     features: [],
   },
@@ -65,10 +65,8 @@ export default function BillingPage() {
     : 0;
 
   const s = {
-    page:    { minHeight: "100vh", background: "var(--app-bg)", color: "var(--app-text)", fontFamily: "var(--font-inter, sans-serif)", padding: "2rem 1.5rem" } as React.CSSProperties,
-    wrap:    { maxWidth: 720, margin: "0 auto" } as React.CSSProperties,
-    back:    { display: "inline-flex", alignItems: "center", gap: 6, color: "var(--app-muted)", fontSize: "0.85rem", textDecoration: "none", marginBottom: "1.5rem" } as React.CSSProperties,
-    h1:      { fontSize: "1.6rem", fontWeight: 700, marginBottom: "0.25rem" } as React.CSSProperties,
+    wrap:    { maxWidth: 720 } as React.CSSProperties,
+    h1:      { fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.25rem", letterSpacing: "-0.03em" } as React.CSSProperties,
     sub:     { color: "var(--app-muted)", fontSize: "0.9rem", marginBottom: "2rem" } as React.CSSProperties,
     card:    { background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: "var(--radius-md)", padding: "1.5rem", marginBottom: "1.25rem" } as React.CSSProperties,
     planBadge: { display: "inline-flex", alignItems: "center", gap: 6, background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: "999px", padding: "4px 12px", fontSize: "0.82rem", fontWeight: 600, color: details.color } as React.CSSProperties,
@@ -76,15 +74,14 @@ export default function BillingPage() {
   };
 
   if (loading) return (
-    <div style={{ ...s.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
       <span style={{ color: "var(--app-muted)" }}>Loading billing…</span>
     </div>
   );
 
   return (
-    <div style={s.page}>
+    <div className="dash-main">
       <div style={s.wrap}>
-        <Link href="/dashboard" style={s.back}><ArrowLeft size={14} /> Back to dashboard</Link>
         <h1 style={s.h1}>Billing & Plan</h1>
         <p style={s.sub}>Manage your subscription and payment information.</p>
 
@@ -97,7 +94,7 @@ export default function BillingPage() {
                 <span style={s.planBadge}><Zap size={12} /> {details.name}</span>
                 {isTrialing && (
                   <span style={{ background: "#1E2A1E", border: "1px solid #2D5A2D", borderRadius: "999px", padding: "3px 10px", fontSize: "0.78rem", color: "#4ADE80" }}>
-                    Trial — {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left
+                    Trial: {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left
                   </span>
                 )}
               </div>
@@ -167,7 +164,7 @@ export default function BillingPage() {
             href="mailto:support@plexovia.com?subject=Enterprise Inquiry"
             style={{ ...s.actionBtn, background: "var(--app-surface-2)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}
           >
-            Contact us — support@plexovia.com
+            Contact us: support@plexovia.com
           </a>
         </div>
       </div>

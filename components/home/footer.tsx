@@ -26,6 +26,7 @@ const NAV_LEGAL = [
 const NAV_CONTACT = [
   { label: "support@plexovia.com",  href: "mailto:support@plexovia.com" },
   { label: "Request a Feature",     href: "mailto:support@plexovia.com?subject=Feature%20Request" },
+  { label: "LinkedIn",              href: "https://linkedin.com/company/plexovia" },
 ];
 
 /* Shared link styles */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import * as d3 from "d3";
 
 export interface ChartDataPoint {
@@ -11,14 +11,11 @@ export interface ChartDataPoint {
 export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const draw = useCallback(() => {
     if (!data || data.length === 0 || !containerRef.current) return;
-
     const container = containerRef.current;
-    
-    // Clear previous
     d3.select(container).selectAll("*").remove();
-    
+
     // Set up dimensions
     const width = container.clientWidth || 600;
     const height = container.clientHeight || 250;
@@ -160,12 +157,14 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
       .ease(d3.easeCubicOut)
       .attr("d", line as any);
 
-    // Interactive tooltip overlay
-    const tooltip = d3.select("body").append("div")
+    // Tooltip scoped to container
+    const tooltipEl = d3.select(container)
+      .append("div")
+      .attr("role", "tooltip")
       .style("position", "absolute")
       .style("visibility", "hidden")
-      .style("background", "#252320")
-      .style("border", "1px solid #3D3830")
+      .style("background", "rgba(26,25,23,0.96)")
+      .style("border", "1px solid #2E2C2A")
       .style("padding", "8px 12px")
       .style("border-radius", "8px")
       .style("color", "#F7F5F0")
@@ -173,7 +172,7 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
       .style("font-size", "0.75rem")
       .style("pointer-events", "none")
       .style("box-shadow", "0 10px 15px -3px rgba(0,0,0,0.5)")
-      .style("z-index", "100");
+      .style("z-index", "10");
 
     const focusLine = g.append("line")
       .attr("y1", 0)
@@ -202,7 +201,7 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
       .on("mouseover", () => {
         focusLine.style("opacity", 0.5);
         focusCircle.style("opacity", 1);
-        tooltip.style("visibility", "visible");
+        tooltipEl.style("visibility", "visible");
       })
       .on("mousemove", (event) => {
         const [xPos] = d3.pointer(event);
@@ -224,7 +223,7 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
         focusLine.attr("x1", cx).attr("x2", cx);
         focusCircle.attr("cx", cx).attr("cy", cy);
 
-        tooltip
+        tooltipEl
           .html(`<div style="color:#A8A29E;margin-bottom:4px;">${d3.timeFormat("%b %d, %Y")(d.date)}</div>
                  <div style="font-weight:700;font-size:0.875rem;color:#FCD34D;">${d.value} Matches</div>`)
           .style("top", (event.pageY - 60) + "px")
@@ -233,23 +232,23 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
       .on("mouseout", () => {
         focusLine.style("opacity", 0);
         focusCircle.style("opacity", 0);
-        tooltip.style("visibility", "hidden");
+        tooltipEl.style("visibility", "hidden");
       });
 
-    // Simple resize handler
-    const handleResize = () => {
-      // Re-trigger effect by updating state conceptually, but without state we can do:
-      // a simple force update. For now, simple fixed dimensions via CSS works, 
-      // but D3 needs redraw if width changes continuously.
-    };
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      tooltip.remove();
-    };
+    // Tooltip scoped to container — declaration above near tooltipEl
 
   }, [data]);
+
+  useEffect(() => {
+    draw();
+
+    // ResizeObserver for responsive redraw
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => draw());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [draw]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: "220px", position: "relative" }} />;
 }

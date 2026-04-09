@@ -12,9 +12,9 @@ interface StatItem {
 }
 
 const initialStats: StatItem[] = [
-  { value: 15847, label: "contracts scanned this week",  suffix: "" },
-  { value: 50,    label: "state portals monitored",      suffix: "" },
-  { value: 6,     label: "hours since last update",      suffix: "h ago" },
+  { value: 15847, label: "contracts scanned this week",              suffix: "" },
+  { value: 50,    label: "state portals monitored nightly",          suffix: "+" },
+  { value: 6,     label: "hours ago. Legacy platforms take 48h.", suffix: "h" },
 ];
 
 function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; suffix?: string; prefix?: string }) {
@@ -74,9 +74,9 @@ export default function StatsBar() {
         }
 
         setLiveStats([
-          { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: 'contracts scanned this week', suffix: '' },
-          { value: data.states_covered  > 0 ? data.states_covered  : 50,    label: 'state portals monitored',     suffix: '' },
-          { value: hrs,                                                       label: 'hours since last update',     suffix: 'h ago' },
+          { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: 'contracts scanned this week',              suffix: '' },
+          { value: data.states_covered  > 0 ? data.states_covered  : 50,    label: 'state portals monitored nightly',          suffix: '+' },
+          { value: hrs,                                                       label: 'hours ago. Legacy platforms take 48h.', suffix: 'h' },
         ]);
       } catch {
         // Silently keep current stats on error

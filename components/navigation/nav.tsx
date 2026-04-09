@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useScroll, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 
 const NAV_LINKS = [
+  { label: "Features", href: "/#features" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "Pricing", href: "/pricing" },
 ];

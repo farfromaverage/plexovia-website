@@ -1,50 +1,55 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import {
   FileText, MapPin, Shield, ExternalLink, Tag,
   ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
-  AlertCircle,
+  ArrowUpDown, Download,
 } from "lucide-react";
-
-
+import ScoreBadge from "../components/ScoreBadge";
+import SkeletonRows from "../components/SkeletonRows";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
+import type { Metadata } from "next";
 
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface ContractRow {
   id: string; title: string; agency: string; naics: string;
   state: string; value: string; posted: string; deadline: string;
+  deadlineDays: number | null;
   score: number; type: string; matchedBy: "naics" | "keyword";
   matchLabel: string; url: string | null;
 }
 
+type SortKey = "score" | "deadline" | "value_min" | "posted_date";
+
 /* ─── Helpers ─────────────────────────────────────────────────────── */
 function fmt$(n: number) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)         return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toLocaleString()}`;
 }
 function fmtVal(min: number | null, max: number | null) {
   if (!min && !max) return "TBD";
-  if (min && max && min !== max) return `${fmt$(min)} – ${fmt$(max)}`;
+  if (min && max && min !== max) return `${fmt$(min)} to ${fmt$(max)}`;
   return fmt$(min || max || 0);
 }
 function fmtDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return "N/A";
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days}d ago`;
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
-function fmtDeadline(d: string | null) {
-  if (!d) return "—";
+function fmtDeadline(d: string | null): { label: string; days: number | null } {
+  if (!d) return { label: "TBD", days: null };
   const days = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
-  if (days < 0) return "Expired";
-  if (days === 0) return "Today";
-  if (days === 1) return "1 day";
-  return `${days} days`;
+  if (days < 0) return { label: "Expired", days };
+  if (days === 0) return { label: "Due today", days: 0 };
+  if (days === 1) return { label: "1 day left", days: 1 };
+  return { label: `${days} days left`, days };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,56 +62,75 @@ function mapRow(m: any): ContractRow {
   const matchLabel = naicsR
     ? `NAICS ${naicsR.replace("naics:", "")}`
     : kwR ? `Keyword: ${kwR.replace("keyword:", "")}` : "Keyword match";
+  const dl = fmtDeadline(c.deadline);
   return {
-    id: m.match_id, title: c.title || "Untitled",
-    agency: c.agency || "Federal Agency", naics: c.naics_code || "",
+    id: m.match_id,
+    title: c.title || "Untitled",
+    agency: c.agency || "Federal Agency",
+    naics: c.naics_code || "",
     state: c.state || "Federal",
     value: fmtVal(c.value_min, c.value_max),
     posted: fmtDate(c.posted_date),
-    deadline: fmtDeadline(c.deadline),
-    score: m.score, type: c.set_aside || "Full & Open",
-    matchedBy, matchLabel, url: c.url || null,
+    deadline: dl.label,
+    deadlineDays: dl.days,
+    score: m.score,
+    type: c.set_aside || "Full & Open",
+    matchedBy,
+    matchLabel,
+    url: c.url || null,
   };
 }
 
-/* ─── Score pill ──────────────────────────────────────────────────── */
-function ScorePill({ score }: { score: number }) {
-  const c = score >= 90 ? "#4ADE80" : score >= 75 ? "#C9A84C" : "#94A3B8";
-  const bg = score >= 90 ? "#1E2A1E" : score >= 75 ? "#2A2318" : "#1E2233";
-  const bd = score >= 90 ? "#2D5A2D" : score >= 75 ? "#4A3D1E" : "#2D3348";
-  return (
-    <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 8px", background:bg, border:`1px solid ${bd}`, borderRadius:999, fontSize:"0.72rem", fontWeight:700, color:c, fontFamily:"var(--font-geist-mono, monospace)" }}>
-      {score}%
-    </span>
-  );
+/* ─── CSV Export ──────────────────────────────────────────────────── */
+function exportCSV(contracts: ContractRow[]) {
+  const headers = ["Score", "Title", "Agency", "NAICS", "State", "Value", "Posted", "Deadline", "Type", "URL"];
+  const rows = contracts.map(c => [
+    c.score, `"${c.title.replace(/"/g, '""')}"`, `"${c.agency.replace(/"/g, '""')}"`,
+    c.naics, c.state, c.value, c.posted, c.deadline, c.type, c.url || "",
+  ]);
+  const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `plexovia-contracts-${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
 }
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "score",        label: "Best match" },
+  { value: "deadline",     label: "Soonest deadline" },
+  { value: "value_min",    label: "Highest value" },
+  { value: "posted_date",  label: "Most recent" },
+];
+
+const PER_PAGE = 15;
 
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function ContractsPage() {
-  const [contracts, setContracts] = useState<ContractRow[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(false);
-  const [total,     setTotal]     = useState(0);
-  const [page,      setPage]      = useState(1);
-  const [minScore,  setMinScore]  = useState(0);
-  const [search,    setSearch]    = useState("");
-  const [plan,      setPlan]      = useState<string | null>(null);
-  const PER_PAGE = 15;
-
-  // Load plan
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return;
-      supabase.from("profiles").select("plan").eq("id", session.user.id).single()
-        .then(({ data }) => setPlan(data?.plan ?? "trial"));
-    });
-  }, []);
+  const [contracts,  setContracts]  = useState<ContractRow[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(false);
+  const [total,      setTotal]      = useState(0);
+  const [page,       setPage]       = useState(1);
+  const [minScore,   setMinScore]   = useState(0);
+  const [search,     setSearch]     = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [sortBy,     setSortBy]     = useState<SortKey>("score");
+  const [sortOpen,   setSortOpen]   = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(false);
+    setLoading(true);
+    setError(false);
     try {
-      const res = await fetch(`/api/user-matches?page=${page}&per_page=${PER_PAGE}&min_score=${minScore}`);
-      if (!res.ok) throw new Error();
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(PER_PAGE),
+        min_score: String(minScore),
+        sort: sortBy,
+      });
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/user-matches?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setContracts((json.matches || []).map(mapRow));
       setTotal(json.pagination?.total || 0);
@@ -115,234 +139,326 @@ export default function ContractsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, minScore]);
+  }, [page, minScore, search, sortBy]);
 
   useEffect(() => { load(); }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
-  const filtered = search.trim()
-    ? contracts.filter(c =>
-        c.title.toLowerCase().includes(search.toLowerCase()) ||
-        c.agency.toLowerCase().includes(search.toLowerCase()) ||
-        c.naics.includes(search) ||
-        c.state.toLowerCase().includes(search.toLowerCase())
-      )
-    : contracts;
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSearch(searchInput);
+    setPage(1);
+  }
 
+  function handlePageChange(newPage: number) {
+    setPage(Math.max(1, Math.min(totalPages, newPage)));
+  }
 
+  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Best match";
 
   return (
-    <>
-      <style>{`
-        .ct-header { border-bottom:1px solid #252320; background:#1C1917; position:sticky; top:0; z-index:50; height:60px; display:flex; align-items:center; padding:0 2rem; gap:1.5rem; }
-        .ct-main   { max-width:1100px; margin:0 auto; padding:2rem; }
-        .ct-nav    { display:flex; gap:0.25rem; flex:1; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
-        .ct-nav::-webkit-scrollbar { display:none; }
-        .ct-nav-item { white-space:nowrap; }
-        .ct-row    { display:grid; grid-template-columns:80px 1fr 140px 80px 100px 80px; align-items:center; gap:0.75rem; padding:1.125rem 1.5rem; border-bottom:1px solid #252320; transition:background 0.12s; cursor:default; }
-        .ct-row:hover { background:#27251F; }
-        .ct-head   { display:grid; grid-template-columns:80px 1fr 140px 80px 100px 80px; padding:0.625rem 1.5rem; border-bottom:1px solid #2D2A26; }
-        .ct-mobile-label { display:none; }
-        @media (max-width:1024px) {
-           .ct-head { grid-template-columns: 80px 1fr 100px 80px; gap:0.75rem; }
-           .ct-row  { grid-template-columns: 80px 1fr 100px 80px; }
-           .ct-hide-md { display: none !important; }
-        }
-        @media (max-width:768px) { 
-          .ct-header { padding:0 1rem; } .ct-main { padding:1rem; } 
-          .ct-head { display: none; }
-          .ct-row { display: flex; flex-direction: column; align-items: stretch; gap: 0.75rem; }
-          .ct-row-right { display: flex; flex-direction: row; align-items: center; justify-content: space-between; border-top: 1px solid #2D2A26; padding-top: 0.75rem; }
-          .ct-hide-mobile { display: none !important; }
-        }
-      `}</style>
+    <div className="dash-main">
 
-      <div style={{ minHeight:"100vh", background:"#1C1917", fontFamily:"var(--font-inter), sans-serif" }}>
+      {/* Page header */}
+      <div className="dash-page-header">
+        <div>
+          <h1 className="dash-page-title">Contract Matches</h1>
+          <p className="dash-page-sub">
+            {total > 0
+              ? `${total.toLocaleString()} contracts matched your profile · Sorted by ${currentSortLabel.toLowerCase()}`
+              : "Matches appear here after the engine's nightly scan"}
+          </p>
+        </div>
 
-        {/* Header */}
-        <header className="ct-header">
-          <Link href="/" style={{ textDecoration:"none", flexShrink:0 }}>
-            <span style={{ fontWeight:800, fontSize:"1.2rem", letterSpacing:"-0.05em" }}>
-              <span style={{ color:"#C9A84C" }}>P</span><span style={{ color:"#F7F5F0" }}>lexovia</span>
-            </span>
-          </Link>
-          <nav className="ct-nav">
-            {[
-              { href:"/dashboard", label:"Overview" },
-              { href:"/dashboard/contracts", label:"Contracts", active:true },
-              { href:"/dashboard/profile", label:"Profile" },
-              { href:"/dashboard/competitors", label:"Competitors" },
-              { href:"/dashboard/forecasts", label:"AI Forecasts" },
-              { href:"/dashboard/team", label:"Team" },
-            ].map(n => (
-              <Link key={n.href} href={n.href}
-                className="ct-nav-item"
-                style={{ padding:"6px 12px", borderRadius:"8px", fontSize:"0.8125rem", textDecoration:"none",
-                  color: n.active ? "#C9A84C" : "#6B6560",
-                  background: n.active ? "#2A2318" : "transparent" }}>
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-        </header>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Export */}
+          {contracts.length > 0 && (
+            <button
+              className="dash-btn"
+              onClick={() => exportCSV(contracts)}
+              aria-label="Export current page results as CSV"
+              title="Export to CSV"
+            >
+              <Download size={13} aria-hidden="true" /> Export CSV
+            </button>
+          )}
+          {/* Refresh */}
+          <button
+            className="dash-btn"
+            onClick={load}
+            aria-label="Refresh contract matches"
+            disabled={loading}
+          >
+            <RefreshCw size={13} aria-hidden="true" className={loading ? "spin" : ""} />
+            Refresh
+          </button>
+        </div>
+      </div>
 
-        <main className="ct-main">
+      {/* Filters row */}
+      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
 
-          {/* Page title */}
-          <div style={{ marginBottom:"1.5rem" }}>
-            <h1 style={{ fontWeight:700, fontSize:"1.5rem", color:"#F7F5F0", margin:0, letterSpacing:"-0.03em" }}>
-              Contract Matches
-            </h1>
-            <p style={{ fontSize:"0.875rem", color:"#6B6560", margin:"4px 0 0" }}>
-              {total > 0 ? `${total} contracts matched your profile · Sorted by relevance score` : "Matches appear here after the engine's nightly scan"}
-            </p>
-          </div>
+        {/* Server-side search */}
+        <form onSubmit={handleSearchSubmit} style={{ position: "relative", flex: 1, minWidth: "220px" }} role="search">
+          <label htmlFor="contract-search" className="sr-only">Search contracts</label>
+          <Search
+            size={13}
+            style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--app-muted)", pointerEvents: "none" }}
+            aria-hidden="true"
+          />
+          <input
+            id="contract-search"
+            type="search"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { setSearch(searchInput); setPage(1); } }}
+            placeholder="Search title, agency, NAICS, state…"
+            className="dash-input"
+            style={{ paddingLeft: 30 }}
+          />
+        </form>
 
-          {/* Filters row */}
-          <div style={{ display:"flex", gap:"0.75rem", marginBottom:"1.25rem", flexWrap:"wrap" }}>
-            {/* Search */}
-            <div style={{ position:"relative", flex:1, minWidth:"220px" }}>
-              <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#6B6560", pointerEvents:"none" }} />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search title, agency, NAICS, state…"
-                style={{ width:"100%", padding:"7px 10px 7px 30px", background:"#252320", border:"1px solid #2D2A26", borderRadius:"8px", color:"#F7F5F0", fontSize:"0.8125rem", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
-              />
-            </div>
+        {/* Min score filter */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }} role="group" aria-label="Minimum match score filter">
+          <Filter size={12} color="var(--app-muted)" aria-hidden="true" />
+          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", whiteSpace: "nowrap" }}>Min score:</span>
+          {[0, 50, 75, 90].map(s => (
+            <button
+              key={s}
+              className={`dash-pill${minScore === s ? " active" : ""}`}
+              aria-pressed={minScore === s}
+              onClick={() => { setMinScore(s); setPage(1); }}
+            >
+              {s === 0 ? "All" : `${s}+`}
+            </button>
+          ))}
+        </div>
 
-            {/* Score filter */}
-            <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
-              <Filter size={12} color="#6B6560" />
-              <span style={{ fontSize:"0.78rem", color:"#6B6560" }}>Min score:</span>
-              {[0,50,75,90].map(s => (
-                <button key={s} onClick={() => { setMinScore(s); setPage(1); }}
-                  style={{ padding:"5px 10px", borderRadius:"6px", fontSize:"0.75rem", cursor:"pointer", border:"1px solid", fontWeight: minScore === s ? 700 : 400,
-                    background: minScore === s ? "#2A2318" : "none",
-                    borderColor: minScore === s ? "#C9A84C50" : "#2D2A26",
-                    color: minScore === s ? "#C9A84C" : "#6B6560" }}>
-                  {s === 0 ? "All" : `${s}+`}
+        {/* Sort dropdown */}
+        <div style={{ position: "relative" }}>
+          <button
+            className="dash-btn"
+            onClick={() => setSortOpen(v => !v)}
+            aria-haspopup="listbox"
+            aria-expanded={sortOpen}
+            aria-label={`Sort by: ${currentSortLabel}`}
+          >
+            <ArrowUpDown size={12} aria-hidden="true" />
+            {currentSortLabel}
+          </button>
+          {sortOpen && (
+            <div
+              role="listbox"
+              aria-label="Sort options"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 4px)",
+                right: 0,
+                background: "var(--app-surface)",
+                border: "1px solid var(--app-border)",
+                borderRadius: "10px",
+                padding: "4px",
+                zIndex: 50,
+                minWidth: "160px",
+                boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
+              }}
+            >
+              {SORT_OPTIONS.map(o => (
+                <button
+                  key={o.value}
+                  role="option"
+                  aria-selected={sortBy === o.value}
+                  onClick={() => { setSortBy(o.value); setSortOpen(false); setPage(1); }}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "7px 10px",
+                    borderRadius: "7px",
+                    border: "none",
+                    background: sortBy === o.value ? "rgba(201,168,76,0.1)" : "none",
+                    color: sortBy === o.value ? "var(--accent)" : "var(--app-muted)",
+                    fontSize: "0.8125rem",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                  }}
+                >
+                  {o.label}
                 </button>
               ))}
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Refresh */}
-            <button onClick={load} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"6px 12px", background:"none", border:"1px solid #2D2A26", borderRadius:"8px", color:"#6B6560", fontSize:"0.8125rem", cursor:"pointer" }}>
-              <RefreshCw size={12} /> Refresh
+      {/* Table */}
+      <div className="dash-card" style={{ marginBottom: "1rem" }}>
+        {/* Table head */}
+        <div
+          className="dash-table-head dash-hide-mobile"
+          style={{ display: "grid", gridTemplateColumns: "80px 1fr 140px 80px 110px 110px" }}
+        >
+          <span className="dash-th">Score</span>
+          <span className="dash-th">Contract</span>
+          <span className="dash-th">Agency</span>
+          <span className="dash-th">State</span>
+          <span className="dash-th">Value</span>
+          <span className="dash-th">Deadline</span>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <SkeletonRows rows={6} columns={6} columnWidths="80px 1fr 140px 80px 110px 110px" />
+        ) : error ? (
+          <ErrorState
+            message="Could not load your contract matches. The engine may be starting up."
+            onRetry={load}
+          />
+        ) : contracts.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={28} />}
+            title={total === 0 ? "No matches yet" : "No contracts match your search"}
+            message={
+              total === 0
+                ? "The engine scans nightly. Set up your NAICS codes and keywords in Profile, then check back tomorrow."
+                : "Try adjusting your search or lowering the score threshold."
+            }
+          />
+        ) : (
+          contracts.map(c => (
+            <ContractRowUI key={c.id} c={c} />
+          ))
+        )}
+      </div>
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+          <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
+            Page {page} of {totalPages} · {total.toLocaleString()} total matches
+          </span>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              className="dash-btn"
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={13} aria-hidden="true" /> Prev
+            </button>
+            <button
+              className="dash-btn"
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === totalPages}
+              aria-label="Next page"
+            >
+              Next <ChevronRight size={13} aria-hidden="true" />
             </button>
           </div>
+        </div>
+      )}
 
+      {/* Spin animation */}
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 0.8s linear infinite; }
+      `}</style>
+    </div>
+  );
+}
 
+/* ─── Row component ───────────────────────────────────────────────── */
+function ContractRowUI({ c }: { c: ContractRow }) {
+  const deadlineColor =
+    c.deadline === "Expired" ? "#F87171"
+    : c.deadlineDays !== null && c.deadlineDays <= 7 ? "#FBBF24"
+    : "var(--app-muted)";
 
-          {/* Contract table */}
-          <div style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", overflow:"hidden" }}>
-            {/* Table head */}
-            <div className="ct-head">
-              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Score</span>
-              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Contract</span>
-              <span className="ct-hide-md" style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Agency</span>
-              <span className="ct-hide-mobile" style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>State</span>
-              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Value</span>
-              <span style={{ fontSize:"0.68rem", fontWeight:600, color:"#6B6560", textTransform:"uppercase", letterSpacing:"0.07em" }}>Deadline</span>
-            </div>
-
-            {/* Rows */}
-            {loading ? (
-              <>{[1,2,3,4,5].map(i => (
-                <div key={i} className="ct-row ct-head">
-                  {[1,2,3,4,5,6].map((j, idx) => <div key={j} className={idx===2?"ct-hide-md":idx===3?"ct-hide-mobile":""} style={{ height:14, background:"#2A2724", borderRadius:4, animation:"pulse 1.4s ease-in-out infinite" }} />)}
-                </div>
-              ))}</>
-            ) : error ? (
-              <div style={{ padding:"2.5rem", textAlign:"center" }}>
-                <AlertCircle size={24} color="#F87171" style={{ margin:"0 auto 0.75rem" }} />
-                <p style={{ color:"#F87171", fontSize:"0.875rem", margin:0 }}>Could not load matches. Engine may be starting up — try refreshing.</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div style={{ padding:"3rem", textAlign:"center" }}>
-                <FileText size={28} color="#4A4540" style={{ margin:"0 auto 1rem" }} />
-                <p style={{ color:"#6B6560", fontSize:"0.9375rem", margin:"0 0 6px", fontWeight:600 }}>
-                  {total === 0 ? "No matches yet" : "No contracts match your search"}
-                </p>
-                <p style={{ fontSize:"0.8125rem", color:"#4A4540", margin:0 }}>
-                  {total === 0
-                    ? "The engine scans nightly. Set up your NAICS codes and check back tomorrow."
-                    : "Try adjusting your search or lowering the score filter."}
-                </p>
-              </div>
-            ) : (
-              filtered.map(c => (
-                <div key={c.id} className="ct-row">
-                  {/* Score */}
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <ScorePill score={c.score} />
-                    {/* Only visible on mobile inline */}
-                  </div>
-
-                  {/* Title + badges */}
-                  <div style={{ minWidth:0, display: "flex", flexDirection: "column", gap: 3 }}>
-                    <p style={{ fontWeight:600, fontSize:"0.875rem", color:"#F7F5F0", margin:"0 0 2px" }}>{c.title}</p>
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                      <span style={{ fontSize:"0.68rem", padding:"1px 6px", background: c.matchedBy==="naics" ? "#1E211A" : "#1A1E2A", border:`1px solid ${c.matchedBy==="naics" ? "#2A3020" : "#2D3A5A"}`, borderRadius:4, color: c.matchedBy==="naics" ? "#86EFAC" : "#93C5FD", display:"flex", alignItems:"center", gap:3 }}>
-                        {c.matchedBy === "naics" ? <FileText size={9}/> : <Tag size={9}/>}{c.matchLabel}
-                      </span>
-                      {c.type !== "Full & Open" && (
-                        <span style={{ fontSize:"0.68rem", padding:"1px 6px", background:"#1E1A12", border:"1px solid #3A3020", borderRadius:4, color:"#FCD34D" }}>{c.type}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Agency - hidden on tablet/mobile but inline grouped below title generally */}
-                  <div className="ct-hide-md" style={{ fontSize:"0.78rem", color:"#8A8580", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:4 }}>
-                    <Shield size={10} color="#4B5563" style={{ flexShrink:0 }} />{c.agency}
-                  </div>
-                  
-                  {/* State */}
-                  <div className="ct-hide-mobile" style={{ fontSize:"0.78rem", color:"#8A8580", display:"flex", alignItems:"center", gap:4 }}>
-                    <MapPin size={10} color="#4B5563" />{c.state}
-                  </div>
-
-                  <div className="ct-row-right">
-                    {/* Value */}
-                    <div style={{ fontSize:"0.8125rem", fontWeight:600, color:"#F7F5F0", fontFamily:"var(--font-geist-mono, monospace)", whiteSpace:"nowrap" }}>{c.value}</div>
-                    
-                    {/* Deadline + View */}
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-                      <span style={{ fontSize:"0.72rem", color: c.deadline === "Expired" ? "#F87171" : c.deadline.includes("days") && parseInt(c.deadline) < 7 ? "#FBBF24" : "#6B6560" }}>{c.deadline}</span>
-                      {c.url && (
-                        <a href={c.url} target="_blank" rel="noopener noreferrer"
-                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:"0.72rem", color:"#C9A84C", textDecoration:"none" }}>
-                          SAM.gov <ExternalLink size={9} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Pagination */}
-          {!loading && totalPages > 1 && (
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"1rem" }}>
-              <span style={{ fontSize:"0.8125rem", color:"#6B6560" }}>
-                Page {page} of {totalPages} · {total} total
-              </span>
-              <div style={{ display:"flex", gap:"0.5rem" }}>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  style={{ display:"flex", alignItems:"center", gap:4, padding:"6px 12px", background:"none", border:"1px solid #2D2A26", borderRadius:"7px", color: page === 1 ? "#3D3830" : "#A8A29E", cursor: page === 1 ? "not-allowed" : "pointer", fontSize:"0.8125rem" }}>
-                  <ChevronLeft size={13} /> Prev
-                </button>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  style={{ display:"flex", alignItems:"center", gap:4, padding:"6px 12px", background:"none", border:"1px solid #2D2A26", borderRadius:"7px", color: page === totalPages ? "#3D3830" : "#A8A29E", cursor: page === totalPages ? "not-allowed" : "pointer", fontSize:"0.8125rem" }}>
-                  Next <ChevronRight size={13} />
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
+  return (
+    <div
+      className="dash-table-row"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "80px 1fr 140px 80px 110px 110px",
+        alignItems: "center",
+        gap: "0.75rem",
+        padding: "1rem 1.5rem",
+      }}
+    >
+      {/* Score */}
+      <div>
+        <ScoreBadge score={c.score} />
       </div>
-    </>
+
+      {/* Title + badges */}
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: "0 0 4px", lineHeight: 1.3 }}>
+          {c.title}
+        </p>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          <span className={`dash-tag ${c.matchedBy === "naics" ? "dash-tag-green" : "dash-tag-blue"}`}>
+            {c.matchedBy === "naics" ? <FileText size={9} aria-hidden="true" /> : <Tag size={9} aria-hidden="true" />}
+            {c.matchLabel}
+          </span>
+          {c.type !== "Full & Open" && (
+            <span className="dash-tag dash-tag-amber" aria-label={`Set-aside type: ${c.type}`}>
+              {c.type}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Agency */}
+      <div
+        className="dash-hide-mobile"
+        style={{ fontSize: "0.78rem", color: "var(--app-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        title={c.agency}
+      >
+        <Shield size={10} color="var(--app-faint)" style={{ marginRight: 4, flexShrink: 0 }} aria-hidden="true" />
+        {c.agency}
+      </div>
+
+      {/* State */}
+      <div
+        className="dash-hide-mobile"
+        style={{ fontSize: "0.78rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 4 }}
+      >
+        <MapPin size={10} color="var(--app-faint)" aria-hidden="true" />
+        {c.state}
+      </div>
+
+      {/* Value */}
+      <div
+        className="dash-mono"
+        style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--app-text)" }}
+        aria-label={`Value: ${c.value}`}
+      >
+        {c.value}
+      </div>
+
+      {/* Deadline + link */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+        <span
+          style={{ fontSize: "0.72rem", color: deadlineColor, fontWeight: c.deadlineDays !== null && c.deadlineDays <= 7 ? 600 : 400 }}
+          aria-label={`Deadline: ${c.deadline}`}
+        >
+          {c.deadline}
+        </span>
+        {c.url && (
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`View on SAM.gov: ${c.title}`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.72rem", color: "var(--accent)", textDecoration: "none" }}
+          >
+            SAM.gov <ExternalLink size={9} aria-hidden="true" />
+          </a>
+        )}
+      </div>
+    </div>
   );
 }

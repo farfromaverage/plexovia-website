@@ -1,194 +1,365 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
-} from "recharts";
-import { Brain, TrendingUp, AlertTriangle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Brain, BarChart2, AlertCircle, ThumbsUp, ThumbsDown, TrendingUp, RefreshCw, Info } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
 
-type Forecast = {
+/* ─── Types ─────────────────────────────────────────────── */
+interface ChartPoint {
+  period: string;
+  historical?: number;
+  projected?: number;
+}
+interface ForecastCard {
   id: string;
   naics_code: string;
-  agency_name: string;
-  forecast_type: string;
-  predicted_array: number[];
-  confidence_score: number;
+  naics_label: string;
+  prediction_type: "increase" | "decrease" | "stable";
+  confidence: "high" | "medium" | "low";
+  percent_change: number;
   insight_text: string;
-};
+  data_points: ChartPoint[];
+  generated_at: string | null;
+}
+interface ForecastResponse {
+  forecasts: ForecastCard[];
+  generated_at: string | null;
+  model: string;
+  status: string;
+}
 
-export default function ForecastsPage() {
-  const [forecasts, setForecasts] = useState<Forecast[]>([]);
-  const [loading, setLoading] = useState(true);
+/* ─── Helpers ────────────────────────────────────────────── */
+function confidenceMeta(c: string) {
+  if (c === "high")   return { label: "High confidence",   color: "#4ADE80", bg: "rgba(74,222,128,0.1)"  };
+  if (c === "medium") return { label: "Medium confidence", color: "var(--accent)", bg: "rgba(201,168,76,0.1)" };
+  return               { label: "Low confidence",  color: "var(--app-muted)", bg: "var(--app-surface-2)" };
+}
+function predictionMeta(p: string) {
+  if (p === "increase") return { icon: "↑", color: "#4ADE80", label: "Increasing" };
+  if (p === "decrease") return { icon: "↓", color: "#F87171", label: "Decreasing" };
+  return                        { icon: "→", color: "var(--app-muted)", label: "Stable" };
+}
+function parseInsight(text: string | null | undefined): string {
+  if (!text) return "";
+  // Handle both " || " separator and direct JSON strings
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed === "string") return parsed.split(" || ")[0].trim();
+    if (Array.isArray(parsed) && typeof parsed[0] === "string") return parsed[0];
+  } catch {
+    // Not JSON — treat as plain string
+    return text.split(" || ")[0].trim();
+  }
+  return text.split(" || ")[0].trim();
+}
 
-  useEffect(() => {
-    async function fetchForecasts() {
-      try {
-        const res = await fetch("/api/forecasts");
-        if (!res.ok) throw new Error("Failed to fetch forecasts");
-        const data = await res.json();
-        setForecasts(data.forecasts || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchForecasts();
-  }, []);
+/* ─── Skeleton card ──────────────────────────────────────── */
+function ForecastSkeleton() {
+  return (
+    <div className="dash-card-padded" aria-label="Loading forecast" aria-busy="true">
+      <div className="dash-skeleton" style={{ height: 14, width: "30%", marginBottom: 10 }} />
+      <div className="dash-skeleton" style={{ height: 22, width: "50%", marginBottom: 16 }} />
+      <div className="dash-skeleton" style={{ height: 120, borderRadius: 8, marginBottom: 12 }} />
+      <div className="dash-skeleton" style={{ height: 12, width: "80%" }} />
+    </div>
+  );
+}
+
+/* ─── Forecast card ──────────────────────────────────────── */
+function ForecastCard({ card }: { card: ForecastCard }) {
+  const cm = confidenceMeta(card.confidence);
+  const pm = predictionMeta(card.prediction_type);
+  const insight = parseInsight(card.insight_text);
+  const [feedback, setFeedback] = useState<"up"|"down"|null>(null);
 
   return (
-    <>
-      <style>{`
-        .cc-header { border-bottom:1px solid #252320; background:#1C1917; position:sticky; top:0; z-index:50; height:60px; display:flex; align-items:center; padding:0 2rem; gap:1.5rem; }
-        .cc-nav    { display:flex; gap:0.25rem; flex:1; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
-        .cc-nav::-webkit-scrollbar { display:none; }
-        .cc-nav-item { white-space:nowrap; }
-        .cc-main   { max-width:1100px; margin:0 auto; padding:2rem; }
-        @media (max-width: 768px) {
-          .cc-header { padding: 0 1rem; }
-          .cc-main   { padding: 1rem; }
-        }
-      `}</style>
-      <div style={{ minHeight:"100vh", background:"#1C1917", fontFamily:"var(--font-inter), sans-serif" }}>
-        
-        <header className="cc-header">
-          <Link href="/" style={{ textDecoration:"none", flexShrink:0 }}>
-            <span style={{ fontWeight:800, fontSize:"1.2rem", letterSpacing:"-0.05em" }}>
-              <span style={{ color:"#C9A84C" }}>P</span><span style={{ color:"#F7F5F0" }}>lexovia</span>
+    <div className="dash-card-padded" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* Header row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: 4 }}>
+            <span className="dash-tag dash-tag-muted dash-mono" style={{ fontSize: "0.7rem", padding: "2px 7px" }}>
+              NAICS {card.naics_code}
             </span>
-          </Link>
-          <nav className="cc-nav">
-            {[
-              { href:"/dashboard", label:"Overview" },
-              { href:"/dashboard/contracts", label:"Contracts" },
-              { href:"/dashboard/profile", label:"Profile" },
-              { href:"/dashboard/competitors", label:"Competitors" },
-              { href:"/dashboard/forecasts", label:"AI Forecasts", active:true },
-              { href:"/dashboard/team", label:"Team" },
-            ].map(n => (
-              <Link key={n.href} href={n.href}
-                className="cc-nav-item"
-                style={{ padding:"6px 12px", borderRadius:"8px", fontSize:"0.8125rem", textDecoration:"none",
-                  color: n.active ? "#C9A84C" : "#6B6560",
-                  background: n.active ? "#2A2318" : "transparent" }}>
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-        </header>
-
-        <main className="cc-main relative">
-          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"2rem", flexWrap:"wrap", gap:"1rem" }}>
-            <div>
-              <h1 style={{ fontWeight:700, fontSize:"1.5rem", color:"#F7F5F0", margin:0, letterSpacing:"-0.03em", display:"flex", alignItems:"center", gap:"8px" }}>
-                <Brain color="#C9A84C" size={24} /> AI Forecasting Hub
-              </h1>
-              <p style={{ fontSize:"0.875rem", color:"#6B6560", margin:"4px 0 0" }}>
-                Powered by Google TimesFM. Predictive intelligence on upcoming government spend.
-              </p>
-            </div>
-            <span style={{ fontSize:"0.72rem", padding:"4px 8px", background:"#C9A84C20", border:"1px solid #C9A84C40", borderRadius:"6px", color:"#C9A84C", fontWeight:600 }}>
-              TimesFM Intelligence Active
+            {/* Confidence badge */}
+            <span
+              title={cm.label}
+              aria-label={cm.label}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 3,
+                padding: "2px 8px", borderRadius: 999,
+                fontSize: "0.65rem", fontWeight: 600, color: cm.color,
+                background: cm.bg, border: `1px solid ${cm.color}30`,
+              }}
+            >
+              <span aria-hidden="true">{card.confidence === "high" ? "●" : card.confidence === "medium" ? "◉" : "○"}</span>
+              {cm.label}
             </span>
           </div>
+          <h3 style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--app-text)", margin: "2px 0 0", lineHeight: 1.3 }}>
+            {card.naics_label}
+          </h3>
+        </div>
 
-          {loading ? (
-            <div style={{ padding:"4rem", textAlign:"center", color:"#6B6560" }}>Executing prediction models...</div>
-          ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(400px, 1fr))", gap:"1.5rem" }}>
-              {forecasts.map((f, i) => {
-                const parts = f.insight_text.split(" || ");
-                const insightStr = parts[0];
-                let parsedDates: string[] = [];
-                if (parts.length > 1) {
-                  try {
-                    parsedDates = JSON.parse(parts[1]);
-                  } catch (e) {}
-                }
-
-                const chartData = f.predicted_array.map((val, idx) => {
-                  let label = `M${idx + 1}`;
-                  if (parsedDates[idx]) {
-                    // Extract "26-05" from "2026-05" for cleaner UI
-                    const [yyyy, mm] = parsedDates[idx].split('-');
-                    if (yyyy && mm) label = `${mm}/${yyyy.slice(-2)}`;
-                    else label = parsedDates[idx];
-                  }
-                  
-                  return {
-                    month: label,
-                    volume: val,
-                  };
-                });
-                const maxVal = Math.max(...f.predicted_array);
-                
-                return (
-                  <div key={f.id || i} style={{ background:"#252320", border:"1px solid #2D2A26", borderRadius:"14px", padding:"1.5rem", position:"relative", overflow:"hidden" }}>
-                    <div style={{ position:"absolute", top:0, right:0, padding:"1.5rem", opacity:0.03, pointerEvents:"none" }}>
-                      <TrendingUp size={100} />
-                    </div>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"1.5rem" }}>
-                      <div>
-                        <h3 style={{ margin:0, color:"#F7F5F0", fontSize:"1.1rem", fontWeight:600 }}>{f.agency_name}</h3>
-                        <div style={{ display:"flex", gap:"6px", marginTop:"6px", flexWrap:"wrap" }}>
-                          <span style={{ fontSize:"0.68rem", padding:"2px 6px", background:"#1E211A", border:"1px solid #2A3020", borderRadius:"4px", color:"#86EFAC", fontFamily:"var(--font-geist-mono, monospace)" }}>NAICS {f.naics_code}</span>
-                          <span style={{ fontSize:"0.68rem", padding:"2px 6px", background:"#1E242C", border:"1px solid #263140", borderRadius:"4px", color:"#93C5FD", textTransform:"uppercase" }}>{f.forecast_type.replace(/_/g, " ")}</span>
-                        </div>
-                      </div>
-                      <div style={{ textAlign:"right" }}>
-                        <div style={{ fontSize:"1.25rem", fontWeight:700, color:"#F7F5F0", fontFamily:"var(--font-geist-mono, monospace)" }}>{f.confidence_score}%</div>
-                        <div style={{ fontSize:"0.65rem", textTransform:"uppercase", color:"#6B6560", fontWeight:600, letterSpacing:"0.05em" }}>Confidence</div>
-                      </div>
-                    </div>
-
-                    <div style={{ height:"160px", marginBottom:"1.5rem" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2D2A26" />
-                          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B6560' }} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B6560' }} domain={[0, maxVal * 1.2]} />
-                          <Tooltip 
-                            contentStyle={{ background: '#1C1917', border: '1px solid #2D2A26', borderRadius: '8px', color: '#F7F5F0', fontSize: '12px' }}
-                            itemStyle={{ color: '#C9A84C' }}
-                            cursor={{ stroke: '#2D2A26', strokeWidth: 1 }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="volume" 
-                            stroke="#C9A84C" 
-                            strokeWidth={3}
-                            dot={{ r: 4, strokeWidth: 0, fill: '#C9A84C' }} 
-                            activeDot={{ r: 6, fill: '#C9A84C', stroke: '#1C1917', strokeWidth: 2 }} 
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div style={{ background:"#1C1917", borderRadius:"8px", padding:"1rem", display:"flex", gap:"12px", border:"1px solid #2D2A26" }}>
-                      <Brain size={16} color="#C9A84C" style={{ flexShrink:0, marginTop:2 }} />
-                      <p style={{ margin:0, fontSize:"0.8125rem", color:"#A8A29E", lineHeight:1.5 }}>
-                        <strong style={{ color:"#F7F5F0", display:"block", marginBottom:"2px", fontSize:"0.75rem", textTransform:"uppercase", letterSpacing:"0.05em" }}>Insight</strong>
-                        {insightStr}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {!loading && forecasts.length === 0 && (
-            <div style={{ padding:"4rem", textAlign:"center", border:"1px dashed #2D2A26", borderRadius:"14px" }}>
-              <AlertTriangle color="#FCD34D" size={32} style={{ margin:"0 auto 1rem" }} />
-              <h3 style={{ fontSize:"1rem", fontWeight:600, color:"#F7F5F0", margin:"0 0 6px" }}>No Forecasts Generated Yet</h3>
-              <p style={{ color:"#6B6560", fontSize:"0.875rem", margin:0, maxWidth:"400px", marginLeft:"auto", marginRight:"auto" }}>
-                The TimesFM engine runs weekly on Sundays. Ensure you have active NAICS codes in your profile to trigger predictions.
-              </p>
-            </div>
-          )}
-        </main>
+        {/* Trend indicator */}
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: pm.color, lineHeight: 1 }}>
+            {pm.icon} {Math.abs(card.percent_change).toFixed(0)}%
+          </div>
+          <div style={{ fontSize: "0.72rem", color: "var(--app-muted)" }}>{pm.label}</div>
+        </div>
       </div>
-    </>
+
+      {/* Chart */}
+      {card.data_points.length > 0 ? (
+        <div aria-label={`Forecast chart for NAICS ${card.naics_code}`} style={{ height: 140 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={card.data_points} margin={{ top: 0, right: 0, bottom: 0, left: -30 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
+              <XAxis dataKey="period" tick={{ fontSize: 10, fill: "var(--app-faint)" }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 10, fill: "var(--app-faint)" }}
+                axisLine={false} tickLine={false}
+                label={{ value: "Contracts", angle: -90, position: "insideLeft", offset: 30, fontSize: 9, fill: "var(--app-faint)" }}
+              />
+              <Tooltip
+                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                contentStyle={{
+                  background: "var(--app-surface-2)", border: "1px solid var(--app-border)",
+                  borderRadius: 8, fontSize: 11, color: "var(--app-text)",
+                }}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any, name: any) => [
+                  typeof value === "number" ? value.toFixed(0) : String(value ?? ""),
+                  name === "historical" ? "Historical (actual)" : "Projected (AI forecast)",
+                ] as [string, string]}
+              />
+              <Legend
+                iconSize={8}
+                wrapperStyle={{ fontSize: 10, color: "var(--app-muted)" }}
+                formatter={(v) => v === "historical" ? "Historical" : "Projected"}
+              />
+              {card.data_points.some(d => d.historical !== undefined) && (
+                <Bar dataKey="historical" fill="var(--app-muted)"    name="historical" radius={[3,3,0,0]} />
+              )}
+              {card.data_points.some(d => d.projected !== undefined) && (
+                <Bar dataKey="projected"  fill="var(--accent)"       name="projected"  radius={[3,3,0,0]} opacity={0.75} />
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--app-faint)", fontSize: "0.8rem" }}>
+          Insufficient data to render chart
+        </div>
+      )}
+
+      {/* Insight */}
+      {insight && (
+        <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          <Info size={12} color="var(--app-faint)" style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <p style={{ fontSize: "0.8rem", color: "var(--app-muted)", margin: 0, lineHeight: 1.5 }}>
+            {insight}
+          </p>
+        </div>
+      )}
+
+      {/* Feedback */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "0.5rem", borderTop: "1px solid var(--app-border)" }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--app-faint)", flex: 1 }}>
+          {feedback === "up" ? "Thanks for your feedback!" : feedback === "down" ? "We'll improve this forecast." : "Is this forecast accurate?"}
+        </span>
+        {!feedback && (
+          <>
+            <button
+              onClick={() => setFeedback("up")}
+              className="dash-btn"
+              aria-label="Mark forecast as accurate"
+              style={{ padding: "4px 10px", minHeight: 28, gap: 4 }}
+            >
+              <ThumbsUp size={11} aria-hidden="true" /> Accurate
+            </button>
+            <button
+              onClick={() => setFeedback("down")}
+              className="dash-btn"
+              aria-label="Mark forecast as inaccurate"
+              style={{ padding: "4px 10px", minHeight: 28, gap: 4 }}
+            >
+              <ThumbsDown size={11} aria-hidden="true" /> Off
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Page ───────────────────────────────────────────────── */
+export default function ForecastsPage() {
+  const [data,    setData]    = useState<ForecastResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/forecasts");
+      if (res.status === 404) {
+        // No forecasts yet — treat as empty, not error
+        setData({ forecasts: [], generated_at: null, model: "TimesFM", status: "no_data" });
+        setLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(body || `HTTP ${res.status}`);
+      }
+      const json = await res.json();
+      setData(json);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const forecasts = data?.forecasts ?? [];
+  const generatedAt = data?.generated_at;
+  const isLive = forecasts.length > 0;
+
+  return (
+    <div className="dash-main">
+
+      {/* Header */}
+      <div className="dash-page-header">
+        <div>
+          <h1 className="dash-page-title">AI Forecasts</h1>
+          <p className="dash-page-sub" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+            <span
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 8px",
+                borderRadius: 999, fontSize: "0.72rem", fontWeight: 600,
+                background: isLive ? "rgba(74,222,128,0.1)" : "var(--app-surface-2)",
+                border: `1px solid ${isLive ? "rgba(74,222,128,0.25)" : "var(--app-border)"}`,
+                color: isLive ? "#4ADE80" : "var(--app-muted)",
+              }}
+              role="status"
+              aria-label={isLive ? "TimesFM intelligence active" : "Waiting for data"}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "inline-block" }} aria-hidden="true" />
+              {isLive ? "TimesFM Intelligence Active" : "Waiting for data"}
+            </span>
+            {generatedAt && (
+              <span style={{ color: "var(--app-faint)", fontSize: "0.8rem" }}>
+                Generated {new Date(generatedAt).toLocaleString("en-US", {
+                  month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+                })}
+              </span>
+            )}
+          </p>
+        </div>
+        <button
+          className="dash-btn"
+          onClick={load}
+          aria-label="Refresh forecasts"
+          disabled={loading}
+        >
+          <RefreshCw size={13} aria-hidden="true" />
+          Refresh
+        </button>
+      </div>
+
+      {/* Confidence explanation */}
+      <div style={{
+        display: "flex", gap: "1.5rem", flexWrap: "wrap",
+        padding: "0.75rem 1rem", background: "var(--app-surface)", border: "1px solid var(--app-border)",
+        borderRadius: "10px", marginBottom: "1.5rem", alignItems: "center",
+      }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--app-faint)", fontWeight: 600 }}>Confidence levels:</span>
+        {[
+          { dot: "#4ADE80", label: "High: 24+ months of data, consistent signals" },
+          { dot: "var(--accent)", label: "Medium: 12+ months, some variance" },
+          { dot: "var(--app-muted)", label: "Low: sparse data, early signals only" },
+        ].map(({ dot, label }) => (
+          <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--app-muted)" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: dot, flexShrink: 0 }} aria-hidden="true" />
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {/* Chart legend */}
+      <div style={{
+        display: "flex", gap: "1.25rem", flexWrap: "wrap",
+        padding: "0.5rem 1rem", marginBottom: "1.5rem", alignItems: "center",
+      }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--app-faint)" }}>Chart:</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.75rem", color: "var(--app-muted)" }}>
+          <span style={{ width: 12, height: 8, background: "var(--app-muted)", borderRadius: 2, display: "inline-block" }} aria-hidden="true" />
+          Grey bars = historical (actual contract counts)
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.75rem", color: "var(--app-muted)" }}>
+          <span style={{ width: 12, height: 8, background: "var(--accent)", borderRadius: 2, display: "inline-block", opacity: 0.75 }} aria-hidden="true" />
+          Gold bars = AI-projected (future forecast)
+        </span>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}
+          aria-label="Loading forecasts"
+          aria-busy="true"
+        >
+          {[1, 2, 3].map(i => <ForecastSkeleton key={i} />)}
+        </div>
+      ) : error ? (
+        <div className="dash-card">
+          <ErrorState
+            message={`Failed to load forecasts: ${error}`}
+            onRetry={load}
+          />
+        </div>
+      ) : forecasts.length === 0 ? (
+        <div className="dash-card">
+          <EmptyState
+            icon={<BarChart2 size={28} />}
+            title="No forecasts yet"
+            message="The AI engine generates forecasts nightly based on your NAICS codes. Add NAICS codes to your profile, then check back tomorrow."
+            action={
+              <a
+                href="/dashboard/profile"
+                className="dash-btn dash-btn-accent"
+                style={{ textDecoration: "none", padding: "8px 16px" }}
+              >
+                Set up NAICS codes →
+              </a>
+            }
+          />
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
+          {forecasts.map(card => (
+            <ForecastCard key={card.id} card={card} />
+          ))}
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      {!loading && !error && forecasts.length > 0 && (
+        <div style={{ marginTop: "2rem", display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          <AlertCircle size={13} color="var(--app-faint)" style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <p style={{ fontSize: "0.75rem", color: "var(--app-faint)", margin: 0, lineHeight: 1.5 }}>
+            Forecasts are generated by Google TimesFM trained on federal contract award history.
+            They indicate probability trends, not guaranteed outcomes. Always verify with official SAM.gov data.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }

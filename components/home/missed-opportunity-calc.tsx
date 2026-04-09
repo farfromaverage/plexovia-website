@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { Activity, AlertTriangle, Calculator, TrendingDown } from "lucide-react";
+import { Activity, AlertTriangle, Calculator, TrendingDown, ArrowRight } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────
    MissedOpportunityCalc
@@ -541,6 +542,35 @@ export default function MissedOpportunityCalc() {
                   }}
                 >
                   Plexovia surfaces every matching opportunity so nothing slips through.
+                </p>
+              </div>
+
+              {/* CTA — H3: conversion exit after emotional loss calc */}
+              <div
+                style={{
+                  borderTop: "1px solid var(--pub-border)",
+                  paddingTop: "1.5rem",
+                  textAlign:  "center",
+                }}
+              >
+                <Link
+                  href="/auth/signup"
+                  id="calculator-cta"
+                  className="btn-gold"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+                >
+                  Stop Leaving Revenue on the Table
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+                <p
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize:   "0.75rem",
+                    color:      "var(--pub-faint)",
+                    marginTop:  "0.5rem",
+                  }}
+                >
+                  7-day free trial. No charge until Day 8.
                 </p>
               </div>
             </div>

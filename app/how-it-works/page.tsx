@@ -60,6 +60,8 @@ const steps = [
       "Each match shows the agency, deadline, place of performance, set aside status, and your score.",
       "Click any contract to go directly to the solicitation. No platform login required.",
       "Weekly bid calendars and performance summaries delivered automatically.",
+      "AI Predictive Forecasting: Renewal Radar predicts when incumbent contracts drop.",
+      "Track agency 'use-it-or-lose-it' spending heatmaps and Q4 budget surges.",
     ],
   },
 ];
@@ -119,8 +121,8 @@ export default function HowItWorksPage() {
       },
       {
         "@type": "HowToStep",
-        "name": "Delivery of matches",
-        "text": "Ranked matches, scored from 0 to 100, are delivered to your inbox at 6 AM."
+        "name": "Delivery of matches with AI Forecasting",
+        "text": "Ranked matches, scored from 0 to 100, delivered to your inbox at 6 AM. Includes AI Predictive Forecasting for incumbent expirations and Q4 budget surges."
       }
     ]
   };

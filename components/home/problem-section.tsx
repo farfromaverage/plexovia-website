@@ -1,45 +1,39 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { ArrowRight } from "lucide-react";
-import { fadeInUp, stagger } from "@/lib/motion";
+import { Clock, Search, AlertTriangle } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────
-   ProblemSection — PAS Framework
-   P: You're checking SAM.gov manually. Your competitor isn't.
-   A: A bid posted Thursday. Their inbox Friday. You saw it Monday.
-   S: Plexovia scans everything. Scored matches arrive by 6 AM.
+   ProblemSection — Names the pain explicitly (PAS framework)
+   Audit item H1: Homepage had no "why your current approach 
+   is failing" section. This fills that gap.
 ───────────────────────────────────────────────────────── */
 
-const PAINS = [
+const PROBLEMS = [
   {
-    id:       "p1",
-    stat:     "24,000+",
-    unit:     "new opportunities posted to SAM.gov every month",
-    headline: "No calendar. No alert. No email to you.",
-    body:     "SAM.gov posts new solicitations daily. There is no calendar, no reminder, no email. By the time you log in and search, many have already passed their question deadline. A third of all bids close within 10 days of posting.",
+    icon: Clock,
+    stat: "2 to 4 hrs",
+    title: "Wasted on manual searching every day",
+    body:  "You log into SAM.gov, check state portals, cross-reference NAICS codes, and repeat. Every single morning. That is not business development. That is data entry.",
   },
   {
-    id:       "p2",
-    stat:     "3 to 5",
-    unit:     "portals your competitor checks weekly",
-    headline: "While you're checking one",
-    body:     "The average BD manager checks SAM.gov and maybe one state portal. Your competitor in the same NAICS code may be watching five. The gap shows up in win rates. It compounds every week.",
+    icon: Search,
+    stat: "73%",
+    title: "Of relevant contracts are missed",
+    body:  "SAM.gov does not cover state or county portals. If you are only searching one source, the majority of matching opportunities are invisible to you.",
   },
   {
-    id:       "p3",
-    stat:     "50",
-    unit:     "state portals",
-    headline: "You're not monitoring",
-    body:     "SAM.gov is federal only. Each state runs its own procurement system. Your competitor watches all 50. You're searching one source and calling it due diligence.",
+    icon: AlertTriangle,
+    stat: "48 hrs",
+    title: "Behind your competitors on every alert",
+    body:  "Legacy aggregators rely on third-party data resellers. By the time you see a listing, your competitors have already started writing their proposal.",
   },
 ];
 
 export default function ProblemSection() {
-  const ref    = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
     <section
@@ -51,16 +45,15 @@ export default function ProblemSection() {
         padding:         "5rem 1.5rem",
       }}
     >
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-        {/* ── Problem Statement ── */}
+        {/* Section header */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-          style={{ maxWidth: "720px", marginBottom: "3.5rem" }}
+          transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
+          style={{ textAlign: "center", marginBottom: "3rem" }}
         >
-          {/* Eyebrow */}
           <span
             aria-hidden="true"
             style={{
@@ -73,184 +66,128 @@ export default function ProblemSection() {
               letterSpacing: "0.08em",
               textTransform: "uppercase",
               color:         "var(--accent)",
-              marginBottom:  "1.25rem",
+              marginBottom:  "1rem",
             }}
           >
-            <span
-              style={{
-                width:           "6px",
-                height:          "6px",
-                borderRadius:    "50%",
-                backgroundColor: "var(--accent)",
-                display:         "block",
-                flexShrink:      0,
-              }}
-            />
+            <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--accent)", display: "block" }} />
             The Problem
           </span>
 
-          {/* H2 — confrontational, direct, Inter 700 */}
           <h2
             style={{
               fontFamily:    "var(--font-inter), sans-serif",
               fontWeight:    700,
-              fontSize:      "clamp(1.875rem, 3.5vw, 2.875rem)",
+              fontSize:      "clamp(1.625rem, 3vw, 2.25rem)",
               letterSpacing: "-0.04em",
-              lineHeight:    1.1,
+              lineHeight:    1.15,
               color:         "var(--pub-text)",
-              marginBottom:  "1.25rem",
+              marginBottom:  "0.75rem",
             }}
           >
-            You&apos;re checking SAM.gov manually.
-            <br />
-            Your competitor isn&apos;t.
+            Manual contract searching is costing you more than you think.
           </h2>
 
-          {/* Agitate — specific and personal */}
           <p
             style={{
-              fontFamily: "var(--font-inter), sans-serif",
-              fontSize:   "1.125rem",
-              fontWeight: 400,
-              lineHeight: 1.7,
-              color:      "var(--pub-muted)",
+              fontFamily:  "var(--font-inter), sans-serif",
+              fontSize:    "1rem",
+              color:       "var(--pub-muted)",
+              lineHeight:  1.65,
+              maxWidth:    "580px",
+              margin:      "0 auto",
             }}
           >
-            A contract posted Thursday was in their inbox Friday morning.
-            They read it. They started the proposal. You found out Monday when
-            you happened to log in. Every week this pattern repeats. Every
-            missed bid is revenue you never got a chance to earn.
+            Every hour you spend logging into portals and filtering results is an hour
+            you are not writing proposals, meeting agencies, or winning contracts.
           </p>
         </motion.div>
 
-        {/* ── Pain Cards ── */}
-        <motion.div
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          variants={stagger}
+        {/* 3 problem cards */}
+        <div
           style={{
             display:             "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap:                 "1.25rem",
-            marginBottom:        "3.5rem",
           }}
         >
-          {PAINS.map((pain) => (
-            <motion.article
-              key={pain.id}
-              variants={fadeInUp}
-              style={{
-                backgroundColor: "var(--pub-surface)",
-                border:          "1px solid var(--pub-border)",
-                borderRadius:    "var(--radius-md)",
-                padding:         "1.75rem",
-              }}
-            >
-              {/* Gold stat number */}
-              <div
-                aria-label={`${pain.stat} ${pain.unit}`}
+          {PROBLEMS.map((problem, i) => {
+            const Icon = problem.icon;
+            return (
+              <motion.div
+                key={problem.title}
+                initial={{ opacity: 0, y: 16 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.1 + i * 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
                 style={{
-                  fontFamily:    "var(--font-geist-mono), monospace",
-                  fontSize:      "2.25rem",
-                  fontWeight:    600,
-                  letterSpacing: "-0.03em",
-                  color:         "var(--accent)",
-                  lineHeight:    1,
-                  marginBottom:  "0.25rem",
+                  backgroundColor: "var(--pub-surface)",
+                  border:          "1px solid var(--pub-border)",
+                  borderRadius:    "var(--radius-md)",
+                  padding:         "2rem",
+                  display:         "flex",
+                  flexDirection:   "column",
+                  gap:             "0.75rem",
                 }}
               >
-                {pain.stat}
-              </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.25rem" }}>
+                  <div
+                    style={{
+                      width:           "40px",
+                      height:          "40px",
+                      borderRadius:    "50%",
+                      backgroundColor: "rgba(201,168,76,0.1)",
+                      border:          "1px solid rgba(201,168,76,0.2)",
+                      display:         "flex",
+                      alignItems:      "center",
+                      justifyContent:  "center",
+                      flexShrink:      0,
+                    }}
+                  >
+                    <Icon size={18} style={{ color: "var(--accent)" }} aria-hidden="true" />
+                  </div>
+                  <span
+                    style={{
+                      fontFamily:    "var(--font-inter), sans-serif",
+                      fontWeight:    800,
+                      fontSize:      "1.5rem",
+                      letterSpacing: "-0.04em",
+                      color:         "var(--pub-text)",
+                      lineHeight:    1,
+                    }}
+                  >
+                    {problem.stat}
+                  </span>
+                </div>
 
-              <div
-                aria-hidden="true"
-                style={{
-                  fontFamily:    "var(--font-geist-mono), monospace",
-                  fontSize:      "0.6875rem",
-                  fontWeight:    400,
-                  letterSpacing: "0.07em",
-                  textTransform: "uppercase",
-                  color:         "var(--pub-faint)",
-                  marginBottom:  "1.125rem",
-                }}
-              >
-                {pain.unit}
-              </div>
+                <p
+                  style={{
+                    fontFamily:    "var(--font-inter), sans-serif",
+                    fontWeight:    600,
+                    fontSize:      "1rem",
+                    letterSpacing: "-0.01em",
+                    color:         "var(--pub-text)",
+                    lineHeight:    1.3,
+                    margin:        0,
+                  }}
+                >
+                  {problem.title}
+                </p>
 
-              <h3
-                style={{
-                  fontFamily:    "var(--font-inter), sans-serif",
-                  fontSize:      "1rem",
-                  fontWeight:    600,
-                  letterSpacing: "-0.02em",
-                  lineHeight:    1.3,
-                  color:         "var(--pub-text)",
-                  marginBottom:  "0.625rem",
-                }}
-              >
-                {pain.headline}
-              </h3>
-
-              <p
-                style={{
-                  fontFamily: "var(--font-inter), sans-serif",
-                  fontSize:   "0.9375rem",
-                  fontWeight: 400,
-                  lineHeight: 1.7,
-                  color:      "var(--pub-muted)",
-                }}
-              >
-                {pain.body}
-              </p>
-            </motion.article>
-          ))}
-        </motion.div>
-
-        {/* ── Solution Bridge ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.55, delay: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-          style={{
-            display:         "flex",
-            flexDirection:   "column",
-            gap:             "1.25rem",
-            padding:         "2rem 2.25rem",
-            backgroundColor: "var(--pub-bg)",
-            border:          "1px solid var(--pub-border)",
-            borderRadius:    "var(--radius-lg)",
-            maxWidth:        "680px",
-          }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--font-inter), sans-serif",
-              fontSize:   "1.0625rem",
-              fontWeight: 500,
-              lineHeight: 1.65,
-              color:      "var(--pub-text)",
-            }}
-          >
-            Plexovia scans SAM.gov and all 50 state portals every night.
-            Contracts matching your NAICS codes land in your inbox, scored 0
-            to 100 based on relevance. You get competitor tracking and complete
-            daily digests without restrictions. No limits. No manual
-            searching. Just the contracts you can win.
-          </p>
-
-          <div>
-            <Link
-              href="/auth/signup"
-              className="btn-gold"
-              id="problem-cta"
-              style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
-            >
-              Start Free Trial
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          </div>
-        </motion.div>
-
+                <p
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize:   "0.9rem",
+                    fontWeight: 400,
+                    color:      "var(--pub-muted)",
+                    lineHeight: 1.65,
+                    margin:     0,
+                  }}
+                >
+                  {problem.body}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

@@ -56,7 +56,7 @@ export default function FinalCTA() {
               animation:       "pulse-gold 2.5s ease-in-out infinite",
             }}
           />
-          7-day free trial
+          Your first scored digest arrives tomorrow
         </motion.span>
 
         {/* H2 — Inter 800, off-white, confrontational close */}
@@ -145,13 +145,13 @@ export default function FinalCTA() {
               (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
             }}
           >
-            Start Your Free 7-Day Trial
+            Start 7-Day Free Trial. No Charge Until Day 8
             <ArrowRight size={17} aria-hidden="true" />
           </Link>
 
           {/* Secondary — ghost text link */}
           <a
-            href="#pricing"
+            href="/pricing"
             style={{
               fontFamily:     "var(--font-inter), sans-serif",
               fontSize:       "0.875rem",

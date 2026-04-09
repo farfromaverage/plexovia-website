@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useInView } from "framer-motion";
-import { Check, ArrowRight, Mail, Quote, Star } from "lucide-react";
+import { Check, ArrowRight, Mail } from "lucide-react";
 import { fadeInUp, stagger } from "@/lib/motion";
 
 /* ─────────────────────────────────────────────────────────
@@ -415,172 +415,84 @@ export default function PricingSection() {
           ))}
         </motion.div>
 
-        {/* ── Testimonial — social proof anchor ── */}
-        {/* REPLACE with real customer quotes before launch */}
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          style={{
-            fontFamily:    "var(--font-inter), sans-serif",
-            fontSize:      "0.8125rem",
-            fontWeight:    500,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color:         "var(--pub-faint)",
-            textAlign:     "center",
-            marginBottom:  "1rem",
-          }}
-        >
-          What contractors say after their first 30 days
-        </motion.p>
+        {/* ── Product proof — real engine numbers, not fabricated quotes ── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.38 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
           style={{
-            display:               "grid",
-            gridTemplateColumns:   "repeat(auto-fit, minmax(260px, 1fr))",
-            gap:                   "1rem",
-            marginBottom:          "2rem",
+            display:             "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap:                 "1rem",
+            marginBottom:        "2rem",
           }}
         >
           {[
             {
-              initials: "MT",
-              name:     "Marcus T.",
-              role:     "BD Director, IT Services, Virginia",
-              quote:    "First week I had 14 relevant contracts in my inbox. Two of them I would never have found manually. One was a $340K SDVOSB set-aside in Virginia. That contract alone paid for Plexovia for years.",
+              stat:  "50+",
+              label: "State & federal portals scanned nightly",
+              detail: "SAM.gov, all 50 states, DC, PR, Guam, and county portals.",
             },
             {
-              initials: "SR",
-              name:     "Sandra R.",
-              role:     "Owner, SRG Construction, Texas",
-              quote:    "I used to spend two hours every morning checking SAM.gov and three state portals. Now I read one email. Found a $220K WOSB contract in Texas in my second week that I had zero visibility on before.",
+              stat:  "6 AM",
+              label: "Daily digest delivery",
+              detail: "Scored contracts in your inbox before you start work. No login required.",
             },
             {
-              initials: "JK",
-              name:     "James K.",
-              role:     "Capture Manager, Federal Systems, Maryland",
-              quote:    "The AI score saves us from chasing the wrong bids. Anything above 80 goes straight to proposal. We cut our bid-to-win ratio in half within 60 days of signing up.",
+              stat:  "0 to 100",
+              label: "AI match score per contract",
+              detail: "Every match includes a plain-English explanation of why it scored the way it did.",
             },
-          ].map((t) => (
+          ].map((item) => (
             <div
-              key={t.initials}
+              key={item.label}
               style={{
                 padding:         "1.5rem",
                 backgroundColor: "var(--pub-surface)",
                 border:          "1px solid var(--pub-border)",
                 borderRadius:    "var(--radius-md)",
-                position:        "relative",
                 display:         "flex",
                 flexDirection:   "column",
-                gap:             "1rem",
+                gap:             "0.5rem",
               }}
             >
-              {/* Decorative quote mark */}
-              <Quote
-                size={22}
-                aria-hidden="true"
+              <span
                 style={{
-                  color:    "var(--accent)",
-                  opacity:  0.3,
-                  position: "absolute",
-                  top:      "1rem",
-                  right:    "1rem",
+                  fontFamily:    "var(--font-inter), sans-serif",
+                  fontSize:      "1.75rem",
+                  fontWeight:    800,
+                  letterSpacing: "-0.04em",
+                  color:         "var(--accent)",
+                  lineHeight:    1,
                 }}
-              />
-
-              {/* Stars */}
-              <div
-                style={{ display: "flex", gap: "0.2rem" }}
-                aria-label="5 out of 5 stars"
               >
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    size={12}
-                    fill="var(--accent)"
-                    stroke="none"
-                    aria-hidden="true"
-                  />
-                ))}
-              </div>
-
-              {/* Quote */}
+                {item.stat}
+              </span>
               <p
                 style={{
-                  fontFamily:  "var(--font-inter), sans-serif",
-                  fontSize:    "0.9rem",
-                  fontWeight:  400,
-                  lineHeight:  1.7,
-                  color:       "var(--pub-text)",
-                  margin:      0,
-                  flexGrow:    1,
-                  paddingRight: "1rem",
+                  fontFamily: "var(--font-inter), sans-serif",
+                  fontSize:   "0.9375rem",
+                  fontWeight: 600,
+                  color:      "var(--pub-text)",
+                  lineHeight: 1.3,
+                  margin:     0,
                 }}
               >
-                &ldquo;{t.quote}&rdquo;
+                {item.label}
               </p>
-
-              {/* Attribution */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-                <div
-                  style={{
-                    width:           "34px",
-                    height:          "34px",
-                    borderRadius:    "50%",
-                    backgroundColor: "var(--accent-bg-pub)",
-                    border:          "1px solid var(--accent)",
-                    display:         "flex",
-                    alignItems:      "center",
-                    justifyContent:  "center",
-                    flexShrink:      0,
-                  }}
-                  aria-hidden="true"
-                >
-                  <span
-                    style={{
-                      fontFamily:    "var(--font-inter), sans-serif",
-                      fontSize:      "0.7rem",
-                      fontWeight:    700,
-                      color:         "var(--accent)",
-                      letterSpacing: "0.02em",
-                    }}
-                  >
-                    {t.initials}
-                  </span>
-                </div>
-
-                <div>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-inter), sans-serif",
-                      fontSize:   "0.8125rem",
-                      fontWeight: 600,
-                      color:      "var(--pub-text)",
-                      lineHeight: 1.3,
-                      margin:     0,
-                    }}
-                  >
-                    {t.name}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-inter), sans-serif",
-                      fontSize:   "0.75rem",
-                      fontWeight: 400,
-                      color:      "var(--pub-muted)",
-                      lineHeight: 1.3,
-                      margin:     0,
-                    }}
-                  >
-                    {t.role}
-                  </p>
-                </div>
-              </div>
+              <p
+                style={{
+                  fontFamily: "var(--font-inter), sans-serif",
+                  fontSize:   "0.8125rem",
+                  fontWeight: 400,
+                  color:      "var(--pub-muted)",
+                  lineHeight: 1.55,
+                  margin:     0,
+                }}
+              >
+                {item.detail}
+              </p>
             </div>
-
           ))}
         </motion.div>
 

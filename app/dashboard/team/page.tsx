@@ -1,221 +1,504 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { Users, Mail, Crown, ArrowLeft, Plus } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import {
+  Users, UserPlus, Mail, Crown, Shield, User,
+  RefreshCw, Clock, Send,
+} from "lucide-react";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import ConfirmModal from "../components/ConfirmModal";
 
+/* ─── Types ───────────────────────────────────────────────────── */
+interface TeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+  role: "owner" | "admin" | "member";
+  status: "active" | "pending" | "invited";
+  joined_at: string | null;
+  invited_at: string | null;
+}
+
+type Role = "admin" | "member";
+
+/* ─── Helpers ─────────────────────────────────────────────────── */
+function roleMeta(role: string) {
+  if (role === "owner") return { icon: <Crown size={12} aria-hidden="true" />, color: "var(--accent)",   label: "Owner: full access, cannot be removed" };
+  if (role === "admin") return { icon: <Shield size={12} aria-hidden="true" />, color: "#4ADE80",        label: "Admin: can invite, view all contracts, manage members" };
+  return                        { icon: <User size={12} aria-hidden="true" />,   color: "var(--app-muted)", label: "Member: can view their own data only" };
+}
+function fmtDate(d: string | null) {
+  if (!d) return "N/A";
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+function mapApiError(e: string): string {
+  if (e.includes("already") || e.includes("duplicate")) return "This email is already on your team.";
+  if (e.includes("invalid") || e.includes("email"))    return "Please enter a valid email address.";
+  if (e.includes("403") || e.includes("Forbidden"))    return "You don't have permission to perform this action.";
+  if (e.includes("429"))                               return "Too many requests. Please wait a moment.";
+  return e || "An unexpected error occurred.";
+}
+
+/* ─── Role legend ─────────────────────────────────────────────── */
+function RoleLegend() {
+  return (
+    <details style={{ marginBottom: "1.25rem" }}>
+      <summary
+        style={{ fontSize: "0.8125rem", color: "var(--app-muted)", cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 5 }}
+      >
+        <Shield size={12} aria-hidden="true" /> Role permissions
+      </summary>
+      <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {["owner", "admin", "member"].map(r => {
+          const m = roleMeta(r);
+          return (
+            <div key={r} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+              <span style={{ color: m.color, marginTop: 2 }}>{m.icon}</span>
+              <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: 0 }}>
+                <strong style={{ color: "var(--app-text)", textTransform: "capitalize" }}>{r}</strong>: {m.label.split(": ").slice(1).join(": ")}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
+/* ─── Page ────────────────────────────────────────────────────── */
 export default function TeamPage() {
-  const [email, setEmail] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  
-  const [teamData, setTeamData] = useState<any>(null);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviting, setInviting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [members,     setMembers]     = useState<TeamMember[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentRole, setCurrentRole] = useState<"owner"|"admin"|"member">("member");
 
-  const loadTeam = async () => {
+  // Invite form
+  const [inviteEmail,     setInviteEmail]     = useState("");
+  const [inviteRole,      setInviteRole]      = useState<Role>("member");
+  const [inviteLoading,   setInviteLoading]   = useState(false);
+  const [inviteError,     setInviteError]     = useState<string | null>(null);
+  const [inviteSuccess,   setInviteSuccess]   = useState(false);
+
+  // Resend invite
+  const [resending, setResending] = useState<string | null>(null);
+
+  // Remove confirm
+  const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
+  const [removing,      setRemoving]      = useState<string | null>(null);
+
+  // Role change
+  const [changingRole, setChangingRole] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/team-members");
-      if (res.ok) {
-        const data = await res.json();
-        setTeamData(data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      setCurrentUser(session.user.email ?? null);
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setEmail(user.email ?? "");
-      await loadTeam();
+      const res = await fetch("/api/team-members");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(body?.error || `HTTP ${res.status}`);
+      }
+      const json = await res.json();
+      const list: TeamMember[] = json.members || [];
+      setMembers(list);
+      const me = list.find(m => m.email === session.user.email);
+      if (me) setCurrentRole(me.role);
+    } catch (e) {
+      setError(e instanceof Error ? mapApiError(e.message) : "Could not load team members.");
+    } finally {
       setLoading(false);
-    })();
+    }
   }, []);
 
-  const handleInvite = async (e: React.FormEvent) => {
+  useEffect(() => { load(); }, [load]);
+
+  async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!inviteEmail) return;
-    setInviting(true);
-    setErrorMsg("");
+    if (!inviteEmail.trim()) return;
+    setInviteLoading(true);
+    setInviteError(null);
+    setInviteSuccess(false);
     try {
       const res = await fetch("/api/team-members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail, role: "member" })
+        body: JSON.stringify({ email: inviteEmail.trim().toLowerCase(), role: inviteRole }),
       });
-      const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.detail || "Failed to invite user");
-      } else {
-        setInviteEmail("");
-        await loadTeam();
+        const body = await res.json().catch(() => ({ error: "Unexpected error" }));
+        throw new Error(body?.error || `HTTP ${res.status}`);
       }
-    } catch (err) {
-      setErrorMsg("Network error trying to invite member.");
+      setInviteSuccess(true);
+      setInviteEmail("");
+      await load();
+    } catch (e) {
+      setInviteError(mapApiError(e instanceof Error ? e.message : "Invite failed."));
     } finally {
-      setInviting(false);
+      setInviteLoading(false);
     }
-  };
+  }
 
-  const removeMember = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this member?")) return;
+  async function handleResendInvite(member: TeamMember) {
+    setResending(member.id);
     try {
-      const res = await fetch(`/api/team-members/${id}`, { method: "DELETE" });
-      if (res.ok) await loadTeam();
-    } catch (err) {
-      console.error("Failed to remove", err);
+      await fetch("/api/team-members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: member.email, role: member.role, resend: true }),
+      });
+    } finally {
+      setResending(null);
     }
-  };
+  }
 
-  const toggleRole = async (id: string, currentRole: string) => {
-    const newRole = currentRole === "admin" ? "member" : "admin";
+  async function handleRemove() {
+    if (!confirmRemove) return;
+    setRemoving(confirmRemove.id);
+    setConfirmRemove(null);
     try {
-      const res = await fetch(`/api/team-members/${id}`, {
+      const res = await fetch(`/api/team-members?id=${confirmRemove.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `HTTP ${res.status}`);
+      }
+      setMembers(prev => prev.filter(m => m.id !== confirmRemove.id));
+    } catch (e) {
+      setError(mapApiError(e instanceof Error ? e.message : "Could not remove member."));
+    } finally {
+      setRemoving(null);
+    }
+  }
+
+  async function handleRoleChange(member: TeamMember, newRole: Role) {
+    setChangingRole(member.id);
+    try {
+      const res = await fetch("/api/team-members", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole })
+        body: JSON.stringify({ id: member.id, role: newRole }),
       });
-      if (res.ok) await loadTeam();
-    } catch (err) {
-      console.error("Failed to change role", err);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Failed to change role");
+      }
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m));
+    } catch (e) {
+      setError(mapApiError(e instanceof Error ? e.message : "Could not change role."));
+    } finally {
+      setChangingRole(null);
     }
-  };
+  }
 
-  if (loading) return <LoadingShell />;
-
-  const seatsUsed = teamData?.seats_used || 1;
-  const seatsLimit = teamData?.seats_limit || 10;
-  const members = teamData?.members || [];
+  const canManage = currentRole === "owner" || currentRole === "admin";
+  const activeMembers = members.filter(m => m.status === "active");
+  const pendingMembers = members.filter(m => m.status !== "active");
 
   return (
-    <div style={page}>
-      {/* Back nav */}
-      <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#6B6560", fontSize: "0.875rem", textDecoration: "none", marginBottom: "2rem", fontFamily: "var(--font-inter), sans-serif" }}>
-        <ArrowLeft size={14} /> Back to Dashboard
-      </Link>
+    <div className="dash-main">
 
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "0.375rem" }}>
-        <Users size={22} color="#C9A84C" />
-        <h1 style={{ fontWeight: 800, fontSize: "1.5rem", color: "#F7F5F0", letterSpacing: "-0.04em", margin: 0, fontFamily: "var(--font-inter), sans-serif" }}>
-          Team Seats
-        </h1>
-      </div>
-      <p style={{ color: "#6B6560", fontSize: "0.9rem", margin: "0 0 2rem", lineHeight: 1.5, fontFamily: "var(--font-inter), sans-serif" }}>
-        Invite teammates to share your workspace boundaries. You are currently using {seatsUsed} of {seatsLimit} included seats.
-      </p>
-
-      {/* Seat usage progress */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#A8A29E", marginBottom: "0.5rem" }}>
-          <span>{seatsUsed} of {seatsLimit} seats used</span>
-          <span>{seatsLimit > seatsUsed ? seatsLimit - seatsUsed + " remaining" : "Limit reached"}</span>
+      {/* Header */}
+      <div className="dash-page-header">
+        <div>
+          <h1 className="dash-page-title">Team</h1>
+          <p className="dash-page-sub">
+            {members.length} member{members.length !== 1 ? "s" : ""} · {pendingMembers.length > 0 ? `${pendingMembers.length} pending invite${pendingMembers.length !== 1 ? "s" : ""}` : "All invites accepted"}
+          </p>
         </div>
-        <div style={{ width: "100%", height: "6px", background: "#2D2A26", borderRadius: "99px", overflow: "hidden" }}>
-          <div style={{ width: `${(seatsUsed / seatsLimit) * 100}%`, height: "100%", background: "#C9A84C", borderRadius: "99px", transition: "width 0.3s" }} />
-        </div>
+        <button
+          className="dash-btn"
+          onClick={load}
+          disabled={loading}
+          aria-label="Refresh team list"
+        >
+          <RefreshCw size={12} aria-hidden="true" />
+        </button>
       </div>
 
-      {/* Invite Member form */}
-      <form onSubmit={handleInvite} style={{ ...card, marginBottom: "1.25rem", padding: "1.25rem 1.5rem" }}>
-        <h2 style={{ fontWeight: 600, fontSize: "0.95rem", color: "#F7F5F0", margin: "0 0 0.75rem", fontFamily: "var(--font-inter), sans-serif" }}>Invite Teammate</h2>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <div style={{ position: "relative", flex: 1 }}>
-            <Mail size={15} color="#6B6560" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={e => setInviteEmail(e.target.value)}
-              placeholder="Colleague's email address"
-              required
-              disabled={inviting || seatsUsed >= seatsLimit}
-              style={{ width: "100%", background: "#1C1917", border: "1px solid #3D3830", borderRadius: "8px", padding: "0.65rem 1rem 0.65rem 2.25rem", color: "#F7F5F0", fontSize: "0.875rem", outline: "none", boxSizing: "border-box" as const }}
-            />
-          </div>
-          <button 
-            type="submit" 
-            disabled={inviting || seatsUsed >= seatsLimit}
-            style={{ minWidth: "100px", background: seatsUsed >= seatsLimit ? "#2D2A26" : "#F7F5F0", color: seatsUsed >= seatsLimit ? "#6B6560" : "#1C1917", border: "none", borderRadius: "8px", fontWeight: 600, fontSize: "0.875rem", cursor: seatsUsed >= seatsLimit ? "not-allowed" : "pointer", transition: "opacity 0.2s", opacity: inviting ? 0.7 : 1 }}
-          >
-            {inviting ? "Inviting..." : "Send Invite"}
-          </button>
-        </div>
-        {errorMsg && <p style={{ color: "#F87171", fontSize: "0.8rem", margin: "0.5rem 0 0" }}>{errorMsg}</p>}
-      </form>
+      {/* Role permissions legend */}
+      <RoleLegend />
 
-      {/* Current owner seat */}
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1px solid #2D2A26" }}>
-          <h2 style={{ fontWeight: 600, fontSize: "0.95rem", color: "#F7F5F0", margin: 0, fontFamily: "var(--font-inter), sans-serif" }}>Team List</h2>
-        </div>
-
-        {/* Owner row */}
-        <div style={memberRow}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "9999px", background: "#C9A84C20", border: "1px solid #C9A84C40", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Crown size={16} color="#C9A84C" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: "0.875rem", color: "#F7F5F0", margin: 0, fontWeight: 600, fontFamily: "var(--font-inter), sans-serif" }}>{email}</p>
-            <p style={{ fontSize: "0.78125rem", color: "#6B6560", margin: 0, fontFamily: "var(--font-inter), sans-serif" }}>Owner</p>
-          </div>
-        </div>
-
-        {/* Invited members */}
-        {members.map((m: any) => (
-          <div key={m.id} style={{ ...memberRow, marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #2D2A26" }}>
-            <div style={{ width: "36px", height: "36px", borderRadius: "9999px", background: "#3D3830", border: "1px solid #4D4840", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Users size={16} color="#A8A29E" />
+      {/* Invite form */}
+      {canManage && (
+        <div className="dash-section" style={{ marginBottom: "1.5rem" }}>
+          <h2 className="dash-section-h">
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <UserPlus size={15} aria-hidden="true" /> Invite team member
+            </span>
+          </h2>
+          <form onSubmit={handleInvite} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }} noValidate>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <label htmlFor="invite-email" className="dash-label">Email address</label>
+              <input
+                id="invite-email"
+                type="email"
+                autoComplete="off"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                placeholder="colleague@company.com"
+                className="dash-input-lg"
+                disabled={inviteLoading}
+                required
+                aria-required="true"
+                aria-describedby={inviteError ? "invite-error" : undefined}
+              />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: "0.875rem", color: "#F7F5F0", margin: 0, fontWeight: 500, fontFamily: "var(--font-inter), sans-serif" }}>{m.email}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
-                <span style={{ fontSize: "0.75rem", color: m.status === "active" ? "#4ADE80" : "#FBBF24", fontFamily: "var(--font-inter), sans-serif" }}>
-                  {m.status === "active" ? "Active" : "Pending"}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "#6B6560" }}>•</span>
-                <span 
-                  onClick={() => toggleRole(m.id, m.role)}
-                  style={{ fontSize: "0.75rem", color: "#A8A29E", cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: "3px" }}
-                >
-                  {m.role === 'admin' ? 'Admin' : 'Member'}
-                </span>
+            <div style={{ minWidth: 120 }}>
+              <label htmlFor="invite-role" className="dash-label">Role</label>
+              <select
+                id="invite-role"
+                value={inviteRole}
+                onChange={e => setInviteRole(e.target.value as Role)}
+                className="dash-input-lg"
+                disabled={inviteLoading}
+                style={{ cursor: "pointer" }}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <button
+                type="submit"
+                disabled={inviteLoading || !inviteEmail.trim()}
+                className="dash-btn dash-btn-primary"
+                style={{ minHeight: 42, padding: "0 1.25rem", gap: 6 }}
+              >
+                <Mail size={13} aria-hidden="true" />
+                {inviteLoading ? "Sending…" : "Send invite"}
+              </button>
+            </div>
+          </form>
+
+          {inviteError && (
+            <div id="invite-error" className="dash-alert-error" role="alert" style={{ marginTop: "0.75rem" }}>
+              {inviteError}
+            </div>
+          )}
+          {inviteSuccess && (
+            <div className="dash-alert-success" role="status" style={{ marginTop: "0.75rem" }}>
+              Invite sent. They'll receive an email with instructions to join.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Global error */}
+      {error && !loading && (
+        <div className="dash-alert-error" role="alert" style={{ marginBottom: "1rem" }}>
+          {error}
+        </div>
+      )}
+
+      {/* Member table */}
+      <div className="dash-card">
+        {/* Table head */}
+        <div
+          className="dash-table-head dash-hide-mobile"
+          style={{ display: "grid", gridTemplateColumns: "1fr 120px 130px 120px" }}
+        >
+          <span className="dash-th">Member</span>
+          <span className="dash-th">Role</span>
+          <span className="dash-th">Joined / Invited</span>
+          {canManage && <span className="dash-th">Actions</span>}
+        </div>
+
+        {loading ? (
+          <div aria-label="Loading team members" aria-busy="true">
+            {[1,2,3].map(i => (
+              <div key={i} style={{ padding: "1rem 1.5rem", display: "flex", gap: "1rem", borderBottom: "1px solid var(--app-border)" }}>
+                <div className="dash-skeleton" style={{ width: 32, height: 32, borderRadius: "50%" }} />
+                <div style={{ flex: 1 }}>
+                  <div className="dash-skeleton" style={{ height: 14, width: "40%", marginBottom: 6 }} />
+                  <div className="dash-skeleton" style={{ height: 11, width: "60%" }} />
+                </div>
               </div>
-            </div>
-            <button
-              onClick={() => removeMember(m.id)}
-              style={{ background: "transparent", border: "1px solid #3D3830", color: "#A8A29E", borderRadius: "6px", padding: "6px 12px", fontSize: "0.75rem", cursor: "pointer" }}
-            >
-              Remove
-            </button>
+            ))}
           </div>
-        ))}
+        ) : members.length === 0 ? (
+          <EmptyState
+            icon={<Users size={28} />}
+            title="No team members yet"
+            message="Invite a colleague to share access to your contract intelligence dashboard."
+          />
+        ) : (
+          members.map(m => (
+            <TeamMemberRow
+              key={m.id}
+              member={m}
+              isCurrentUser={m.email === currentUser}
+              canManage={canManage}
+              removing={removing === m.id}
+              changingRole={changingRole === m.id}
+              resending={resending === m.id}
+              onRemove={() => setConfirmRemove(m)}
+              onRoleChange={(role) => handleRoleChange(m, role)}
+              onResendInvite={() => handleResendInvite(m)}
+            />
+          ))
+        )}
       </div>
+
+      {/* Confirm remove modal */}
+      {confirmRemove && (
+        <ConfirmModal
+          title={`Remove ${confirmRemove.name ?? confirmRemove.email}?`}
+          message={`This will immediately revoke their access to the Plexovia dashboard. They'll need a new invite to rejoin.`}
+          confirmLabel="Yes, remove"
+          cancelLabel="Keep them"
+          danger
+          onConfirm={handleRemove}
+          onCancel={() => setConfirmRemove(null)}
+        />
+      )}
     </div>
   );
 }
 
-function LoadingShell() {
+/* ─── Member row ──────────────────────────────────────────────── */
+function TeamMemberRow({
+  member, isCurrentUser, canManage, removing, changingRole, resending,
+  onRemove, onRoleChange, onResendInvite,
+}: {
+  member: TeamMember;
+  isCurrentUser: boolean;
+  canManage: boolean;
+  removing: boolean;
+  changingRole: boolean;
+  resending: boolean;
+  onRemove: () => void;
+  onRoleChange: (r: Role) => void;
+  onResendInvite: () => void;
+}) {
+  const rm = roleMeta(member.role);
+  const isPending = member.status !== "active";
+
   return (
-    <div style={{ ...page, alignItems: "center", justifyContent: "center", display: "flex" }}>
-      <div style={{ width: "28px", height: "28px", border: "3px solid #2D2A26", borderTopColor: "#C9A84C", borderRadius: "9999px", animation: "spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div
+      className="dash-table-row"
+      style={{
+        display: "grid",
+        gridTemplateColumns: `1fr 120px 130px${canManage ? " 120px" : ""}`,
+        alignItems: "center",
+        gap: "0.75rem",
+        padding: "0.875rem 1.5rem",
+        opacity: removing ? 0.5 : 1,
+        transition: "opacity 0.2s",
+      }}
+    >
+      {/* Avatar + name + email */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div
+          style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "var(--app-surface-2)", border: "1px solid var(--app-border)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)",
+            flexShrink: 0,
+          }}
+          aria-hidden="true"
+        >
+          {(member.name ?? member.email).charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            {member.name ?? member.email.split("@")[0]}
+            {isCurrentUser && (
+              <span style={{ fontSize: "0.65rem", color: "var(--app-faint)", fontWeight: 400 }}>(you)</span>
+            )}
+            {isPending && (
+              <span className="dash-tag dash-tag-amber" style={{ fontSize: "0.62rem", padding: "1px 6px" }}>
+                <Clock size={9} aria-hidden="true" /> Pending
+              </span>
+            )}
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: 0 }} title={member.email}>
+            {member.email}
+          </p>
+        </div>
+      </div>
+
+      {/* Role (editable for non-owners if canManage) */}
+      <div>
+        {canManage && !isCurrentUser && member.role !== "owner" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ color: rm.color }} aria-hidden="true">{rm.icon}</span>
+            <select
+              value={member.role}
+              onChange={e => onRoleChange(e.target.value as Role)}
+              disabled={changingRole}
+              aria-label={`Change role for ${member.email}`}
+              style={{
+                background: "var(--app-surface-2)",
+                border: "1px solid var(--app-border)",
+                borderRadius: "6px",
+                color: "var(--app-text)",
+                fontSize: "0.8rem",
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                outline: "none",
+                opacity: changingRole ? 0.5 : 1,
+              }}
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ color: rm.color }} aria-label={`Role: ${member.role}`}>{rm.icon}</span>
+            <span style={{ fontSize: "0.8rem", color: rm.color, fontWeight: 500, textTransform: "capitalize" }}>
+              {member.role}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Date */}
+      <div>
+        <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: 0 }}>
+          {isPending
+            ? `Invited ${fmtDate(member.invited_at)}`
+            : fmtDate(member.joined_at)}
+        </p>
+      </div>
+
+      {/* Actions */}
+      {canManage && (
+        <div style={{ display: "flex", gap: "5px", justifyContent: "flex-end" }}>
+          {isPending && (
+            <button
+              className="dash-btn"
+              onClick={onResendInvite}
+              disabled={resending}
+              aria-label={`Resend invite to ${member.email}`}
+              title="Resend invite"
+              style={{ padding: "4px 8px", minHeight: 30, gap: 3, fontSize: "0.72rem" }}
+            >
+              <Send size={10} aria-hidden="true" />
+              {resending ? "…" : "Resend"}
+            </button>
+          )}
+          {!isCurrentUser && member.role !== "owner" && (
+            <button
+              className="dash-btn dash-btn-danger"
+              onClick={onRemove}
+              disabled={removing}
+              aria-label={`Remove ${member.name ?? member.email} from team`}
+              style={{ padding: "4px 8px", minHeight: 30, fontSize: "0.72rem" }}
+            >
+              {removing ? "Removing…" : "Remove"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-
-const page: React.CSSProperties = {
-  minHeight: "100vh", background: "#1C1917",
-  padding: "2.5rem 1.5rem",
-  maxWidth: "640px", margin: "0 auto",
-  fontFamily: "var(--font-inter), sans-serif",
-};
-const card: React.CSSProperties = {
-  background: "#252320", border: "1px solid #2D2A26",
-  borderRadius: "14px", padding: "1.5rem",
-};
-const memberRow: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: "12px",
-};

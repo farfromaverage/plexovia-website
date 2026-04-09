@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "./providers";
 import ConditionalLayout from "@/components/navigation/conditional-layout";
 
+import CookieConsent from "@/components/home/cookie-consent";
 
 /* ═══════════════════════════════════════════════════════════
    SELF-HOSTED FONTS
@@ -209,6 +210,7 @@ export default function RootLayout({
           <ConditionalLayout>
             {children}
           </ConditionalLayout>
+          <CookieConsent />
         </Providers>
       </body>
     </html>

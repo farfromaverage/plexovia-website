@@ -1,12 +1,25 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Radar } from 'lucide-react';
 
 export default function AetherFlowHero() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [liveCount, setLiveCount] = useState<number | null>(null);
+
+  // Fetch live contract count from engine
+  useEffect(() => {
+    fetch('/api/engine-stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.total_contracts && typeof data.total_contracts === 'number') {
+          setLiveCount(data.total_contracts);
+        }
+      })
+      .catch(() => { /* graceful degradation */ });
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -79,13 +92,13 @@ export default function AetherFlowHero() {
       const cw = logicalW;
       const ch = logicalH;
 
-      // Mobile: fewer particles to preserve battery + CPU headroom
-      // Desktop: ~230 at 1920×1080, Mobile: ~20 at 375×800
-      const densityDivisor = isMobile ? 15000 : 9000;
+      // Mobile: minimal particles to preserve battery + CPU headroom
+      // Desktop: ~100 at 1920×1080, Mobile: ~12 at 375×800
+      const densityDivisor = isMobile ? 25000 : 18000;
       let numberOfParticles = (cw * ch) / densityDivisor;
 
-      // Hard cap: mobile 30, desktop 200
-      const maxParticles = isMobile ? 30 : 200;
+      // Hard cap: mobile 15, desktop 100
+      const maxParticles = isMobile ? 15 : 100;
       numberOfParticles = Math.min(numberOfParticles, maxParticles);
 
       for (let i = 0; i < numberOfParticles; i++) {
@@ -353,7 +366,7 @@ export default function AetherFlowHero() {
                   className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] animate-pulse"
                   aria-hidden="true"
                 />
-                Government Contract Intelligence
+                For Federal & State Contractors
               </span>
             </motion.div>
 
@@ -380,7 +393,7 @@ export default function AetherFlowHero() {
                 leading-relaxed max-w-2xl mb-10
               "
             >
-              Plexovia automatically monitors SAM.gov and all 50 state portals every night. By 6:00 AM, you receive a ruthlessly-filtered, AI-scored digest of the exact contracts you have an unfair advantage to win.
+               Every matching government contract, scored and ranked, in your inbox by 6 AM. SAM.gov + all 50 state portals. Scanned every night.
             </motion.p>
 
             {/* CTA group */}
@@ -394,7 +407,7 @@ export default function AetherFlowHero() {
                 id="hero-cta"
                 className="btn-gold text-base px-8 py-4 inline-flex items-center gap-2 w-full sm:w-auto justify-center rounded-lg font-bold shadow-xl shadow-[#C9A84C]/20 hover:shadow-2xl hover:shadow-[#1C1917]/20 transition-all"
               >
-                Start Free Trial
+                Get Your First Contract Digest
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
 
@@ -409,6 +422,23 @@ export default function AetherFlowHero() {
                 See exactly how it works &rarr;
               </Link>
             </motion.div>
+
+            {/* Live counter */}
+            {liveCount && (
+              <motion.div
+                custom={3.5}
+                variants={fadeUpVariants}
+                className="flex items-center gap-2 mb-4"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#16A34A] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]"></span>
+                </span>
+                <span className="text-xs font-semibold text-[#6B6560] tracking-wide" style={{ fontFamily: "var(--font-geist-mono, monospace)" }}>
+                  <strong className="text-[#1C1917] font-bold">{liveCount.toLocaleString()}</strong> contracts scanned
+                </span>
+              </motion.div>
+            )}
 
             {/* Trust signals */}
             <motion.ul

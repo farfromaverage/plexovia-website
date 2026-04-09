@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Hero from "@/components/home/hero";
 import SocialProofBar from "@/components/home/social-proof-bar";
+import ProblemSection from "@/components/home/problem-section";
+import DigestPreview from "@/components/home/digest-preview";
 import StatsBar from "@/components/home/stats-bar";
 import CoverageMap from "@/components/home/coverage-map";
 import AIForecastingSection from "@/components/home/ai-forecasting-section";
@@ -39,11 +41,22 @@ export default function LandingPage() {
         "operatingSystem": "WebBrowser",
         "url": "https://plexovia.com",
         "description": "Government contract intelligence and matching system",
-        "offers": {
-          "@type": "Offer",
-          "price": "249",
-          "priceCurrency": "USD"
-        }
+        "offers": [
+          {
+            "@type": "Offer",
+            "price": "249",
+            "priceCurrency": "USD",
+            "name": "Monthly",
+            "description": "Full Coverage — billed monthly"
+          },
+          {
+            "@type": "Offer",
+            "price": "1999",
+            "priceCurrency": "USD",
+            "name": "Yearly",
+            "description": "Full Coverage — billed annually (save 33%)"
+          }
+        ]
       }
     ]
   };
@@ -53,6 +66,8 @@ export default function LandingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <Hero />
       <SocialProofBar />
+      <ProblemSection />
+      <DigestPreview />
       <StatsBar />
       <CoverageMap />
       <AIForecastingSection />

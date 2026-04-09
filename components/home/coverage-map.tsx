@@ -17,16 +17,8 @@ const FALLBACK_STATE_DATA: Record<string, number> = {
   WY: 45
 };
 
-// Coordinates for radar pings (rough SVG viewbox translation)
-const RADAR_NODES = [
-  { id: "CA", x: 100, y: 300 },
-  { id: "TX", x: 420, y: 410 },
-  { id: "NY", x: 800, y: 155 },
-  { id: "FL", x: 740, y: 470 },
-  { id: "IL", x: 590, y: 220 },
-  { id: "WA", x: 130, y: 65 },
-  { id: "VA", x: 780, y: 245 }
-];
+
+
 
 export default function CoverageMap() {
   const [hoveredState, setHoveredState] = useState<string | null>(null);
@@ -86,9 +78,9 @@ export default function CoverageMap() {
               className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium"
               style={{ color: "#F5F3EE" }}
             >
-              Every Contract.<br />
-              <span style={{ color: "var(--accent)" }}>Every State.</span><br />
-              Every Day.
+              50 State Portals<br />
+              <span style={{ color: "var(--accent)" }}>+ SAM.gov.</span><br />
+              Scanned Every Night.
             </h2>
             <p className="text-lg leading-relaxed mt-4" style={{ color: "#8A8580" }}>
               Contracts are posted across hundreds of portals daily. Most get missed simply because no one was watching. Plexovia watches all of them, automatically, every night.
@@ -183,6 +175,65 @@ export default function CoverageMap() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile: Tap-friendly state list (replaces hover-only SVG on small screens) */}
+      <div
+        className="relative z-10 mx-auto px-5 pb-10"
+        style={{ maxWidth: "600px" }}
+        id="coverage-mobile-list"
+      >
+        <p className="text-center text-xs text-[#8A8580] mb-3 font-medium uppercase tracking-wider" style={{ fontFamily: "var(--font-geist-mono, monospace)" }}>
+          All 50 states monitored
+        </p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "6px",
+          }}
+        >
+          {Object.entries(usaMapDimensions).map(([abbr, dim]) => {
+            const count = stateData[abbr] || 0;
+            return (
+              <div
+                key={abbr}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 8px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid #2A2926",
+                  borderRadius: "8px",
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: count > 0 ? "#16A34A" : "#3A3835",
+                    flexShrink: 0,
+                  }}
+                  aria-hidden="true"
+                />
+                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#E2DDD6", minWidth: 22 }}>
+                  {abbr}
+                </span>
+                <span style={{ fontSize: "0.62rem", color: "#6B6560", fontFamily: "var(--font-geist-mono, monospace)" }}>
+                  {count > 0 ? count.toLocaleString() : "0"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @media (min-width: 769px) {
+          #coverage-mobile-list { display: none !important; }
+        }
+      `}</style>
     </section>
   );
 }
