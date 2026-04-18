@@ -24,7 +24,7 @@ export default function PricingPage() {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": "Plexovia Platform",
-    "description": "Government contract matching and intelligence platform covering SAM.gov and state portals.",
+    "description": "Federal procurement matching and intelligence platform covering SAM.gov, DLA DIBBS, and SBA SubNet.",
     "offers": {
       "@type": "Offer",
       "priceCurrency": "USD",

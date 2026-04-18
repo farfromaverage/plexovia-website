@@ -103,7 +103,7 @@ export const metadata: Metadata = {
     template: "%s | Plexovia",
   },
   description:
-    "Every contract matching your NAICS codes. Delivered to your inbox by 6 AM. Plexovia monitors SAM.gov and all 50 state portals nightly. Scored alerts. 7-day free trial.",
+    "Every contract matching your NAICS codes. Delivered to your inbox by 6 AM. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet nightly. Scored alerts. 7-day free trial.",
   metadataBase: new URL("https://plexovia.com"),
   openGraph: {
     type: "website",
@@ -112,7 +112,7 @@ export const metadata: Metadata = {
     siteName: "Plexovia",
     title: "Plexovia — Federal Contract Alerts in Your Inbox by 6 AM",
     description:
-      "Every contract matching your NAICS codes, scored 0 to 100, delivered to your inbox each morning. SAM.gov and all 50 states.",
+      "Every contract matching your NAICS codes, scored 0 to 100, delivered to your inbox each morning. SAM.gov, DLA DIBBS, and SBA SubNet.",
     images: [
       {
         url: "/og-image.png",
@@ -126,7 +126,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Plexovia — Federal Contracts in Your Inbox by 6 AM",
     description:
-      "Every contract matching your NAICS codes. Scored 0 to 100. SAM.gov and all 50 state portals monitored nightly.",
+      "Every contract matching your NAICS codes. Scored 0 to 100. Three federal procurement sources monitored nightly.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -197,7 +197,7 @@ export default function RootLayout({
               url: "https://plexovia.com",
               email: "support@plexovia.com",
               description:
-                "Government contract monitoring platform tracking 50 US state portals and SAM.gov daily.",
+                "Federal procurement monitoring platform tracking SAM.gov, DLA DIBBS, and SBA SubNet daily.",
               sameAs: [],
             }),
           }}

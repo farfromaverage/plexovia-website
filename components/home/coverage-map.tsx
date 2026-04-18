@@ -78,7 +78,7 @@ export default function CoverageMap() {
               className="text-4xl sm:text-5xl lg:text-[54px] tracking-tight leading-[1.05] font-medium"
               style={{ color: "#F5F3EE" }}
             >
-              50 State Portals<br />
+              3 Federal Sources<br />
               <span style={{ color: "var(--accent)" }}>+ SAM.gov.</span><br />
               Scanned Every Night.
             </h2>
@@ -96,7 +96,7 @@ export default function CoverageMap() {
               </h3>
             </div>
             <p className="text-base leading-relaxed" style={{ color: "#D6D3CD" }}>
-              Every active state portal. Federal contracts from SAM.gov. County systems. DC, Puerto Rico, and Guam. <strong className="font-semibold" style={{ color: "#FFFFFF" }}>Same subscription, full access, no caps.</strong> You will not lose a bid because a portal you did not know about posted it first.
+              SAM.gov, DLA DIBBS, and SBA SubNet — the three primary federal procurement sources, scanned every night. <strong className="font-semibold" style={{ color: "#FFFFFF" }}>Same subscription, full access, no caps.</strong> You will not miss a federal contract because you were not monitoring the right source.
             </p>
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function CoverageMap() {
         id="coverage-mobile-list"
       >
         <p className="text-center text-xs text-[#8A8580] mb-3 font-medium uppercase tracking-wider" style={{ fontFamily: "var(--font-geist-mono, monospace)" }}>
-          All 50 states monitored
+          All federal sources monitored
         </p>
         <div
           style={{

@@ -13,7 +13,7 @@ interface StatItem {
 
 const initialStats: StatItem[] = [
   { value: 15847, label: "contracts scanned this week",              suffix: "" },
-  { value: 50,    label: "state portals monitored nightly",          suffix: "+" },
+  { value: 3,     label: "federal procurement sources scanned nightly", suffix: "" },
   { value: 6,     label: "hours ago. Legacy platforms take 48h.", suffix: "h" },
 ];
 
@@ -75,7 +75,7 @@ export default function StatsBar() {
 
         setLiveStats([
           { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: 'contracts scanned this week',              suffix: '' },
-          { value: data.states_covered  > 0 ? data.states_covered  : 50,    label: 'state portals monitored nightly',          suffix: '+' },
+          { value: data.federal_sources  > 0 ? data.federal_sources  : 3,     label: 'federal procurement sources scanned nightly', suffix: '' },
           { value: hrs,                                                       label: 'hours ago. Legacy platforms take 48h.', suffix: 'h' },
         ]);
       } catch {

@@ -30,7 +30,7 @@ const PLANS = [
     audience:     "Individuals and teams. Scale by adding more seats as your team grows.",
     features: [
       "AI Forecasting with 7 Predictive Core Features. Predict budget curves and expose RFIs months in advance.",
-      "SAM.gov plus all 50 states, county portals, DC, Puerto Rico and Guam. Monitored overnight, in your inbox by 6 AM.",
+      "SAM.gov, DLA DIBBS, and SBA SubNet — three federal procurement sources monitored overnight, in your inbox by 6 AM.",
       "Unlimited NAICS codes and keywords. No caps, no add-ons, no upgrades.",
       "AI match score with a plain-English reason per contract. Know what to bid before you read it.",
       "Set-aside filtering for 8(a), WOSB, SDVOSB and HUBZone. Only contracts you qualify for.",
@@ -431,7 +431,7 @@ export default function PricingSection() {
             {
               stat:  "50+",
               label: "State & federal portals scanned nightly",
-              detail: "SAM.gov, all 50 states, DC, PR, Guam, and county portals.",
+              detail: "SAM.gov, DLA DIBBS, and SBA SubNet — three federal procurement sources.",
             },
             {
               stat:  "6 AM",

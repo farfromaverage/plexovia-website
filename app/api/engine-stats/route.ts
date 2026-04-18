@@ -38,10 +38,9 @@ export async function GET() {
     // Engine is down — return fallback so landing page stays functional
     return NextResponse.json({
       total_contracts: 15847,
-      states_covered: 50,
+      federal_sources: 3,
       last_run_at: null,
-      portals_monitored: 51,
-      contracts_by_state: {},
+      portals_monitored: 3,
       recent_contracts: [],
       _fallback: true,
     })

@@ -46,7 +46,7 @@ const CORE_FEATURES = [
     id:    "coverage",
     icon:  Globe,
     tag:   "Total Market Coverage",
-    title: "SAM.gov plus all 50 states in one pipeline",
+    title: "SAM.gov, DLA DIBBS, and SBA SubNet in one pipeline",
     body:  "Every federal solicitation, state procurement portal, county registry, and presolicitation in one unified feed. Indexed nightly, deduplicated, and ranked.",
     metric: { value: "50+", label: "portals scanned nightly" },
     accent: "rgba(16,185,129,0.08)",

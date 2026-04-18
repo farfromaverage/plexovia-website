@@ -41,7 +41,7 @@ const ROWS: Row[] = [
   },
   {
     feature:     "Monitoring & Coverage",
-    plexovia:    { type: "text", value: "SAM.gov + 50 states + county + DC & PR", highlight: true },
+    plexovia:    { type: "text", value: "SAM.gov + DLA DIBBS + SBA SubNet", highlight: true },
     alternative: { type: "text", value: "Often requires paid add-ons per state" },
   },
   {

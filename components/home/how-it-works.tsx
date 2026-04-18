@@ -9,7 +9,7 @@ const steps = [
     number: "01",
     title:  "Tell us your NAICS codes and states",
     body:
-      "Set up takes under three minutes. Enter the NAICS codes your firm bids under and choose your states. We cover all 50 states. You never touch a search bar again.",
+      "Set up takes under three minutes. Enter the NAICS codes your firm bids under and choose your target states. We cover three federal procurement sources. You never touch a search bar again.",
   },
   {
     number: "02",

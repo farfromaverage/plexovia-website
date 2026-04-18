@@ -7,7 +7,7 @@ import FAQSection from "@/components/home/faq-section";
 export const metadata: Metadata = {
   title: "How Plexovia Works | Government Contract Monitoring",
   description:
-    "Three steps to full automation. Plexovia monitors SAM.gov and all 50 state procurement portals every night. Scored contract matches delivered to your inbox by 6 AM. No login required.",
+    "Three steps to full automation. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet every night. Scored contract matches delivered to your inbox by 6 AM. No login required.",
   alternates: { canonical: "https://plexovia.com/how-it-works" },
   openGraph: {
     title: "How Plexovia Works",
@@ -44,7 +44,7 @@ const steps = [
     body:   "Unlike legacy platforms relying on delayed data resellers, our engine pulls directly from the primary government source. When a state agency hits publish, we see it. Your competitors get the alert 48 hours later. You get it the next morning.",
     detail: [
       "SAM.gov federal awards and presolicitations updated daily.",
-      "All 50 state portals checked nightly. High volume portals checked every 6 hours.",
+      "Three federal procurement sources checked nightly. High-priority sources checked every 6 hours.",
       "Set aside types flagged automatically: 8(a), WOSB, SDVOSB, HUBZone.",
       "Bid deadlines tracked. Reminders sent 3 days and 1 day before close.",
     ],
@@ -73,7 +73,7 @@ const faqs = [
   {
     id: "hiw-faq-0",
     q: "Where does the contract data come from?",
-    a: "SAM.gov is the federal source. Every state portal is an official government procurement system: eProcurement, BIDS, Procurement Gateway, DemandStar, and others depending on the state. We pull directly from each source. No data resellers.",
+    a: "SAM.gov is the primary federal source. DLA DIBBS covers defense micro-purchases and spare parts RFQs. SBA SubNet tracks subcontracting opportunities. We pull directly from each source. No data resellers.",
   },
   {
     id: "hiw-faq-1",
@@ -117,7 +117,7 @@ export default function HowItWorksPage() {
       {
         "@type": "HowToStep",
         "name": "Engine scans portals",
-        "text": "Our engine pulls directly from SAM.gov and 50 state portals every night."
+        "text": "Our engine pulls directly from SAM.gov, DLA DIBBS, and SBA SubNet every night."
       },
       {
         "@type": "HowToStep",

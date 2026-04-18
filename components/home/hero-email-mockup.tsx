@@ -234,7 +234,7 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
             </h3>
             
             <div className="flex flex-col gap-3">
-              <ProcessStep icon={Database} text="Ingesting federal & state portals" active={phase === 0} completed={phase > 0} delay={0.1} />
+              <ProcessStep icon={Database} text="Ingesting federal procurement sources" active={phase === 0} completed={phase > 0} delay={0.1} />
               <AnimatePresence>
                 {phase >= 1 && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>

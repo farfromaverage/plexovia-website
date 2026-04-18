@@ -168,7 +168,7 @@ export default function Footer() {
               marginBottom: "1.25rem",
             }}
           >
-            Government contract monitoring for all 50 states.
+            Federal procurement monitoring — SAM.gov, DLA DIBBS, SBA SubNet.
             Scored alerts delivered to your inbox. No login required.
           </p>
           <Link

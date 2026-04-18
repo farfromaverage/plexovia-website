@@ -228,7 +228,7 @@ export default function DevPageClient() {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             {[
-              { icon: <CheckCircle size={20} />, title: "All 50 states", body: "Federal + every state procurement portal in a single subscription." },
+              { icon: <CheckCircle size={20} />, title: "3 federal sources", body: "SAM.gov + DLA DIBBS + SBA SubNet in a single subscription." },
               { icon: <Zap         size={20} />, title: "Score 0–100",   body: "AI match score on every bid. High scores at the top. Noise removed." },
               { icon: <Shield      size={20} />, title: "Month to month", body: "No annual contracts. Cancel anytime. No questions." },
               { icon: <BarChart    size={20} />, title: "6 AM daily",    body: "Your matching bids arrive in your inbox before your first meeting." },
@@ -253,7 +253,7 @@ export default function DevPageClient() {
           </h2>
           <div className="bg-[#111110] rounded-2xl p-10 grid grid-cols-1 sm:grid-cols-3 gap-8">
             <AnimatedCounter value={15847} label="contracts scanned this week" />
-            <AnimatedCounter value={50}    label="state portals monitored"     />
+            <AnimatedCounter value={3}     label="federal procurement sources"     />
             <AnimatedCounter value={4}     label="hours since last update"     />
           </div>
         </section>
@@ -270,8 +270,8 @@ export default function DevPageClient() {
                 answer:   "No. Your contract matches are emailed to you every morning at 6 AM. You never need to log in to see results. The dashboard exists for settings and history.",
               },
               {
-                question: "Does Plexovia cover all 50 states?",
-                answer:   "The Pro plan covers all 50 states. The Essential plan covers 7 states of your choice plus SAM.gov federal contracts.",
+                question: "What sources does Plexovia cover?",
+                answer:   "Plexovia covers three federal procurement sources: SAM.gov (all federal solicitations), DLA DIBBS (defense micro-purchases), and SBA SubNet (subcontracting opportunities).",
               },
               {
                 question: "What is a match score?",

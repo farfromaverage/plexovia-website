@@ -15,7 +15,7 @@ const PROBLEMS = [
     icon: Clock,
     stat: "2 to 4 hrs",
     title: "Wasted on manual searching every day",
-    body:  "You log into SAM.gov, check state portals, cross-reference NAICS codes, and repeat. Every single morning. That is not business development. That is data entry.",
+    body:  "You log into SAM.gov, check DLA DIBBS, cross-reference NAICS codes, and repeat. Every single morning. That is not business development. That is data entry.",
   },
   {
     icon: Search,

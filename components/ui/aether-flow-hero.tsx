@@ -393,7 +393,7 @@ export default function AetherFlowHero() {
                 leading-relaxed max-w-2xl mb-10
               "
             >
-               Every matching government contract, scored and ranked, in your inbox by 6 AM. SAM.gov + all 50 state portals. Scanned every night.
+               Every matching federal contract, scored and ranked, in your inbox by 6 AM. SAM.gov, DLA DIBBS, and SBA SubNet. Scanned every night.
             </motion.p>
 
             {/* CTA group */}

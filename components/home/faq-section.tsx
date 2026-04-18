@@ -28,7 +28,7 @@ const FAQS = [
   {
     id: "faq-2",
     q:  "What states and portals do you actually monitor?",
-    a:  "We cover all 50 states, SAM.gov, major county portals, DC, Puerto Rico, and Guam. If your specific county portal is not yet indexed, tell us and we will confirm coverage within one business day.",
+    a:  "We cover three federal procurement sources: SAM.gov (all active federal solicitations), DLA DIBBS (Defense Logistics Agency micro-purchases), and SBA SubNet (subcontracting opportunities). These sources together represent the vast majority of U.S. government contract opportunities.",
   },
   {
     id: "faq-3",
@@ -48,7 +48,7 @@ const FAQS = [
   {
     id: "faq-6",
     q:  "I have used other contract tracking tools before. Why is this different?",
-    a:  "Most contract tracking platforms sell the same data feed to thousands of subscribers. You see the same contracts as everyone else, at the same time. Plexovia builds a unique scoring model around your exact NAICS codes, certifications, set-aside eligibility, and preferred states. No two users receive the same digest. Beyond scoring, Plexovia covers all 50 state portals, which most aggregators do not. And because we deliver via email at 6 AM every day, there is no portal to log into, no dashboard to learn, and no subscription tier to navigate.",
+    a:  "Most contract tracking platforms sell the same data feed to thousands of subscribers. You see the same contracts as everyone else, at the same time. Plexovia builds a unique scoring model around your exact NAICS codes, certifications, set-aside eligibility, and PSC codes. No two users receive the same digest. Beyond basic matching, Plexovia uses tiered NAICS scoring, title-weighted keywords, and deadline proximity analysis to surface the contracts most likely to result in a win. Because we deliver via email at 6 AM every day, there is no portal to log into, no dashboard to learn, and no subscription tier to navigate.",
   },
 ] as const;
 
