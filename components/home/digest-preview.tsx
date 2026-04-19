@@ -3,51 +3,24 @@
 import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
-import { Mail, ExternalLink, ArrowRight, Send, CheckCircle, AlertCircle } from "lucide-react";
+import { LayoutDashboard, ExternalLink, ArrowRight } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────
-   DigestPreview — Condensed email mockup for the homepage
-   Shows exactly what the visitor will receive at 6 AM.
-   Extracted from the How It Works page's full mockup for
-   homepage conversion (audit item C4).
+   DashboardPreview — Condensed dashboard mockup for homepage
+   Shows exactly what the visitor will see in their dashboard.
+   Extracted from the How It Works page for homepage
+   conversion (audit item C4).
 ───────────────────────────────────────────────────────── */
 
 export default function DigestPreview() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
-  const [sampleEmail, setSampleEmail] = useState("");
-  const [sampleStatus, setSampleStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [sampleMsg, setSampleMsg] = useState("");
 
-  async function handleSampleDigest(e: React.FormEvent) {
-    e.preventDefault();
-    if (!sampleEmail.trim()) return;
-    setSampleStatus("loading");
-    try {
-      const res = await fetch("/api/sample-digest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: sampleEmail.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSampleStatus("success");
-        setSampleMsg(data.message || "Sample digest sent. Check your inbox.");
-        setSampleEmail("");
-      } else {
-        setSampleStatus("error");
-        setSampleMsg(data.error || "Something went wrong.");
-      }
-    } catch {
-      setSampleStatus("error");
-      setSampleMsg("Network error. Please try again.");
-    }
-  }
 
   return (
     <section
       ref={ref}
-      aria-label="Example contract digest"
+      aria-label="Example contract dashboard"
       style={{
         backgroundColor: "var(--pub-surface-2)",
         borderTop:       "1px solid var(--pub-border)",
@@ -92,7 +65,7 @@ export default function DigestPreview() {
               marginBottom:  "0.75rem",
             }}
           >
-            This is what lands in your inbox at 6 AM.
+            This is what lands in your dashboard every morning.
           </h2>
           <p
             style={{
@@ -102,11 +75,11 @@ export default function DigestPreview() {
               lineHeight: 1.65,
             }}
           >
-            One entry from a real digest. Every match includes a score, an AI explanation, and a direct link.
+            One entry from a real dashboard. Every match includes a score, an AI explanation, and a direct link.
           </p>
         </motion.div>
 
-        {/* Mock email card */}
+        {/* Mock dashboard card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -119,7 +92,7 @@ export default function DigestPreview() {
             boxShadow:       "0 4px 24px rgba(0,0,0,0.06)",
           }}
         >
-          {/* Email header */}
+          {/* Dashboard header */}
           <div
             style={{
               borderBottom:    "1px solid var(--pub-border)",
@@ -133,7 +106,7 @@ export default function DigestPreview() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-              <Mail size={14} style={{ color: "var(--accent)" }} aria-hidden="true" />
+              <LayoutDashboard size={14} style={{ color: "var(--accent)" }} aria-hidden="true" />
               <span
                 style={{
                   fontFamily: "var(--font-geist-mono), monospace",
@@ -142,7 +115,7 @@ export default function DigestPreview() {
                   fontWeight: 500,
                 }}
               >
-                alerts@plexovia.com
+                Plexovia Dashboard
               </span>
             </div>
             <span
@@ -153,7 +126,7 @@ export default function DigestPreview() {
                 fontWeight: 500,
               }}
             >
-              Your morning digest · 3 new matches · 6:00 AM
+              Today&apos;s matches · 3 new contracts found
             </span>
           </div>
 
@@ -365,7 +338,7 @@ export default function DigestPreview() {
                 color:      "var(--pub-muted)",
               }}
             >
-              2 more matches in this digest · scores 74 and 61
+              2 more matches in your dashboard · scores 74 and 61
             </span>
             <span
               style={{
@@ -379,126 +352,7 @@ export default function DigestPreview() {
           </div>
         </motion.div>
 
-        {/* Sample digest email form */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.4, delay: 0.25 }}
-          style={{
-            maxWidth: "480px",
-            margin: "1.75rem auto 0",
-            textAlign: "center",
-          }}
-        >
-          {sampleStatus === "success" ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                padding: "0.75rem 1.25rem",
-                background: "rgba(74,222,128,0.08)",
-                border: "1px solid rgba(74,222,128,0.25)",
-                borderRadius: "10px",
-                fontSize: "0.875rem",
-                color: "#4ADE80",
-                fontWeight: 500,
-                fontFamily: "var(--font-inter), sans-serif",
-              }}
-              role="status"
-            >
-              <CheckCircle size={15} aria-hidden="true" />
-              {sampleMsg}
-            </div>
-          ) : (
-            <>
-              <p
-                style={{
-                  fontFamily: "var(--font-inter), sans-serif",
-                  fontSize: "0.8125rem",
-                  color: "var(--pub-muted)",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                Want to see a real sample? Enter your email.
-              </p>
-              <form
-                onSubmit={handleSampleDigest}
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <input
-                  type="email"
-                  value={sampleEmail}
-                  onChange={(e) => setSampleEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  required
-                  style={{
-                    flex: 1,
-                    minWidth: 200,
-                    maxWidth: 280,
-                    padding: "0.625rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid var(--pub-border)",
-                    background: "var(--pub-bg)",
-                    color: "var(--pub-text)",
-                    fontSize: "0.875rem",
-                    fontFamily: "var(--font-inter), sans-serif",
-                    outline: "none",
-                  }}
-                  disabled={sampleStatus === "loading"}
-                  aria-label="Email address for sample digest"
-                />
-                <button
-                  type="submit"
-                  disabled={sampleStatus === "loading" || !sampleEmail.trim()}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.375rem",
-                    padding: "0.625rem 1.25rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "var(--accent)",
-                    color: "#1C1917",
-                    fontSize: "0.875rem",
-                    fontWeight: 700,
-                    cursor: sampleStatus === "loading" ? "wait" : "pointer",
-                    fontFamily: "var(--font-inter), sans-serif",
-                    opacity: sampleStatus === "loading" ? 0.7 : 1,
-                    transition: "opacity 0.15s",
-                  }}
-                >
-                  <Send size={13} aria-hidden="true" />
-                  {sampleStatus === "loading" ? "Sending..." : "Get a sample"}
-                </button>
-              </form>
-              {sampleStatus === "error" && (
-                <p
-                  style={{
-                    fontSize: "0.8125rem",
-                    color: "#F87171",
-                    marginTop: "0.5rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.375rem",
-                    fontFamily: "var(--font-inter), sans-serif",
-                  }}
-                  role="alert"
-                >
-                  <AlertCircle size={13} aria-hidden="true" />
-                  {sampleMsg}
-                </p>
-              )}
-            </>
-          )}
-        </motion.div>
+
 
         {/* CTA below mockup */}
         <motion.div
@@ -513,7 +367,7 @@ export default function DigestPreview() {
             className="btn-gold"
             style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
           >
-            Get Your First Digest Tomorrow Morning
+            Start Monitoring Contracts Now
             <ArrowRight size={15} aria-hidden="true" />
           </Link>
           <p

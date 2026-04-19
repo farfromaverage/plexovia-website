@@ -56,7 +56,7 @@ export default function FinalCTA() {
               animation:       "pulse-gold 2.5s ease-in-out infinite",
             }}
           />
-          Your first scored digest arrives tomorrow
+          Your intelligence dashboard activates instantly
         </motion.span>
 
         {/* H2 — Inter 800, off-white, confrontational close */}
@@ -100,7 +100,7 @@ export default function FinalCTA() {
           }}
         >
           Setup takes three minutes. No charge until Day 8.
-          Your first scored digest arrives tomorrow morning.
+          Your personalized dashboard updates every morning.
         </motion.p>
 
         {/* CTA group */}

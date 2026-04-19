@@ -259,13 +259,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Alert email (read-only from auth) */}
+      {/* Account email (read-only from auth) */}
       {userEmail && (
         <div className="dash-alert-warning" style={{ marginBottom: "1.25rem", fontSize: "0.8rem" }}>
           <AlertCircle size={13} aria-hidden="true" />
           <span>
-            Alert emails are sent to <strong>{userEmail}</strong> (your account email).
-            To change this, update your account email in account settings.
+            Account email: <strong>{userEmail}</strong>.
+            System notifications (billing, trial reminders) are sent to this address.
           </span>
         </div>
       )}
@@ -550,8 +550,8 @@ export default function ProfilePage() {
         </div>
         <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--app-muted)" }}>
           {frequency === "daily"
-            ? "You'll receive a contract digest every morning at 6 AM Eastern."
-            : "You'll receive a weekly summary every Monday at 6 AM Eastern."}
+            ? "New matches appear in your dashboard every morning."
+            : "Dashboard updated weekly with a full summary every Monday."}
         </p>
       </div>
 

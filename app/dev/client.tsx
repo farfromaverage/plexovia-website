@@ -231,7 +231,7 @@ export default function DevPageClient() {
               { icon: <CheckCircle size={20} />, title: "3 federal sources", body: "SAM.gov + DLA DIBBS + SBA SubNet in a single subscription." },
               { icon: <Zap         size={20} />, title: "Score 0–100",   body: "AI match score on every bid. High scores at the top. Noise removed." },
               { icon: <Shield      size={20} />, title: "Month to month", body: "No annual contracts. Cancel anytime. No questions." },
-              { icon: <BarChart    size={20} />, title: "6 AM daily",    body: "Your matching bids arrive in your inbox before your first meeting." },
+              { icon: <BarChart    size={20} />, title: "Updated daily",    body: "Your matching bids appear in your dashboard every morning, scored and ranked." },
             ].map((f) => (
               <motion.div
                 key={f.title}
@@ -267,7 +267,7 @@ export default function DevPageClient() {
             {[
               {
                 question: "Do I need to log in to see my matches?",
-                answer:   "No. Your contract matches are emailed to you every morning at 6 AM. You never need to log in to see results. The dashboard exists for settings and history.",
+                answer:   "Your dashboard updates every morning with all matched contracts, scored and ranked. The dashboard is your primary interface for reviewing matches, history, and settings.",
               },
               {
                 question: "What sources does Plexovia cover?",

@@ -19,9 +19,9 @@ const steps = [
   },
   {
     number: "03",
-    title:  "Scored matches land in your inbox. No login required.",
+    title:  "Scored matches appear in your dashboard, ready to review.",
     body:
-      "Every matching contract gets a score from 0 to 100. You get one digest per morning. You read, you decide, you bid.",
+      "Every matching contract gets a score from 0 to 100. Your dashboard updates every morning. You review, you decide, you bid.",
   },
 ];
 

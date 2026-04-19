@@ -30,7 +30,7 @@ const PLANS = [
     audience:     "Individuals and teams. Scale by adding more seats as your team grows.",
     features: [
       "AI Forecasting with 7 Predictive Core Features. Predict budget curves and expose RFIs months in advance.",
-      "SAM.gov, DLA DIBBS, and SBA SubNet — three federal procurement sources monitored overnight, in your inbox by 6 AM.",
+      "SAM.gov, DLA DIBBS, and SBA SubNet — three federal procurement sources monitored overnight, delivered to your dashboard daily.",
       "Unlimited NAICS codes and keywords. No caps, no add-ons, no upgrades.",
       "AI match score with a plain-English reason per contract. Know what to bid before you read it.",
       "Set-aside filtering for 8(a), WOSB, SDVOSB and HUBZone. Only contracts you qualify for.",
@@ -434,9 +434,9 @@ export default function PricingSection() {
               detail: "SAM.gov, DLA DIBBS, and SBA SubNet — three federal procurement sources.",
             },
             {
-              stat:  "6 AM",
-              label: "Daily digest delivery",
-              detail: "Scored contracts in your inbox before you start work. No login required.",
+              stat:  "Daily",
+              label: "Dashboard updated daily",
+              detail: "Scored contracts in your dashboard before you start work. Ready when you log in.",
             },
             {
               stat:  "0 to 100",

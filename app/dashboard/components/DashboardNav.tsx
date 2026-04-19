@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User, TrendingUp,
-  Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight
+  Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight, Zap
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/profile",     label: "Profile",      icon: User },
   { href: "/dashboard/competitors", label: "Competitors",  icon: TrendingUp },
   { href: "/dashboard/forecasts",   label: "AI Forecasts", icon: Brain },
+  { href: "/dashboard/intelligence",label: "Intelligence", icon: Zap },
   { href: "/dashboard/team",        label: "Team",         icon: Users },
   { href: "/dashboard/billing",     label: "Billing",      icon: CreditCard },
 ] as const;

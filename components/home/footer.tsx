@@ -169,7 +169,7 @@ export default function Footer() {
             }}
           >
             Federal procurement monitoring — SAM.gov, DLA DIBBS, SBA SubNet.
-            Scored alerts delivered to your inbox. No login required.
+            Scored matches delivered daily to your dashboard.
           </p>
           <Link
             href="/auth/signup"

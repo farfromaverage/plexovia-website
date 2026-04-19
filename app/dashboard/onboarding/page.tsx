@@ -411,7 +411,7 @@ function Step3({ email, setEmail, company, setCompany }: { email: string; setEma
     <div className="flex flex-col h-full fade-in">
       <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Final Details</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
-        Every morning by 6 AM, we will deliver your scored federal and state contract matches to this address.
+        Your dashboard updates every morning with scored federal and state contract matches. We will send optional email reports to this address.
       </p>
 
       <div className="mb-5">

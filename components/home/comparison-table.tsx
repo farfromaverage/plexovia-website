@@ -36,7 +36,7 @@ const ROWS: Row[] = [
   },
   {
     feature:     "Time required per day",
-    plexovia:    { type: "text", value: "Under 5 min (read your email)", highlight: true },
+    plexovia:    { type: "text", value: "Under 5 min (review your dashboard)", highlight: true },
     alternative: { type: "text", value: "2 to 4 hours of manual searching" },
   },
   {
@@ -55,8 +55,8 @@ const ROWS: Row[] = [
     alternative: { type: "minus" },
   },
   {
-    feature:     "Email delivery. No login required.",
-    plexovia:    { type: "text", value: "Full digest in your inbox by 6 AM, no login ever", highlight: true },
+    feature:     "Dashboard delivery. Updated daily.",
+    plexovia:    { type: "text", value: "Scored matches in your dashboard daily, no manual searching", highlight: true },
     alternative: { type: "minus" },
   },
   {
@@ -198,7 +198,7 @@ export default function ComparisonTable() {
               lineHeight: 1.6,
             }}
           >
-            No annual contract. No confusing tiers. No login required to use the product. See exactly what you get versus manually doing it yourself.
+            No annual contract. No confusing tiers. See exactly what you get versus manually doing it yourself.
           </p>
         </motion.div>
 

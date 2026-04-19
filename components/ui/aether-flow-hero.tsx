@@ -393,7 +393,7 @@ export default function AetherFlowHero() {
                 leading-relaxed max-w-2xl mb-10
               "
             >
-               Every matching federal contract, scored and ranked, in your inbox by 6 AM. SAM.gov, DLA DIBBS, and SBA SubNet. Scanned every night.
+               Every matching federal contract, scored and ranked, in your dashboard every morning. SAM.gov, DLA DIBBS, and SBA SubNet. Scanned every night.
             </motion.p>
 
             {/* CTA group */}
@@ -407,7 +407,7 @@ export default function AetherFlowHero() {
                 id="hero-cta"
                 className="btn-gold text-base px-8 py-4 inline-flex items-center gap-2 w-full sm:w-auto justify-center rounded-lg font-bold shadow-xl shadow-[#C9A84C]/20 hover:shadow-2xl hover:shadow-[#1C1917]/20 transition-all"
               >
-                Get Your First Contract Digest
+                Start Your Contract Intelligence
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
 

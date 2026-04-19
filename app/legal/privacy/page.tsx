@@ -42,10 +42,10 @@ export default function PrivacyPage() {
         <Section title="2. How We Use Your Information">
           <p>We use the information we collect to:</p>
           <ul style={list}>
-            <li>Deliver daily and real-time contract match digests to your email address</li>
+            <li>Surface daily contract matches in your dashboard based on your monitoring profile</li>
             <li>Operate, maintain, and improve the {COMPANY} platform</li>
             <li>Process payments and manage your subscription</li>
-            <li>Send transactional emails such as digest alerts, bid deadline reminders, and account notifications</li>
+            <li>Send transactional emails such as welcome messages, trial reminders, and billing notifications</li>
             <li>Respond to your support requests</li>
             <li>Comply with legal obligations</li>
           </ul>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="5. Email Communications">
-          <p>By creating an account, you consent to receiving transactional emails from {COMPANY}, including contract match digests, deadline reminders, and account updates. You can configure your email preferences in the dashboard under Alert Settings. You cannot opt out of critical account emails such as billing receipts and password resets.</p>
+          <p>By creating an account, you consent to receiving transactional emails from {COMPANY}, including welcome messages, trial reminders, and billing notifications. Contract matches are delivered through your dashboard, not by email. You cannot opt out of critical account emails such as billing receipts and password resets.</p>
         </Section>
 
         <Section title="6. Third-Party Services">

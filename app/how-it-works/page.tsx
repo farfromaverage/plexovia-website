@@ -7,12 +7,12 @@ import FAQSection from "@/components/home/faq-section";
 export const metadata: Metadata = {
   title: "How Plexovia Works | Government Contract Monitoring",
   description:
-    "Three steps to full automation. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet every night. Scored contract matches delivered to your inbox by 6 AM. No login required.",
+    "Three steps to full automation. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet every night. Scored contract matches delivered to your dashboard every morning.",
   alternates: { canonical: "https://plexovia.com/how-it-works" },
   openGraph: {
     title: "How Plexovia Works",
     description:
-      "Set your NAICS codes in minutes. We scan every portal every night and deliver ranked matches to your inbox by 6 AM.",
+      "Set your NAICS codes in minutes. We scan every portal every night and deliver ranked matches to your dashboard every morning.",
     url: "https://plexovia.com/how-it-works",
     images: [{ url: "https://plexovia.com/og-how-it-works.jpg", width: 1200, height: 630 }],
   },
@@ -33,7 +33,7 @@ const steps = [
       "Add custom keywords to catch contracts your NAICS codes miss.",
       "Set your place of performance preference so irrelevant states drop out.",
       "Track competitors to see what federal awards they win.",
-      "Set your delivery email. Daily digests at 6 AM, no other login needed.",
+      "Configure your notification preferences for optional email reports.",
     ],
   },
   {
@@ -53,8 +53,8 @@ const steps = [
     number: "03",
     label:  "Delivery",
     tag:    "We handle this",
-    title:  "Ranked matches in your inbox at 6 AM. No login, ever.",
-    body:   "Our matching model ruthlessly filters out false positives. Every contract arrives ranked from 100 down to 0, completely stripping away the noise. You don't just get an alert; you get an AI explanation detailing exactly why the contract triggered, so you never guess.",
+    title:  "Ranked matches in your dashboard every morning. Always updated.",
+    body:   "Our matching model ruthlessly filters out false positives. Every contract arrives ranked from 100 down to 0, completely stripping away the noise. You don't just get a match; you get an AI explanation detailing exactly why the contract triggered, so you never guess.",
     detail: [
       "Every match includes an AI explanation detailing exactly why it scored the way it did.",
       "Each match shows the agency, deadline, place of performance, set aside status, and your score.",
@@ -83,7 +83,7 @@ const faqs = [
   {
     id: "hiw-faq-2",
     q: "Do I need to log in every day?",
-    a: "No. The entire point is that you do not have to. Everything you need is in your email. You can log in to review match history, export to CSV, or update your profile. But if you never log in after setup, the alerts still arrive every morning.",
+    a: "No. Your dashboard updates automatically every morning with all your matched contracts, scored and ranked. You can log in to review matches, export to CSV, or update your profile at any time.",
   },
   {
     id: "hiw-faq-3",
@@ -122,7 +122,7 @@ export default function HowItWorksPage() {
       {
         "@type": "HowToStep",
         "name": "Delivery of matches with AI Forecasting",
-        "text": "Ranked matches, scored from 0 to 100, delivered to your inbox at 6 AM. Includes AI Predictive Forecasting for incumbent expirations and Q4 budget surges."
+        "text": "Ranked matches, scored from 0 to 100, delivered to your dashboard every morning. Includes AI Predictive Forecasting for incumbent expirations and Q4 budget surges."
       }
     ]
   };
@@ -237,7 +237,7 @@ export default function HowItWorksPage() {
         >
           {[
             { stat: "50+",   unit: "states",   label: "monitored every night"      },
-            { stat: "6 AM",  unit: "",          label: "contracts in your inbox"    },
+            { stat: "Daily", unit: "",          label: "dashboard auto-updates"    },
             { stat: "0 to 100", unit: "",          label: "AI match score per contract"},
             { stat: "15+ hrs", unit: "",          label: "saved per week on manual search"          },
           ].map(({ stat, unit, label }) => (
@@ -452,9 +452,9 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* EMAIL DIGEST MOCKUP */}
+      {/* DASHBOARD PREVIEW MOCKUP */}
       <section
-        aria-label="Example contract digest"
+        aria-label="Example contract dashboard"
         style={{
           borderTop:       "1px solid var(--pub-border)",
           borderBottom:    "1px solid var(--pub-border)",
@@ -494,7 +494,7 @@ export default function HowItWorksPage() {
                 marginBottom:  "0.75rem",
               }}
             >
-              This is what lands in your inbox at 6 AM.
+              This is what your dashboard looks like every morning.
             </h2>
             <p
               style={{
@@ -504,11 +504,11 @@ export default function HowItWorksPage() {
                 lineHeight: 1.65,
               }}
             >
-              One entry from a real digest. Every match includes a score, an AI explanation, and a direct link.
+              One entry from a real dashboard. Every match includes a score, an AI explanation, and a direct link.
             </p>
           </div>
 
-          {/* Mock email card */}
+          {/* Mock dashboard card */}
           <div
             style={{
               backgroundColor: "var(--pub-bg)",
@@ -518,7 +518,7 @@ export default function HowItWorksPage() {
               boxShadow:       "0 4px 24px rgba(0,0,0,0.06)",
             }}
           >
-            {/* Email header bar */}
+            {/* Dashboard header bar */}
             <div
               style={{
                 borderBottom:    "1px solid var(--pub-border)",
@@ -541,7 +541,7 @@ export default function HowItWorksPage() {
                     fontWeight: 500,
                   }}
                 >
-                  alerts@plexovia.com
+                  Plexovia Dashboard
                 </span>
               </div>
               <span
@@ -552,7 +552,7 @@ export default function HowItWorksPage() {
                   fontWeight: 500,
                 }}
               >
-                Your morning digest 3 new matches 6:00 AM
+                Today&apos;s matches &middot; 3 new contracts found
               </span>
             </div>
 
@@ -821,7 +821,7 @@ export default function HowItWorksPage() {
               marginBottom: "2.5rem",
             }}
           >
-            Set up in three minutes. Tomorrow morning at 6 AM, the matches are waiting.
+            Set up in three minutes. Your dashboard starts updating the next morning.
           </p>
           <Link
             href="/auth/signup"

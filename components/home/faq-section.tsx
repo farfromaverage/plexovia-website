@@ -18,12 +18,12 @@ const FAQS = [
   {
     id: "faq-0",
     q:  "SAM.gov is free. Why would I pay $249 per month?",
-    a:  "SAM.gov is a data source. It lists contracts but does not filter, score, or alert you. To use it effectively, you need to log in daily, set up searches manually per NAICS code, check each state portal separately, and repeat that process every single day. Most contractors spend 2 to 4 hours doing this, and still miss contracts posted on state or county portals that SAM.gov does not cover. Plexovia replaces that entire process. You set your profile once. Every morning, you receive a scored digest of exactly what changed overnight, ranked by how well each contract matches your business. The question is not whether SAM.gov is free. The question is what 2 to 4 hours of your time is worth every day.",
+    a:  "SAM.gov is a data source. It lists contracts but does not filter, score, or alert you. To use it effectively, you need to log in daily, set up searches manually per NAICS code, check each state portal separately, and repeat that process every single day. Most contractors spend 2 to 4 hours doing this, and still miss contracts posted on state or county portals that SAM.gov does not cover. Plexovia replaces that entire process. You set your profile once. Every morning, your dashboard shows a scored list of exactly what changed overnight, ranked by how well each contract matches your business. The question is not whether SAM.gov is free. The question is what 2 to 4 hours of your time is worth every day.",
   },
   {
     id: "faq-1",
     q:  "Do I have to log in to a dashboard every day to see results?",
-    a:  "No. That is the entire point. Every contract matching your NAICS codes arrives in your email inbox. No portal, no dashboard, no login required. You get a comprehensive email digest every morning. Your inbox is your interface.",
+    a:  "Your dashboard is the primary interface. Every contract matching your NAICS codes and keywords appears there automatically, scored and ranked. You log in, review your matches, and decide which to bid on. We also send system notifications for critical events like approaching deadlines.",
   },
   {
     id: "faq-2",
@@ -43,12 +43,12 @@ const FAQS = [
   {
     id: "faq-5",
     q:  "Is my NAICS profile and tracking data kept private?",
-    a:  "Yes. Your NAICS codes, custom keywords, states, and set-aside eligibility are never shared, sold, or visible to other users. Competitors cannot see what you are tracking. Your profile is used solely to generate your personal contract digest. We do not aggregate, benchmark, or expose individual account configurations.",
+    a:  "Yes. Your NAICS codes, custom keywords, states, and set-aside eligibility are never shared, sold, or visible to other users. Competitors cannot see what you are tracking. Your profile is used solely to generate your personalized contract matches. We do not aggregate, benchmark, or expose individual account configurations.",
   },
   {
     id: "faq-6",
     q:  "I have used other contract tracking tools before. Why is this different?",
-    a:  "Most contract tracking platforms sell the same data feed to thousands of subscribers. You see the same contracts as everyone else, at the same time. Plexovia builds a unique scoring model around your exact NAICS codes, certifications, set-aside eligibility, and PSC codes. No two users receive the same digest. Beyond basic matching, Plexovia uses tiered NAICS scoring, title-weighted keywords, and deadline proximity analysis to surface the contracts most likely to result in a win. Because we deliver via email at 6 AM every day, there is no portal to log into, no dashboard to learn, and no subscription tier to navigate.",
+    a:  "Most contract tracking platforms sell the same data feed to thousands of subscribers. You see the same contracts as everyone else, at the same time. Plexovia builds a unique scoring model around your exact NAICS codes, certifications, set-aside eligibility, and PSC codes. No two users see the same dashboard. Beyond basic matching, Plexovia uses tiered NAICS scoring, title-weighted keywords, and deadline proximity analysis to surface the contracts most likely to result in a win. Because your dashboard updates daily with AI-scored matches, there is no data to manually search and no subscription tier to navigate.",
   },
 ] as const;
 
@@ -279,7 +279,7 @@ export default function FAQSection({
               id="faq-cta"
               style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
             >
-              See Matching Contracts Tomorrow Morning
+              See Matching Contracts in Your Dashboard
             </Link>
           </motion.div>
 

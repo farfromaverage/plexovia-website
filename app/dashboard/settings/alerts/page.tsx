@@ -142,10 +142,10 @@ export default function AlertSettingsPage() {
         <div>
           <h1 className="dash-page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <Bell size={20} color="var(--accent)" aria-hidden="true" />
-            Alert Settings
+            Notification Preferences
           </h1>
           <p className="dash-page-sub">
-            Manage email reports sent to{" "}
+            Manage dashboard monitoring and optional email reports sent to{" "}
             <strong style={{ color: "var(--app-text)" }}>{prefs.email ?? "your account email"}</strong>.
           </p>
         </div>
@@ -155,16 +155,16 @@ export default function AlertSettingsPage() {
 
         {/* Core delivery — always on */}
         <div className="dash-section" style={{ marginBottom: "1.25rem" }}>
-          <p className="dash-label">Core Delivery: Always On</p>
+          <p className="dash-label">Dashboard Monitoring: Always On</p>
 
           <SettingRow
             icon={<Mail size={15} aria-hidden="true" />}
-            label="Daily Contract Digest"
-            description="Your matched contracts, ranked by AI score. Sent once per day at 6 AM EST."
+            label="Contract Monitoring"
+            description="Your dashboard updates daily with matched contracts, ranked by AI score. No action needed."
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "0.78rem", color: "#4ADE80", fontWeight: 600 }}>Active</span>
-              <Toggle id="daily-digest" checked={true} onChange={() => {}} disabled={true} />
+              <Toggle id="daily-monitoring" checked={true} onChange={() => {}} disabled={true} />
             </div>
           </SettingRow>
 
@@ -180,13 +180,13 @@ export default function AlertSettingsPage() {
           </SettingRow>
         </div>
 
-        {/* Weekly digests — user-configurable */}
+        {/* Optional email reports — user-configurable */}
         <div className="dash-section" style={{ marginBottom: "1.5rem" }}>
-          <p className="dash-label">Weekly Digests</p>
+          <p className="dash-label">Optional Email Reports</p>
 
           <SettingRow
             icon={<Calendar size={15} aria-hidden="true" />}
-            label="Bid Calendar Digest"
+            label="Weekly Bid Calendar"
             description="Every Sunday: open bids in your NAICS codes with closing dates. Plan your week before Monday."
           >
             <Toggle
@@ -198,7 +198,7 @@ export default function AlertSettingsPage() {
 
           <SettingRow
             icon={<TrendingUp size={15} aria-hidden="true" />}
-            label="Weekly Performance Digest"
+            label="Weekly Performance Summary"
             description="Every Monday: total matches last week, match rate trend, and your top keywords by volume."
           >
             <Toggle
@@ -248,7 +248,7 @@ export default function AlertSettingsPage() {
           <a href="mailto:support@plexovia.com" style={{ color: "var(--accent)", textDecoration: "none" }}>
             support@plexovia.com
           </a>.
-          Unsubscribing from a digest does not affect your daily contract alerts.
+          Toggling off an email report does not affect your dashboard monitoring. All matched contracts always appear in your dashboard.
         </div>
 
       </div>

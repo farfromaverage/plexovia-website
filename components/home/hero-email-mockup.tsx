@@ -208,7 +208,7 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
             </div>
             <div className="flex flex-col">
               <span className="text-[12px] font-bold text-[#F7F5F0] tracking-wide">Plexovia Intelligence</span>
-              <span className="text-[10px] text-[#A8A29E] font-mono tracking-tight">DAILY DIGEST &middot; 06:00 AM</span>
+              <span className="text-[10px] text-[#A8A29E] font-mono tracking-tight">LIVE MONITORING &middot; UPDATED DAILY</span>
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -268,7 +268,7 @@ export default function DashboardPage() {
   const hour         = new Date().getHours();
   const greeting     = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const subtitle     = setupDone
-    ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""} · ${naicsCount} NAICS code${naicsCount !== 1 ? "s" : ""}${keywordCount > 0 ? ` · ${keywordCount} keyword${keywordCount !== 1 ? "s" : ""}` : ""} · Next digest: 6 AM EST`
+    ? `Monitoring ${stateCount} state${stateCount !== 1 ? "s" : ""} · ${naicsCount} NAICS code${naicsCount !== 1 ? "s" : ""}${keywordCount > 0 ? ` · ${keywordCount} keyword${keywordCount !== 1 ? "s" : ""}` : ""} · Updated daily`
     : "Complete your setup below to activate contract monitoring";
 
   /* 14-day mini chart */
@@ -341,7 +341,7 @@ export default function DashboardPage() {
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", flexShrink: 0, display: "inline-block" }} aria-hidden="true" />
           <span>
             <strong>Monitoring is active.</strong> Government portals scan nightly.
-            Next digest: <strong style={{ color: "var(--app-text)" }}>6:00 AM EST</strong>
+            New matches appear daily in your <strong style={{ color: "var(--app-text)" }}>dashboard</strong>.
           </span>
         </div>
       )}
@@ -355,6 +355,9 @@ export default function DashboardPage() {
         {keywordCount > 0 && (
           <StatCard icon={<Tag size={14} aria-hidden="true" />}      label="Keywords"         value={String(keywordCount)}                               sub="Active keyword matching" />
         )}
+        <Link href="/dashboard/intelligence" style={{ textDecoration: "none" }}>
+          <StatCard icon={<Zap size={14} aria-hidden="true" />}     label="Intelligence"     value="View"                                               sub="Signals & win probability" accent />
+        </Link>
       </div>
 
       {/* Two-column layout */}
@@ -536,7 +539,7 @@ export default function DashboardPage() {
             <div style={{ padding: "0.625rem 1.25rem", borderTop: "1px solid var(--app-border)", display: "flex", alignItems: "center", gap: 6 }}>
               <RefreshCw size={10} color="#4ADE80" aria-hidden="true" />
               <span style={{ fontSize: "0.7rem", color: "var(--app-faint)" }}>
-                Engine syncs daily at <strong style={{ color: "var(--app-muted)" }}>6:00 AM EST</strong>
+                Engine syncs <strong style={{ color: "var(--app-muted)" }}>daily</strong> &middot; dashboard auto-updates
               </span>
             </div>
           </div>

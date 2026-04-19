@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: resendKey
-        ? "Sample digest sent. Check your inbox."
+        ? "Sample preview sent. Check your email."
         : "Thank you. Your sample digest will arrive shortly.",
     });
   } catch (e) {
@@ -64,7 +64,7 @@ function buildSampleDigestHTML(): string {
       <h1 style="font-size:1.25rem;font-weight:800;margin:0;letter-spacing:-0.03em;">
         <span style="color:#C9A84C;">P</span>lexovia
       </h1>
-      <p style="font-size:0.875rem;color:#6B6560;margin:0.5rem 0 0;">Your Morning Contract Digest &middot; Sample</p>
+      <p style="font-size:0.875rem;color:#6B6560;margin:0.5rem 0 0;">Sample Dashboard Preview &middot; Plexovia</p>
     </div>
 
     <div style="background:#fff;border:1px solid #E2DDD6;border-radius:12px;padding:1.5rem;margin-bottom:1.25rem;">
@@ -99,12 +99,12 @@ function buildSampleDigestHTML(): string {
     </div>
 
     <div style="text-align:center;padding:1.5rem 0;">
-      <a href="https://plexovia.com/auth/signup" style="display:inline-block;padding:0.875rem 2rem;background:#C9A84C;color:#1C1917;font-weight:700;font-size:0.9375rem;border-radius:8px;text-decoration:none;">Get Your First Real Digest Tomorrow</a>
+      <a href="https://plexovia.com/auth/signup" style="display:inline-block;padding:0.875rem 2rem;background:#C9A84C;color:#1C1917;font-weight:700;font-size:0.9375rem;border-radius:8px;text-decoration:none;">Start Your Contract Intelligence</a>
       <p style="font-size:0.75rem;color:#8A8580;margin:0.75rem 0 0;">7-day free trial. No charge until Day 8.</p>
     </div>
 
     <p style="font-size:0.6875rem;color:#A8A29E;text-align:center;margin:1rem 0 0;border-top:1px solid #E2DDD6;padding-top:1rem;">
-      This is a sample digest from Plexovia. Real digests contain your actual NAICS-matched contracts.
+      This is a sample preview from Plexovia. Your real dashboard contains your actual NAICS-matched contracts.
     </p>
   </div>
 </body>

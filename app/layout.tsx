@@ -103,16 +103,16 @@ export const metadata: Metadata = {
     template: "%s | Plexovia",
   },
   description:
-    "Every contract matching your NAICS codes. Delivered to your inbox by 6 AM. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet nightly. Scored alerts. 7-day free trial.",
+    "Every contract matching your NAICS codes. Scored and ranked in your dashboard every morning. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet nightly. 7-day free trial.",
   metadataBase: new URL("https://plexovia.com"),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://plexovia.com",
     siteName: "Plexovia",
-    title: "Plexovia — Federal Contract Alerts in Your Inbox by 6 AM",
+    title: "Plexovia — Federal Contract Intelligence Dashboard",
     description:
-      "Every contract matching your NAICS codes, scored 0 to 100, delivered to your inbox each morning. SAM.gov, DLA DIBBS, and SBA SubNet.",
+      "Every contract matching your NAICS codes, scored 0 to 100, delivered to your dashboard each morning. SAM.gov, DLA DIBBS, and SBA SubNet.",
     images: [
       {
         url: "/og-image.png",
@@ -124,7 +124,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Plexovia — Federal Contracts in Your Inbox by 6 AM",
+    title: "Plexovia — Federal Contract Intelligence Dashboard",
     description:
       "Every contract matching your NAICS codes. Scored 0 to 100. Three federal procurement sources monitored nightly.",
     images: ["/og-image.png"],
