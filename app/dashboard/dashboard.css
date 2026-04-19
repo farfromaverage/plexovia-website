@@ -4,7 +4,7 @@
  * Add new tokens here, never add ad-hoc inline hex values to page files.
  */
 
-/* ── Tokens ──────────────────────────────────────────────────── */
+/* ── Tokens (Dark — default) ──────────────────────────────── */
 :root {
   --app-bg:         #1C1917;
   --app-surface:    #252320;
@@ -13,6 +13,7 @@
   --app-text:       #F7F5F0;
   --app-muted:      #A8A29E;
   --app-faint:      #6B6560;
+  --app-hover:      #333028;
 
   --accent:         #C9A84C;
   --accent-dim:     rgba(201,168,76,0.12);
@@ -20,6 +21,24 @@
   --radius-sm:      6px;
   --radius-md:      12px;
   --radius-lg:      16px;
+
+  --progress-track: var(--app-surface-2);
+  --progress-fill:  var(--accent);
+}
+
+/* ── Tokens (Light) ──────────────────────────────────────── */
+[data-theme="light"] {
+  --app-bg:         #F7F5F0;
+  --app-surface:    #FFFFFF;
+  --app-surface-2:  #F0EDE6;
+  --app-hover:      #E8E4DB;
+  --app-border:     #E2DDD6;
+  --app-text:       #1C1917;
+  --app-muted:      #6B6560;
+  --app-faint:      #A8A29E;
+
+  --accent:         #B5942F;
+  --accent-dim:     rgba(181,148,47,0.10);
 
   --progress-track: var(--app-surface-2);
   --progress-fill:  var(--accent);
@@ -163,9 +182,9 @@
   text-decoration: none;
 }
 .dash-btn:hover:not(:disabled) {
-  background: #333028;
+  background: var(--app-hover, #333028);
   color: var(--app-text);
-  border-color: #3D3830;
+  border-color: var(--app-hover, #3D3830);
 }
 .dash-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -216,7 +235,7 @@
   white-space: nowrap;
   transition: all 0.12s;
 }
-.dash-pill:hover { border-color: #3D3830; color: var(--app-text); }
+.dash-pill:hover { border-color: var(--app-hover, #3D3830); color: var(--app-text); }
 .dash-pill.active,
 .dash-pill[aria-pressed="true"] {
   background: var(--accent-dim);
@@ -241,6 +260,10 @@
 .dash-tag-blue   { color: #93C5FD; background: rgba(147,197,253,0.08); border-color: rgba(147,197,253,0.2); }
 .dash-tag-amber  { color: #FCD34D; background: rgba(252,211,77,0.08);  border-color: rgba(252,211,77,0.2); }
 .dash-tag-muted  { color: var(--app-muted); background: var(--app-surface-2); border-color: var(--app-border); }
+
+[data-theme="light"] .dash-tag-green  { color: #16A34A; background: rgba(22,163,74,0.08); border-color: rgba(22,163,74,0.2); }
+[data-theme="light"] .dash-tag-blue   { color: #2563EB; background: rgba(37,99,235,0.08); border-color: rgba(37,99,235,0.2); }
+[data-theme="light"] .dash-tag-amber  { color: #B5942F; background: rgba(181,148,47,0.08); border-color: rgba(181,148,47,0.2); }
 
 /* ── Mono ─────────────────────────────────────────────────────── */
 .dash-mono {
@@ -316,7 +339,7 @@
   background: linear-gradient(
     90deg,
     var(--app-surface-2) 0%,
-    #333028 50%,
+    var(--app-hover, #333028) 50%,
     var(--app-surface-2) 100%
   );
   background-size: 200% 100%;

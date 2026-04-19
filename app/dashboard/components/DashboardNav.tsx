@@ -6,7 +6,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User, TrendingUp,
-  Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight, Zap
+  Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight, Zap,
+  Sun, Moon
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -27,6 +28,7 @@ export default function DashboardNav() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -46,7 +48,25 @@ export default function DashboardNav() {
           }
         });
     });
+
+    // Restore saved theme
+    const saved = localStorage.getItem("plexovia-theme") as "dark" | "light" | null;
+    if (saved === "light") {
+      setTheme("light");
+      document.documentElement.setAttribute("data-theme", "light");
+    }
   }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("plexovia-theme", next);
+    if (next === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  }
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -149,8 +169,40 @@ export default function DashboardNav() {
         </ul>
       </nav>
 
-      {/* User footer */}
+      {/* Theme toggle + user footer */}
       <div style={{ padding: "0.625rem", borderTop: "1px solid var(--app-border)", flexShrink: 0 }}>
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 10px",
+            borderRadius: "7px",
+            border: "none",
+            background: "none",
+            color: "var(--app-muted)",
+            fontSize: "0.8rem",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            transition: "background 0.12s, color 0.12s",
+            marginBottom: "4px",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--app-surface-2)";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--app-text)";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "none";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--app-muted)";
+          }}
+        >
+          {theme === "dark" ? <Sun size={13} aria-hidden="true" /> : <Moon size={13} aria-hidden="true" />}
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
         {userEmail && (
           <div style={{
             padding: "7px 10px",
