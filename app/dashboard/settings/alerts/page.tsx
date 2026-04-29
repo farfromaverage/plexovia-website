@@ -7,9 +7,7 @@ import { Bell, Mail, Calendar, TrendingUp, CheckCircle, AlertCircle } from "luci
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface AlertPrefs {
-  bid_calendar_digest: boolean;
-  performance_digest:  boolean;
-  email:               string | null;
+  email: string | null;
 }
 
 /* ─── Toggle ─────────────────────────────────────────────────── */
@@ -73,11 +71,9 @@ function SettingRow({
 export default function AlertSettingsPage() {
   const router = useRouter();
   const [prefs, setPrefs] = useState<AlertPrefs>({
-    bid_calendar_digest: false, performance_digest: false, email: null,
+    email: null,
   });
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
   const [userId,  setUserId]  = useState<string | null>(null);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -96,8 +92,6 @@ export default function AlertSettingsPage() {
       if (!dbErr && data) {
         setPrefs({
           email:               data.email ?? (session.user.email ?? null),
-          bid_calendar_digest: data.bid_calendar_digest ?? false,
-          performance_digest:  data.performance_digest  ?? false,
         });
       }
       setLoading(false);
@@ -105,24 +99,6 @@ export default function AlertSettingsPage() {
     load();
   }, [router]);
 
-  async function handleSave() {
-    if (!userId) return;
-    setSaving(true); setSaved(false); setError(null);
-    const { error: dbErr } = await supabase
-      .from("profiles")
-      .update({
-        bid_calendar_digest: prefs.bid_calendar_digest,
-        performance_digest:  prefs.performance_digest,
-      })
-      .eq("id", userId);
-    setSaving(false);
-    if (dbErr) {
-      setError(dbErr.message || "Failed to save preferences.");
-    } else {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3500);
-    }
-  }
 
   if (loading) {
     return (
@@ -180,59 +156,6 @@ export default function AlertSettingsPage() {
           </SettingRow>
         </div>
 
-        {/* Optional email reports — user-configurable */}
-        <div className="dash-section" style={{ marginBottom: "1.5rem" }}>
-          <p className="dash-label">Optional Email Reports</p>
-
-          <SettingRow
-            icon={<Calendar size={15} aria-hidden="true" />}
-            label="Weekly Bid Calendar"
-            description="Every Sunday: open bids in your NAICS codes with closing dates. Plan your week before Monday."
-          >
-            <Toggle
-              id="bid-calendar-digest"
-              checked={prefs.bid_calendar_digest}
-              onChange={v => setPrefs(p => ({ ...p, bid_calendar_digest: v }))}
-            />
-          </SettingRow>
-
-          <SettingRow
-            icon={<TrendingUp size={15} aria-hidden="true" />}
-            label="Weekly Performance Summary"
-            description="Every Monday: total matches last week, match rate trend, and your top keywords by volume."
-          >
-            <Toggle
-              id="performance-digest"
-              checked={prefs.performance_digest}
-              onChange={v => setPrefs(p => ({ ...p, performance_digest: v }))}
-            />
-          </SettingRow>
-        </div>
-
-        {/* Save */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="dash-btn dash-btn-primary"
-            style={{ minWidth: 140, minHeight: 40, fontSize: "0.9375rem" }}
-          >
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
-          {saved && (
-            <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.875rem", color: "#4ADE80" }}>
-              <CheckCircle size={14} aria-hidden="true" /> Saved
-            </span>
-          )}
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="dash-alert-error" role="alert" style={{ marginBottom: "1.5rem" }}>
-            <AlertCircle size={14} aria-hidden="true" style={{ flexShrink: 0 }} />
-            <span>{error}</span>
-          </div>
-        )}
 
         {/* Info note */}
         <div style={{

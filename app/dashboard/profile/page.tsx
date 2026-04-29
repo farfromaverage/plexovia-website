@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw } from "lucide-react";
+import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, ExternalLink } from "lucide-react";
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -29,6 +29,8 @@ const STATE_NAMES: Record<string, string> = {
 };
 
 const SET_ASIDES = [
+  { value: "none",   label: "Unrestricted" },
+  { value: "sba",    label: "Small Business" },
   { value: "8a",     label: "8(a) Business Development" },
   { value: "sdvosb", label: "Service-Disabled Veteran-Owned (SDVOSB)" },
   { value: "wosb",   label: "Women-Owned Small Business (WOSB)" },
@@ -42,10 +44,14 @@ interface ProfileData {
   id: string;
   company_name: string | null;
   naics_codes: string[] | null;
+  psc_codes: string[] | null;
   states: string[] | null;
   keywords: string[] | null;
+  exclude_keywords: string[] | null;
   alert_frequency: string | null;
   set_aside_preferences: string[] | null;
+  min_value: number | null;
+  max_value: number | null;
 }
 
 /* ─── NAICS validation ───────────────────────────────────── */
@@ -84,11 +90,22 @@ export default function ProfilePage() {
   const [naicsCodes,    setNaicsCodes]    = useState<string[]>([]);
   const [naicsInput,    setNaicsInput]    = useState("");
   const [naicsError,    setNaicsError]    = useState<string | null>(null);
+  
+  const [pscCodes,      setPscCodes]      = useState<string[]>([]);
+  const [pscInput,      setPscInput]      = useState("");
+  
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [keywords,      setKeywords]      = useState<string[]>([]);
   const [keywordInput,  setKeywordInput]  = useState("");
+  
+  const [excludeKeywords, setExcludeKeywords] = useState<string[]>([]);
+  const [excludeInput,    setExcludeInput]    = useState("");
+
   const [frequency,     setFrequency]     = useState("daily");
   const [setAsides,     setSetAsides]     = useState<string[]>([]);
+  
+  const [minValue,      setMinValue]      = useState<string>("");
+  const [maxValue,      setMaxValue]      = useState<string>("");
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -98,7 +115,7 @@ export default function ProfilePage() {
 
     const { data, error: err } = await supabase
       .from("profiles")
-      .select("id,company_name,naics_codes,states,keywords,alert_frequency,set_aside_preferences")
+      .select("id,company_name,naics_codes,psc_codes,states,keywords,exclude_keywords,alert_frequency,set_aside_preferences,min_value,max_value")
       .eq("id", user.id)
       .single();
 
@@ -108,10 +125,15 @@ export default function ProfilePage() {
       const d = data as ProfileData;
       setCompanyName(d.company_name ?? "");
       setNaicsCodes(d.naics_codes ?? []);
+      setOriginalNaicsCodes(d.naics_codes ?? []);
+      setPscCodes(d.psc_codes ?? []);
       setSelectedStates(d.states ?? []);
       setKeywords(d.keywords ?? []);
+      setExcludeKeywords(d.exclude_keywords ?? []);
       setFrequency(d.alert_frequency ?? "daily");
       setSetAsides(d.set_aside_preferences ?? []);
+      setMinValue(d.min_value !== null ? String(d.min_value) : "");
+      setMaxValue(d.max_value !== null ? String(d.max_value) : "");
     }
     setLoading(false);
     setIsDirty(false);
@@ -156,6 +178,23 @@ export default function ProfilePage() {
     markDirty();
   }
 
+  function addPsc() {
+    const code = pscInput.trim().toUpperCase();
+    if (!code) { setPscInput(""); return; }
+    if (pscCodes.includes(code)) {
+      setPscInput("");
+      return;
+    }
+    setPscCodes(prev => [...prev, code]);
+    setPscInput("");
+    markDirty();
+  }
+
+  function removePsc(code: string) {
+    setPscCodes(prev => prev.filter(c => c !== code));
+    markDirty();
+  }
+
   function toggleState(st: string) {
     setSelectedStates(prev =>
       prev.includes(st) ? prev.filter(s => s !== st) : [...prev, st]
@@ -174,32 +213,62 @@ export default function ProfilePage() {
     setKeywordInput("");
     markDirty();
   }
-
-  function toggleSetAside(val: string) {
-    setSetAsides(prev =>
-      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
-    );
+  
+  function addExcludeKeyword() {
+    const kw = excludeInput.trim().toLowerCase();
+    if (!kw || excludeKeywords.includes(kw)) { setExcludeInput(""); return; }
+    if (excludeKeywords.length >= MAX_KEYWORDS) {
+      setError(`Max ${MAX_KEYWORDS} exclude keywords allowed.`);
+      return;
+    }
+    setExcludeKeywords(prev => [...prev, kw]);
+    setExcludeInput("");
     markDirty();
   }
+
+  function toggleSetAside(val: string) {
+    if (val === "none") {
+      setSetAsides(["none"]);
+      markDirty();
+      return;
+    }
+    setSetAsides(prev => {
+      let next = prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val];
+      next = next.filter(v => v !== "none");
+      return next;
+    });
+    markDirty();
+  }
+
+  /* Track original NAICS codes loaded from DB */
+  const [originalNaicsCodes, setOriginalNaicsCodes] = useState<string[]>([]);
 
   /* ─── Save ────────────────────────────────────────────────── */
   async function handleSave() {
     if (!userId) return;
-    if (naicsInput.trim()) {
-      // Commit pending NAICS before save
-      addNaics();
-    }
+    if (naicsInput.trim()) addNaics();
+    if (pscInput.trim()) addPsc();
+    if (keywordInput.trim()) addKeyword();
+    if (excludeInput.trim()) addExcludeKeyword();
+    
     setSaving(true);
     setError(null);
+    
+    const finalSetAsides = setAsides.includes("none") ? [] : setAsides;
+
     const { error: err } = await supabase
       .from("profiles")
       .update({
         company_name:             companyName.trim() || null,
         naics_codes:              naicsCodes,
+        psc_codes:                pscCodes,
         states:                   selectedStates,
         keywords:                 keywords,
+        exclude_keywords:         excludeKeywords,
         alert_frequency:          frequency,
-        set_aside_preferences:    setAsides,
+        set_aside_preferences:    finalSetAsides,
+        min_value:                minValue ? parseInt(minValue, 10) : null,
+        max_value:                maxValue ? parseInt(maxValue, 10) : null,
         updated_at:               new Date().toISOString(),
       })
       .eq("id", userId);
@@ -210,6 +279,19 @@ export default function ProfilePage() {
       setSaved(true);
       setIsDirty(false);
       setTimeout(() => setSaved(false), 3500);
+
+      // Trigger forecast cold start for any newly added NAICS codes
+      const newCodes = naicsCodes.filter(c => !originalNaicsCodes.includes(c));
+      if (newCodes.length > 0) {
+        fetch("/api/forecasts/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ naics_codes: newCodes }),
+        }).catch(e => console.error("Forecast trigger error:", e));
+      }
+
+      // Update the baseline so subsequent saves only trigger for truly new codes
+      setOriginalNaicsCodes([...naicsCodes]);
     }
   }
 
@@ -236,7 +318,7 @@ export default function ProfilePage() {
         <div>
           <h1 className="dash-page-title">Profile Settings</h1>
           <p className="dash-page-sub">
-            Configure your NAICS codes, states, keywords, and alert preferences.
+            Configure your NAICS codes, PSC codes, states, keywords, and alert preferences.
           </p>
         </div>
 
@@ -258,17 +340,6 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
-
-      {/* Account email (read-only from auth) */}
-      {userEmail && (
-        <div className="dash-alert-warning" style={{ marginBottom: "1.25rem", fontSize: "0.8rem" }}>
-          <AlertCircle size={13} aria-hidden="true" />
-          <span>
-            Account email: <strong>{userEmail}</strong>.
-            System notifications (billing, trial reminders) are sent to this address.
-          </span>
-        </div>
-      )}
 
       {/* Error alert */}
       {error && (
@@ -328,12 +399,7 @@ export default function ProfilePage() {
               aria-describedby={naicsError ? "naics-error" : undefined}
             />
           </div>
-          <button
-            className="dash-btn dash-btn-primary"
-            onClick={addNaics}
-            style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}
-            aria-label="Add NAICS code"
-          >
+          <button className="dash-btn dash-btn-primary" onClick={addNaics} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
             <Plus size={13} aria-hidden="true" /> Add
           </button>
         </div>
@@ -342,32 +408,88 @@ export default function ProfilePage() {
             {naicsError}
           </p>
         )}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list" aria-label="Added NAICS codes">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list">
           {naicsCodes.map(code => (
-            <span
-              key={code}
-              role="listitem"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)",
-                borderRadius: 999, padding: "3px 10px",
-                fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)",
-                color: "var(--accent)",
-              }}
-            >
+            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
               {code}
-              <button
-                onClick={() => removeNaics(code)}
-                aria-label={`Remove NAICS code ${code}`}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}
-              >
+              <button onClick={() => removeNaics(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}>
                 <X size={11} aria-hidden="true" />
               </button>
             </span>
           ))}
-          {naicsCodes.length === 0 && (
-            <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No NAICS codes added yet.</span>
-          )}
+          {naicsCodes.length === 0 && <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No NAICS codes added yet.</span>}
+        </div>
+      </div>
+
+      {/* PSC Codes */}
+      <div className="dash-section">
+        <div className="dash-section-h">
+          <span>PSC / FSC Codes</span>
+          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
+            {pscCodes.length} added
+          </span>
+        </div>
+        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
+          Enter 4-character Product Service Codes (e.g. D302, 1005). Optional, but highly recommended for precision.
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <input
+              type="text"
+              value={pscInput}
+              onChange={e => setPscInput(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === "Enter" && addPsc()}
+              placeholder="e.g. D302"
+              className="dash-input-lg uppercase"
+            />
+          </div>
+          <button className="dash-btn dash-btn-primary" onClick={addPsc} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
+            <Plus size={13} aria-hidden="true" /> Add
+          </button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list">
+          {pscCodes.map(code => (
+            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
+              {code}
+              <button onClick={() => removePsc(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}>
+                <X size={11} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+          {pscCodes.length === 0 && <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No PSC codes added yet.</span>}
+        </div>
+      </div>
+
+      {/* Target Value Range */}
+      <div className="dash-section">
+        <h2 className="dash-section-h">Target Contract Value</h2>
+        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
+          Optional. Filter out contracts that are too small or too large. Leave blank for unrestricted.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--app-faint)" }}>$</span>
+            <input
+              type="number"
+              value={minValue}
+              onChange={(e) => { setMinValue(e.target.value); markDirty(); }}
+              placeholder="Min value (e.g. 25000)"
+              className="dash-input-lg"
+              style={{ paddingLeft: "28px" }}
+            />
+          </div>
+          <span style={{ color: "var(--app-muted)", fontSize: "0.9rem" }}>to</span>
+          <div style={{ flex: 1, position: "relative" }}>
+            <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--app-faint)" }}>$</span>
+            <input
+              type="number"
+              value={maxValue}
+              onChange={(e) => { setMaxValue(e.target.value); markDirty(); }}
+              placeholder="Max value (e.g. 5000000)"
+              className="dash-input-lg"
+              style={{ paddingLeft: "28px" }}
+            />
+          </div>
         </div>
       </div>
 
@@ -379,50 +501,21 @@ export default function ProfilePage() {
             <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
               {selectedStates.length} / {US_STATES.length} selected
             </span>
-            <button
-              className="dash-pill"
-              onClick={() => { setSelectedStates(US_STATES as unknown as string[]); markDirty(); }}
-              aria-label="Select all states"
-              style={{ fontSize: "0.68rem", padding: "2px 8px" }}
-            >
-              All
-            </button>
-            <button
-              className="dash-pill"
-              onClick={() => { setSelectedStates([]); markDirty(); }}
-              aria-label="Clear all states"
-              style={{ fontSize: "0.68rem", padding: "2px 8px" }}
-            >
-              Clear
-            </button>
+            <button className="dash-pill" onClick={() => { setSelectedStates(US_STATES as unknown as string[]); markDirty(); }} style={{ fontSize: "0.68rem", padding: "2px 8px" }}>All</button>
+            <button className="dash-pill" onClick={() => { setSelectedStates([]); markDirty(); }} style={{ fontSize: "0.68rem", padding: "2px 8px" }}>Clear</button>
           </div>
         </div>
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(55px, 1fr))", gap: "0.375rem" }}
-          role="group"
-          aria-label="Select states to monitor"
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(55px, 1fr))", gap: "0.375rem" }}>
           {US_STATES.map(st => {
             const active = selectedStates.includes(st);
             return (
               <button
                 key={st}
                 onClick={() => toggleState(st)}
-                aria-pressed={active}
-                aria-label={STATE_NAMES[st] ?? st}
-                title={STATE_NAMES[st]}
                 style={{
-                  padding: "5px 4px",
-                  borderRadius: "6px",
-                  fontSize: "0.72rem",
-                  fontWeight: active ? 700 : 400,
-                  cursor: "pointer",
-                  border: `1px solid ${active ? "rgba(201,168,76,0.5)" : "var(--app-border)"}`,
-                  background: active ? "rgba(201,168,76,0.1)" : "var(--app-surface-2)",
-                  color: active ? "var(--accent)" : "var(--app-muted)",
-                  transition: "all 0.1s",
-                  textAlign: "center",
-                  fontFamily: "inherit",
+                  padding: "5px 4px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: active ? 700 : 400,
+                  cursor: "pointer", border: `1px solid ${active ? "rgba(201,168,76,0.5)" : "var(--app-border)"}`,
+                  background: active ? "rgba(201,168,76,0.1)" : "var(--app-surface-2)", color: active ? "var(--accent)" : "var(--app-muted)",
                 }}
               >
                 {st}
@@ -432,91 +525,73 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Keywords */}
+      {/* Positive Keywords */}
       <div className="dash-section">
         <div className="dash-section-h">
-          <span>Keywords</span>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
-            {keywords.length} / {MAX_KEYWORDS}
-          </span>
+          <span>Positive Keywords</span>
+          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>{keywords.length} / {MAX_KEYWORDS}</span>
+        </div>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <input type="text" value={keywordInput} onChange={e => setKeywordInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addKeyword()} placeholder="e.g. cybersecurity" className="dash-input-lg" disabled={keywords.length >= MAX_KEYWORDS} />
+          </div>
+          <button className="dash-btn dash-btn-primary" onClick={addKeyword} disabled={keywords.length >= MAX_KEYWORDS} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
+            <Plus size={13} /> Add
+          </button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {keywords.map(kw => (
+            <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", color: "var(--app-text)" }}>
+              {kw}
+              <button onClick={() => { setKeywords(k => k.filter(x => x !== kw)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-faint)" }}><X size={11} /></button>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Negative Keywords */}
+      <div className="dash-section">
+        <div className="dash-section-h">
+          <span style={{ color: "#F87171" }}>Negative Keywords</span>
+          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>{excludeKeywords.length} / {MAX_KEYWORDS}</span>
         </div>
         <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Optional. The engine also searches contract titles for these keywords.
+          Exclude contracts containing these words (e.g. "hardware"). Highly recommended to eliminate false positives.
         </p>
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 160 }}>
-            <label htmlFor="keyword-input" className="sr-only">Add keyword</label>
-            <input
-              id="keyword-input"
-              type="text"
-              value={keywordInput}
-              onChange={e => setKeywordInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addKeyword()}
-              placeholder="e.g. cybersecurity"
-              className="dash-input-lg"
-              disabled={keywords.length >= MAX_KEYWORDS}
-            />
+            <input type="text" value={excludeInput} onChange={e => setExcludeInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addExcludeKeyword()} placeholder="e.g. cleaning" className="dash-input-lg" disabled={excludeKeywords.length >= MAX_KEYWORDS} />
           </div>
-          <button
-            className="dash-btn dash-btn-primary"
-            onClick={addKeyword}
-            disabled={keywords.length >= MAX_KEYWORDS}
-            style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}
-            aria-label="Add keyword"
-          >
-            <Plus size={13} aria-hidden="true" /> Add
+          <button className="dash-btn" onClick={addExcludeKeyword} disabled={excludeKeywords.length >= MAX_KEYWORDS} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
+            <Plus size={13} /> Add
           </button>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list" aria-label="Added keywords">
-          {keywords.map(kw => (
-            <span
-              key={kw}
-              role="listitem"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                background: "var(--app-surface-2)", border: "1px solid var(--app-border)",
-                borderRadius: 999, padding: "3px 10px",
-                fontSize: "0.8rem", color: "var(--app-muted)",
-              }}
-            >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {excludeKeywords.map(kw => (
+            <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", color: "#F87171" }}>
               {kw}
-              <button
-                onClick={() => { setKeywords(k => k.filter(x => x !== kw)); markDirty(); }}
-                aria-label={`Remove keyword ${kw}`}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-faint)", padding: 0, display: "flex", lineHeight: 1 }}
-              >
-                <X size={11} aria-hidden="true" />
-              </button>
+              <button onClick={() => { setExcludeKeywords(k => k.filter(x => x !== kw)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#FCA5A5" }}><X size={11} /></button>
             </span>
           ))}
-          {keywords.length === 0 && (
-            <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No keywords added yet.</span>
-          )}
         </div>
       </div>
 
       {/* Set-aside preferences */}
       <div className="dash-section">
         <h2 className="dash-section-h">Set-Aside Preferences</h2>
-        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.875rem", lineHeight: 1.5 }}>
-          Select applicable set-aside designations to weight contract matching towards contracts you're eligible in.
-        </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }} role="group" aria-label="Set-aside preferences">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           {SET_ASIDES.map(({ value, label }) => {
-            const active = setAsides.includes(value);
+            const active = value === "none" ? (setAsides.length === 0 || setAsides.includes("none")) : setAsides.includes(value);
             return (
               <button
                 key={value}
                 onClick={() => toggleSetAside(value)}
-                aria-pressed={active}
                 className="dash-pill"
                 style={{
-                  fontSize: "0.8rem",
-                  padding: "6px 12px",
+                  fontSize: "0.8rem", padding: "6px 12px",
                   background: active ? "rgba(201,168,76,0.1)" : undefined,
                   borderColor: active ? "rgba(201,168,76,0.4)" : undefined,
-                  color: active ? "var(--accent)" : undefined,
-                  fontWeight: active ? 600 : undefined,
+                  color: active ? "var(--accent)" : undefined, fontWeight: active ? 600 : undefined,
                 }}
               >
                 {label}
@@ -526,55 +601,19 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Alert frequency */}
-      <div className="dash-section">
-        <h2 className="dash-section-h">Alert Frequency</h2>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }} role="group" aria-label="Alert frequency">
-          {["daily", "weekly"].map(f => (
-            <button
-              key={f}
-              onClick={() => { setFrequency(f); markDirty(); }}
-              aria-pressed={frequency === f}
-              className="dash-pill"
-              style={{
-                padding: "8px 20px", fontSize: "0.875rem",
-                background: frequency === f ? "rgba(201,168,76,0.1)" : undefined,
-                borderColor: frequency === f ? "rgba(201,168,76,0.4)" : undefined,
-                color: frequency === f ? "var(--accent)" : undefined,
-                fontWeight: frequency === f ? 700 : undefined,
-              }}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-        <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--app-muted)" }}>
-          {frequency === "daily"
-            ? "New matches appear in your dashboard every morning."
-            : "Dashboard updated weekly with a full summary every Monday."}
-        </p>
-      </div>
-
       {/* Save */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", paddingBottom: "2rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", paddingBottom: "1.5rem" }}>
         <button
           className="dash-btn dash-btn-primary"
           onClick={handleSave}
           disabled={saving || (!isDirty && !saved)}
           style={{ padding: "0.75rem 2rem", minHeight: 44, fontSize: "0.9375rem", gap: 6 }}
-          aria-label="Save profile changes"
         >
-          {saving ? (
-            <><RefreshCw size={14} style={{ animation: "spin 0.8s linear infinite" }} aria-hidden="true" /> Saving…</>
-          ) : saved ? (
-            <><CheckCircle size={14} aria-hidden="true" /> Saved!</>
-          ) : (
-            <><Save size={14} aria-hidden="true" /> Save Changes</>
-          )}
+          {saving ? <><RefreshCw size={14} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Changes</>}
         </button>
         {saved && (
-          <span role="status" style={{ color: "#4ADE80", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
-            <CheckCircle size={14} aria-hidden="true" /> Changes saved successfully
+          <span style={{ color: "#4ADE80", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
+            <CheckCircle size={14} /> Profile updated. New matches will reflect your changes after tonight's update.
           </span>
         )}
       </div>

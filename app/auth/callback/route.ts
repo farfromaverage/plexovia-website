@@ -39,19 +39,68 @@ export async function GET(request: Request) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // Safe check to setup trial if not done
-        const { data: profile } = await supabase.from('profiles').select('trial_ends_at').eq('id', user.id).single()
-        if (profile && !profile.trial_ends_at) {
+        // Check if profile exists
+        const { data: profile } = await supabase.from('profiles').select('id, onboarding_complete, trial_ends_at').eq('id', user.id).single()
+        
+        let isComplete = false;
+
+        if (!profile) {
+          // First time — create profile
           const trialEndsAt = new Date()
           trialEndsAt.setDate(trialEndsAt.getDate() + 7)
           
-          await supabase.from('profiles').update({
+          await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name,
+            avatar_url: user.user_metadata?.avatar_url,
             trial_ends_at: trialEndsAt.toISOString(),
-            active: true
-          }).eq('id', user.id)
+            onboarding_complete: false,
+            active: true,
+            created_at: new Date().toISOString(),
+            last_login_at: new Date().toISOString()
+          })
+        } else {
+          // Existing user
+          isComplete = !!profile.onboarding_complete;
+          const updates: any = { last_login_at: new Date().toISOString() }
+          
+          if (!profile.trial_ends_at) {
+            const trialEndsAt = new Date()
+            trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+            updates.trial_ends_at = trialEndsAt.toISOString()
+            updates.active = true
+          }
+          
+          await supabase.from('profiles').update(updates).eq('id', user.id)
         }
+
+        // Process invite token if exists
+        const inviteToken = cookieStore.get('plexovia_invite')?.value
+        if (inviteToken) {
+          const { data: invite } = await supabase.from('team_profiles').select('*').eq('invite_token', inviteToken).single()
+          if (invite && invite.status === 'pending') {
+            await supabase.from('team_profiles').update({
+              member_id: user.id,
+              status: 'active',
+              accepted_at: new Date().toISOString()
+            }).eq('invite_token', inviteToken)
+
+            // Log the action
+            await supabase.from('team_activity_log').insert({
+              org_id: invite.org_id,
+              actor_user_id: user.id,
+              actor_email: user.email,
+              action: 'invite_accepted',
+              target_email: invite.invited_email
+            })
+          }
+          cookieStore.delete('plexovia_invite')
+        }
+
+        const redirectUrl = isComplete ? `${origin}${next}` : `${origin}/dashboard/onboarding`
+        return NextResponse.redirect(redirectUrl)
       }
-      return NextResponse.redirect(`${origin}${next}`)
     }
   }
 

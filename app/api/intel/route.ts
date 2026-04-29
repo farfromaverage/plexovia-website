@@ -1,11 +1,3 @@
-/**
- * Plexovia — GET /api/intel
- * Server-side proxy to engine /api/user/intel.
- *
- * Returns an aggregated intelligence briefing combining signals,
- * forecasts, and win probabilities.
- */
-
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
@@ -35,13 +27,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `${engineUrl}/api/user/intel?user_id=${session.user.id}`,
+      `${engineUrl}/api/user/intel`,
       {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
       }
     )
 
@@ -54,10 +46,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data)
   } catch (err) {
     console.error('[/api/intel] Engine fetch failed:', err)
-    return NextResponse.json({
-      error: 'Engine unavailable',
-      briefing: { headline: 'Intelligence briefing unavailable', signals: { count: 0, items: [] }, forecasts: { count: 0, items: [] }, win_probability: { count: 0, items: [] } },
-      meta: {}
-    }, { status: 502 })
+    return NextResponse.json({ error: 'Engine unavailable', briefings: [] }, { status: 502 })
   }
 }

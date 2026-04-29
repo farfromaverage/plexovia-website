@@ -6,64 +6,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2,
-  Search, Plus, Tag, MapPin, FileText, Mail,
+  Search, Plus, Tag, MapPin, DollarSign, ShieldAlert
 } from "lucide-react";
 
 /* ─── Shared data and logic ───────────────────────────────────────── */
-const NAICS_LIST: { code: string; desc: string }[] = [
-  { code: "541511", desc: "Custom Computer Programming Services" },
-  { code: "541512", desc: "Computer Systems Design Services" },
-  { code: "541513", desc: "Computer Facilities Management Services" },
-  { code: "541519", desc: "Other Computer Related Services" },
-  { code: "541330", desc: "Engineering Services" },
-  { code: "541611", desc: "Administrative Management Consulting" },
-  { code: "541614", desc: "Process, Physical Distribution & Logistics Consulting" },
-  { code: "541620", desc: "Environmental Consulting Services" },
-  { code: "541690", desc: "Other Scientific & Technical Consulting" },
-  { code: "541715", desc: "R&D in Physical, Engineering & Life Sciences" },
-  { code: "541720", desc: "R&D in Social Sciences & Humanities" },
-  { code: "236220", desc: "Commercial & Institutional Building Construction" },
-  { code: "237310", desc: "Highway, Street & Bridge Construction" },
-  { code: "238210", desc: "Electrical Contractors" },
-  { code: "238220", desc: "Plumbing, Heating & AC Contractors" },
-  { code: "561110", desc: "Office Administrative Services" },
-  { code: "561210", desc: "Facilities Support Services" },
-  { code: "561320", desc: "Temporary Staffing Services" },
-  { code: "561499", desc: "All Other Business Support Services" },
-  { code: "561730", desc: "Landscaping Services" },
-  { code: "561740", desc: "Carpet & Upholstery Cleaning" },
-  { code: "561990", desc: "All Other Support Services" },
-  { code: "336411", desc: "Aircraft Manufacturing" },
-  { code: "336992", desc: "Military Armored Vehicle Manufacturing" },
-  { code: "332710", desc: "Machine Shops" },
-  { code: "333249", desc: "Other Industrial Machinery Manufacturing" },
-  { code: "334111", desc: "Electronic Computer Manufacturing" },
-  { code: "334511", desc: "Search & Navigation Equipment Manufacturing" },
-  { code: "517110", desc: "Wired Telecommunications Carriers" },
-  { code: "517311", desc: "Telephone Apparatus Manufacturing" },
-  { code: "518210", desc: "Data Processing & Hosting Services" },
-  { code: "519190", desc: "All Other Information Services" },
-  { code: "522390", desc: "Other Activities Related to Credit Intermediation" },
-  { code: "524114", desc: "Direct Health & Medical Insurance Carriers" },
-  { code: "541214", desc: "Payroll Services" },
-  { code: "541380", desc: "Testing Laboratories" },
-  { code: "541490", desc: "Other Specialized Design Services" },
-  { code: "541711", desc: "R&D in Biotechnology" },
-  { code: "562910", desc: "Remediation Services" },
-  { code: "611430", desc: "Professional & Management Development Training" },
-  { code: "621111", desc: "Offices of Physicians" },
-  { code: "622110", desc: "General Medical & Surgical Hospitals" },
-  { code: "722310", desc: "Food Service Contractors" },
-  { code: "811212", desc: "Computer & Office Machine Repair" },
-  { code: "923120", desc: "Administration of Public Health Programs" },
-  { code: "928110", desc: "National Security" },
-  { code: "928120", desc: "International Affairs" },
-  { code: "488190", desc: "Other Support Activities for Air Transportation" },
-  { code: "493110", desc: "General Warehousing & Storage" },
-];
-
-const NAICS_MAP = new Map(NAICS_LIST.map((n) => [n.code, n.desc]));
-
 const REGIONS: Record<string, string[]> = {
   "Northeast":     ["CT","MA","ME","NH","NJ","NY","PA","RI","VT"],
   "Mid-Atlantic":  ["DC","DE","MD","VA","WV"],
@@ -77,7 +23,7 @@ const REGIONS: Record<string, string[]> = {
 /* ─── Components ──────────────────────────────────────────────────── */
 
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["Core Targeting", "Location & Refinements", "Final Details"];
+  const labels = ["Basics", "NAICS & PSC Codes", "Location & Keywords"];
   return (
     <div className="mb-7">
       <div className="flex justify-between items-center mb-2">
@@ -94,56 +40,149 @@ function StepBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-function Step1({ selected, setSelected }: { selected: string[]; setSelected: (v: string[]) => void }) {
+// Step 1: Set-Asides & Value
+function Step1({
+  selected, setSelected, minValue, setMinValue, maxValue, setMaxValue
+}: {
+  selected: string[]; setSelected: (v: string[]) => void;
+  minValue: string; setMinValue: (v: string) => void;
+  maxValue: string; setMaxValue: (v: string) => void;
+}) {
+  const options = [
+    { code: "sba",    label: "Small Business" },
+    { code: "8a",     label: "8(a)" },
+    { code: "wosb",   label: "WOSB" },
+    { code: "sdvosb", label: "SDVOSB" },
+    { code: "hubzone",label: "HUBZone" },
+    { code: "vosb",   label: "VOSB" },
+    { code: "none",   label: "Unrestricted" },
+  ];
+
+  function toggle(code: string) {
+    if (code === "none") {
+      setSelected(["none"]);
+      return;
+    }
+    
+    let next = selected.includes(code) ? selected.filter(s => s !== code) : [...selected, code];
+    next = next.filter(s => s !== "none");
+    setSelected(next);
+  }
+
+  return (
+    <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Set-Asides & Value</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
+        Select your eligible socio-economic certifications and target contract value.
+      </p>
+
+      <div className="mb-6">
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-3 pl-0.5">
+          <span className="flex items-center gap-1.5"><ShieldAlert size={14} /> Certifications</span>
+        </label>
+        <div className="flex flex-wrap gap-2.5">
+          {options.map(({ code, label }) => {
+            const active = selected.includes(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                onClick={() => toggle(code)}
+                className={`px-4 py-2.5 rounded-full border text-[14px] font-medium transition-all ${
+                  active 
+                    ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
+                    : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-text)] hover:border-[var(--app-muted)]"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-3 pl-0.5">
+          <span className="flex items-center gap-1.5"><DollarSign size={14} /> Target Contract Value (Optional)</span>
+        </label>
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-faint)]">$</span>
+            <input
+              type="number"
+              value={minValue}
+              onChange={(e) => setMinValue(e.target.value)}
+              placeholder="Min value (e.g. 50000)"
+              className="w-full pl-7 pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+            />
+          </div>
+          <span className="text-[var(--app-muted)] font-medium">to</span>
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-faint)]">$</span>
+            <input
+              type="number"
+              value={maxValue}
+              onChange={(e) => setMaxValue(e.target.value)}
+              placeholder="Max value (e.g. 1000000)"
+              className="w-full pl-7 pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Step 2: NAICS & PSC
+function Step2({ 
+  naics, setNaics, pscCodes, setPscCodes, naicsList 
+}: { 
+  naics: string[]; setNaics: (v: string[]) => void; 
+  pscCodes: string[]; setPscCodes: (v: string[]) => void;
+  naicsList: {code: string; title: string}[] 
+}) {
   const [query, setQuery] = useState("");
+  const [pscInput, setPscInput] = useState("");
   const LIMIT = 999;
 
   const trimmed = query.trim();
-  const isCustom6 = /^\d{6}$/.test(trimmed) && !NAICS_MAP.has(trimmed);
-  const canAddCustom = isCustom6 && !selected.includes(trimmed) && selected.length < LIMIT;
+  const isCustom6 = /^\d{6}$/.test(trimmed) && !naicsList.some(n => n.code === trimmed);
+  const canAddCustom = isCustom6 && !naics.includes(trimmed) && naics.length < LIMIT;
 
-  const filtered = NAICS_LIST.filter(
-    (n) => n.code.startsWith(trimmed) || n.desc.toLowerCase().includes(trimmed.toLowerCase())
+  const filtered = naicsList.filter(
+    (n) => n.code.startsWith(trimmed) || n.title.toLowerCase().includes(trimmed.toLowerCase())
   ).slice(0, 10);
 
-  function toggle(code: string) {
-    if (selected.includes(code)) {
-      setSelected(selected.filter((c) => c !== code));
-    } else if (selected.length < LIMIT) {
-      setSelected([...selected, code]);
-    }
+  function toggleNaics(code: string) {
+    if (naics.includes(code)) setNaics(naics.filter((c) => c !== code));
+    else if (naics.length < LIMIT) setNaics([...naics, code]);
   }
 
-  function addCustom() {
-    if (canAddCustom) {
-      setSelected([...selected, trimmed]);
-      setQuery("");
+  function addPsc() {
+    const code = pscInput.trim().toUpperCase();
+    if (code && !pscCodes.includes(code) && pscCodes.length < LIMIT) {
+      setPscCodes([...pscCodes, code]);
+      setPscInput("");
     }
   }
 
   return (
-    <div className="flex flex-col h-full fade-in">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Which NAICS codes does your firm hold?</h2>
-      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-5">
-        Select from the list or type any 6-digit NAICS code directly.
-        You can add up to {LIMIT === 999 ? "unlimited" : LIMIT} codes.
-        These are the codes your company is registered under at SAM.gov.
+    <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Industry Codes</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-4">
+        Define your NAICS codes and Federal Supply/PSC Codes.
       </p>
 
-      {/* Selected chips */}
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {selected.map((code) => {
-            const desc = NAICS_MAP.get(code);
+      {/* Selected NAICS */}
+      {naics.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {naics.map((code) => {
+            const desc = naicsList.find(n => n.code === code)?.title;
             return (
               <span key={code} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[13px] text-[var(--accent)] font-mono">
                 {code}
-                {desc && (
-                  <span className="text-[11px] text-[var(--accent)]/70 font-sans tracking-tight">
-                    {desc.substring(0, 22)}{desc.length > 22 ? "…" : ""}
-                  </span>
-                )}
-                <button type="button" onClick={() => toggle(code)} className="text-[var(--accent)] hover:text-white transition-colors" aria-label={`Remove ${code}`}>
+                {desc && <span className="text-[11px] text-[var(--accent)]/70 font-sans tracking-tight">{desc.substring(0, 20)}…</span>}
+                <button type="button" onClick={() => toggleNaics(code)} className="text-[var(--accent)] hover:text-white transition-colors">
                   <X size={13} strokeWidth={2.5} />
                 </button>
               </span>
@@ -152,162 +191,133 @@ function Step1({ selected, setSelected }: { selected: string[]; setSelected: (v:
         </div>
       )}
 
-      {/* Search row */}
-      <div className="flex items-center gap-3 mb-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
+      {/* NAICS Search */}
+      <div className="relative mb-3 flex-shrink-0">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && canAddCustom) { toggleNaics(trimmed); setQuery(""); } }}
+          placeholder="Search NAICS codes..."
+          className="w-full pl-[38px] pr-4 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)]"
+        />
+      </div>
+
+      {query && (
+        <div className="flex-1 max-h-[120px] overflow-y-auto flex flex-col gap-1.5 pr-1 custom-scroll mb-4">
+          {canAddCustom && (
+            <button type="button" onClick={() => { toggleNaics(trimmed); setQuery(""); }} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-dashed border-[var(--accent)]/50 text-left">
+              <Plus size={14} className="text-[var(--accent)] shrink-0" />
+              <span className="font-mono text-[13px] text-[var(--accent)] font-semibold">{trimmed} (Custom)</span>
+            </button>
+          )}
+          {filtered.map((n) => {
+            const isSelected = naics.includes(n.code);
+            return (
+              <button key={n.code} type="button" onClick={() => toggleNaics(n.code)} className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all text-left gap-2 ${isSelected ? "bg-[var(--accent-bg-app)] border-[var(--accent)]/50" : "bg-[var(--app-surface-2)] border-[var(--app-border)]"}`}>
+                <div className="flex-1 min-w-0 pr-2">
+                  <span className={`font-mono text-[13px] mr-2 ${isSelected ? "text-[var(--accent)] font-semibold" : "text-[var(--app-text)]"}`}>{n.code}</span>
+                  <span className={`text-[12px] truncate ${isSelected ? "text-[var(--accent)]/80" : "text-[var(--app-muted)]"}`}>{n.title}</span>
+                </div>
+                {isSelected && <Check size={14} className="text-[var(--accent)] shrink-0" strokeWidth={2.5} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* PSC Codes */}
+      <div className="mt-4 border-t border-[var(--app-border)] pt-4 flex-shrink-0">
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
+          <span className="flex items-center gap-1.5">PSC / FSC Codes</span>
+        </label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {pscCodes.map((code) => (
+            <span key={code} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-md text-[13px] font-mono text-[var(--app-text)]">
+              {code}
+              <button type="button" onClick={() => setPscCodes(pscCodes.filter(c => c !== code))} className="text-[var(--app-muted)] hover:text-red-400"><X size={12}/></button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
           <input
             type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") addCustom(); }}
-            placeholder="Search by code or desc, or type 6-digit code…"
-            className="w-full pl-[38px] pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-            autoComplete="off"
+            value={pscInput}
+            onChange={(e) => setPscInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") addPsc(); }}
+            placeholder="e.g. D302, 1005"
+            className="flex-1 px-3 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-lg text-[var(--app-text)] text-[13px] outline-none focus:border-[var(--accent)] uppercase"
           />
+          <button type="button" onClick={addPsc} className="px-4 py-2 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-lg text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">Add</button>
         </div>
-        <span className={`text-[13px] font-mono whitespace-nowrap min-w-[36px] text-right ${selected.length >= LIMIT ? "text-amber-500 font-bold" : "text-[var(--app-muted)]"}`}>
-          {selected.length}/{LIMIT === 999 ? "∞" : LIMIT}
-        </span>
       </div>
-
-      {/* Results */}
-      <div className="flex-1 max-h-[290px] overflow-y-auto flex flex-col gap-1.5 pr-1 custom-scroll">
-        {canAddCustom && (
-          <button
-            type="button"
-            onClick={addCustom}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl border border-dashed border-[var(--accent)]/50 bg-[var(--accent-bg-app)] hover:bg-[var(--accent)]/20 hover:border-[var(--accent)] transition-colors text-left"
-          >
-            <Plus size={16} className="text-[var(--accent)] shrink-0" />
-            <div>
-              <span className="font-mono text-[14px] text-[var(--accent)] mr-2 font-semibold">{trimmed}</span>
-              <span className="text-[13px] text-[var(--app-muted)]">Add this NAICS code directly</span>
-            </div>
-          </button>
-        )}
-
-        {filtered.map((n) => {
-          const isSelected = selected.includes(n.code);
-          const isDisabled = !isSelected && selected.length >= LIMIT;
-          return (
-            <button
-              key={n.code}
-              type="button"
-              onClick={() => toggle(n.code)}
-              disabled={isDisabled}
-              className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl border transition-all text-left gap-2 ${
-                isSelected 
-                  ? "bg-[var(--accent-bg-app)] border-[var(--accent)]/50" 
-                  : "bg-[var(--app-surface-2)] border-[var(--app-border)] hover:border-[var(--app-muted)]"
-              } ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <div className="flex-1 min-w-0 pr-2">
-                <span className={`font-mono text-[13.5px] mr-2.5 ${isSelected ? "text-[var(--accent)] font-semibold" : "text-[var(--app-text)]"}`}>
-                  {n.code}
-                </span>
-                <span className={`text-[13.5px] truncate ${isSelected ? "text-[var(--accent)]/80" : "text-[var(--app-muted)]"}`}>
-                  {n.desc}
-                </span>
-              </div>
-              {isSelected && <Check size={16} className="text-[var(--accent)] shrink-0" strokeWidth={2.5} />}
-            </button>
-          );
-        })}
-
-        {filtered.length === 0 && !canAddCustom && trimmed.length > 0 && (
-          <div className="py-5 text-center">
-            <p className="text-[14px] text-[var(--app-muted)]">No codes match your search.</p>
-            {/^\d+$/.test(trimmed) && trimmed.length < 6 && (
-              <p className="text-[13px] text-[var(--app-faint)] mt-1.5">
-                NAICS codes are 6 digits. Keep typing ({6 - trimmed.length} more)
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {selected.length >= LIMIT && (
-        <p className="text-[13px] text-amber-500 font-medium mt-3">
-          Limit reached ({selected.length}/{LIMIT === 999 ? "∞" : LIMIT}). Remove a code to add another.
-        </p>
-      )}
     </div>
   );
 }
 
-function Step2({
-  states, setStates, keywords, setKeywords, setAsides, setSetAsides,
+// Step 3: Location & Keywords
+function Step3({
+  states, setStates, keywords, setKeywords, excludeKeywords, setExcludeKeywords
 }: {
   states: string[]; setStates: (v: string[]) => void;
   keywords: string[]; setKeywords: (v: string[]) => void;
-  setAsides: string[]; setSetAsides: (v: string[]) => void;
+  excludeKeywords: string[]; setExcludeKeywords: (v: string[]) => void;
 }) {
   const [input, setInput] = useState("");
+  const [exInput, setExInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const keywordLimit = 999;
-  const stateLimit = 50;
+  const exRef = useRef<HTMLInputElement>(null);
+  const limit = 999;
 
   function toggleState(state: string) {
-    if (states.includes(state)) {
-      setStates(states.filter((s) => s !== state));
-    } else if (states.length < stateLimit) {
-      setStates([...states, state]);
-    }
+    if (states.includes(state)) setStates(states.filter((s) => s !== state));
+    else if (states.length < 50) setStates([...states, state]);
   }
 
-  function clean(raw: string): string {
-    return raw.trim().replace(/^["'\s]+|["'.,;\s]+$/g, "").trim().toLowerCase();
-  }
-
-  function flush(source?: string) {
-    const src = (source ?? input).trim();
-    if (!src) return;
-    const parts = src.split(",").map(clean).filter(Boolean);
-    const next = [...keywords];
+  function flush(type: 'pos' | 'neg') {
+    const isPos = type === 'pos';
+    const src = isPos ? input : exInput;
+    const target = isPos ? keywords : excludeKeywords;
+    const setter = isPos ? setKeywords : setExcludeKeywords;
+    
+    const parts = src.split(",").map(k => k.trim().replace(/^["'\s]+|["'.,;\s]+$/g, "").trim().toLowerCase()).filter(Boolean);
+    const next = [...target];
     let changed = false;
     for (const val of parts) {
-      if (val && !next.map((k) => k.toLowerCase()).includes(val) && next.length < keywordLimit) {
+      if (val && !next.map(k => k.toLowerCase()).includes(val) && next.length < limit) {
         next.push(val);
         changed = true;
       }
     }
-    if (changed) setKeywords(next);
-    setInput("");
+    if (changed) setter(next);
+    if (isPos) setInput(""); else setExInput("");
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === "Tab") {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, type: 'pos' | 'neg') {
+    if (e.key === "Enter" || e.key === "Tab" || e.key === ",") {
       e.preventDefault();
-      flush();
-    } else if (e.key === ",") {
-      e.preventDefault();
-      flush();
-    } else if (e.key === "Backspace" && !input && keywords.length > 0) {
-      setKeywords(keywords.slice(0, -1));
+      flush(type);
+    } else if (e.key === "Backspace") {
+      if (type === 'pos' && !input && keywords.length > 0) setKeywords(keywords.slice(0, -1));
+      if (type === 'neg' && !exInput && excludeKeywords.length > 0) setExcludeKeywords(excludeKeywords.slice(0, -1));
     }
   }
 
   return (
     <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Location & Refinements</h2>
-      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
-        Narrow your matches down by location, custom keywords, and set-asides to ensure high-quality accuracy.
-      </p>
-
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Location & Keywords</h2>
+      
       {/* Target States */}
-      <div className="mb-6">
+      <div className="mb-5 mt-2">
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
           <span className="flex items-center gap-1.5"><MapPin size={14} /> State Monitoring</span>
-          <span className={`font-mono text-[12px] ${states.length >= stateLimit ? "text-amber-500 font-bold" : "text-[var(--app-faint)]"}`}>
-            {states.length}/{stateLimit}
-          </span>
         </label>
-        <div className="p-4 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-xl max-h-[180px] overflow-y-auto custom-scroll">
+        <div className="p-3 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-xl max-h-[110px] overflow-y-auto custom-scroll">
           {Object.entries(REGIONS).map(([region, regionStates]) => (
-            <div key={region} className="mb-3">
-              <p className="text-[11px] font-bold text-[var(--app-faint)] uppercase tracking-wider mb-2">{region}</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div key={region} className="mb-2 last:mb-0 flex items-start gap-2">
+              <p className="text-[10px] font-bold text-[var(--app-faint)] uppercase tracking-wider w-[80px] shrink-0 pt-1">{region}</p>
+              <div className="flex flex-wrap gap-1">
                 {regionStates.map((state) => {
                   const active = states.includes(state);
                   return (
@@ -315,12 +325,7 @@ function Step2({
                       key={state}
                       type="button"
                       onClick={() => toggleState(state)}
-                      disabled={!active && states.length >= stateLimit}
-                      className={`px-2.5 py-1 rounded border text-[12px] font-medium transition-all ${
-                        active 
-                          ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)]" 
-                          : "bg-transparent border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
-                      } ${!active && states.length >= stateLimit ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                      className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${active ? "bg-[var(--accent-bg-app)] border border-[var(--accent)] text-[var(--accent)]" : "bg-transparent border border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"}`}
                     >
                       {state}
                     </button>
@@ -332,115 +337,37 @@ function Step2({
         </div>
       </div>
 
-      {/* Keywords input */}
-      <div className="mb-6">
-        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
-          <span className="flex items-center gap-1.5"><Tag size={14} /> Custom Keywords</span>
-          <span className={`font-mono text-[12px] ${keywordLimit < 999 && keywords.length >= keywordLimit ? "text-amber-500 font-bold" : "text-[var(--app-faint)]"}`}>
-            {keywords.length}/{keywordLimit === 999 ? "∞" : keywordLimit}
-          </span>
+      {/* Positive Keywords */}
+      <div className="mb-4">
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-1 pl-0.5">
+          <span className="flex items-center gap-1.5"><Tag size={14} /> Positive Keywords</span>
         </label>
-        <div
-          className="min-h-[80px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] flex-col rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--accent)]"
-          onClick={() => inputRef.current?.focus()}
-        >
+        <p className="text-[12px] text-[var(--app-faint)] mb-2 pl-0.5">Do NOT use generic words like "services" or "management". Be highly specific.</p>
+        <div className="min-h-[60px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--accent)]" onClick={() => inputRef.current?.focus()}>
           {keywords.map((kw) => (
-            <span key={kw} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[12px] text-[var(--accent)]">
+            <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[12px] text-[var(--accent)]">
               {kw}
-              <button
-                type="button"
-                onClick={() => setKeywords(keywords.filter((k) => k !== kw))}
-                className="text-[var(--accent)] hover:text-white transition-colors"
-                aria-label={`Remove ${kw}`}
-              >
-                <X size={12} strokeWidth={2.5} />
-              </button>
+              <button type="button" onClick={() => setKeywords(keywords.filter((k) => k !== kw))} className="text-[var(--accent)] hover:text-white"><X size={12} strokeWidth={2.5} /></button>
             </span>
           ))}
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={() => flush()}
-            placeholder={keywords.length === 0 ? "e.g. cybersecurity, cloud..." : ""}
-            className="flex-1 min-w-[140px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1"
-          />
+          <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'pos')} onBlur={() => flush('pos')} placeholder={keywords.length === 0 ? "e.g. cybersecurity, hvac..." : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
         </div>
       </div>
 
-      {/* Set-aside preferences */}
+      {/* Negative Keywords */}
       <div>
-        <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
-          <FileText size={14} /> Set-Aside Preferences
+        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-1 pl-0.5">
+          <span className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-red-400/70" /> Negative Keywords</span>
         </label>
-        <div className="flex flex-wrap gap-2">
-          {([
-            { code: "8a",     label: "8(a)" },
-            { code: "wosb",   label: "WOSB" },
-            { code: "sdvosb", label: "SDVOSB" },
-            { code: "hubzone",label: "HUBZone" },
-            { code: "vosb",   label: "VOSB" },
-            { code: "sba",    label: "Small Business" },
-          ] as const).map(({ code, label }) => {
-            const active = setAsides.includes(code);
-            return (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setSetAsides(active ? setAsides.filter(s => s !== code) : [...setAsides, code])}
-                className={`px-3 py-1.5 rounded-full border text-[13px] font-medium transition-all ${
-                  active 
-                    ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
-                    : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-muted)] hover:border-[var(--app-muted)]"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Step3({ email, setEmail, company, setCompany }: { email: string; setEmail: (v: string) => void; company: string; setCompany: (v: string) => void; }) {
-  return (
-    <div className="flex flex-col h-full fade-in">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Final Details</h2>
-      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
-        Your dashboard updates every morning with scored federal and state contract matches. We will send optional email reports to this address.
-      </p>
-
-      <div className="mb-5">
-        <label htmlFor="pref-email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Notification Email</label>
-        <div className="relative">
-          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
-          <input
-            id="pref-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
-            required
-            className="w-full pl-[38px] pr-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Company Name <span className="text-[11px] text-[var(--app-faint)] uppercase tracking-widest ml-1">(Optional)</span></label>
-        <div className="relative">
-          <FileText size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
-          <input
-            type="text"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="Your registered business name"
-            className="w-full pl-[38px] pr-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-          />
+        <p className="text-[12px] text-[var(--app-faint)] mb-2 pl-0.5">Exclude contracts containing these words (e.g. hardware, cleaning).</p>
+        <div className="min-h-[60px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-red-500/50" onClick={() => exRef.current?.focus()}>
+          {excludeKeywords.map((kw) => (
+            <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-[12px] text-red-400">
+              {kw}
+              <button type="button" onClick={() => setExcludeKeywords(excludeKeywords.filter((k) => k !== kw))} className="text-red-400 hover:text-red-300"><X size={12} strokeWidth={2.5} /></button>
+            </span>
+          ))}
+          <input ref={exRef} type="text" value={exInput} onChange={(e) => setExInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'neg')} onBlur={() => flush('neg')} placeholder={excludeKeywords.length === 0 ? "Exclude words..." : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
         </div>
       </div>
     </div>
@@ -451,42 +378,53 @@ function Step3({ email, setEmail, company, setCompany }: { email: string; setEma
 export default function OnboardingPage() {
   const router = useRouter();
   const [step,     setStep]     = useState(1);
+  const [naicsList, setNaicsList] = useState<{code: string; title: string}[]>([]);
+  
   const [naics,    setNaics]    = useState<string[]>([]);
+  const [pscCodes, setPscCodes] = useState<string[]>([]);
   const [states,   setStates]   = useState<string[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [setAsides, setSetAsides] = useState<string[]>([]);
-  const [company,  setCompany]  = useState("");
-  const [email,    setEmail]    = useState("");
+  const [excludeKeywords, setExcludeKeywords] = useState<string[]>([]);
+  const [setAsides, setSetAsides] = useState<string[]>(["sba"]);
+  const [minValue, setMinValue] = useState<string>("");
+  const [maxValue, setMaxValue] = useState<string>("");
+  
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
 
   useEffect(() => {
+    fetch("/data/naics-2022.json").then(r => r.json()).then(setNaicsList).catch(() => {});
+
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("naics_codes, states, keywords, company_name, plan, set_aside_preferences, email")
+        .select("naics_codes, states, keywords, set_aside_preferences, psc_codes, exclude_keywords, min_value, max_value")
         .eq("id", user.id)
         .single();
       if (!data) return;
-      if (data.email)                setEmail(data.email);
-      else if (user.email)           setEmail(user.email);
       if (data.naics_codes?.length)  setNaics(data.naics_codes);
       if (data.states?.length)       setStates(data.states);
-      if (data.company_name)         setCompany(data.company_name);
       if (data.set_aside_preferences?.length) setSetAsides(data.set_aside_preferences);
+      if (data.psc_codes?.length)    setPscCodes(data.psc_codes);
+      if (data.min_value !== null)   setMinValue(String(data.min_value));
+      if (data.max_value !== null)   setMaxValue(String(data.max_value));
       
-      if (data.keywords?.length) {
+      const parseList = (rawList: any) => {
+        if (!rawList?.length) return [];
         const cleaned: string[] = [];
-        for (const raw of data.keywords) {
+        for (const raw of rawList) {
           const parts = String(raw).split(",").map((p: string) => p.trim().replace(/^["'\s]+|["'.,;\s]+$/g, "").trim().toLowerCase()).filter(Boolean);
           for (const part of parts) {
             if (part && !cleaned.includes(part)) cleaned.push(part);
           }
         }
-        setKeywords(cleaned);
-      }
+        return cleaned;
+      };
+      
+      setKeywords(parseList(data.keywords));
+      setExcludeKeywords(parseList(data.exclude_keywords));
     })();
   }, []);
 
@@ -496,23 +434,39 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
 
+    const finalSetAsides = setAsides.includes("none") ? [] : setAsides;
+
     const { error: err } = await supabase.from("profiles").update({
       naics_codes:             naics,
+      psc_codes:               pscCodes,
       states:                  states,
       keywords:                keywords,
-      set_aside_preferences:   setAsides,
-      company_name:            company.trim() || null,
-      email:                   email.trim() || user.email,
+      exclude_keywords:        excludeKeywords,
+      set_aside_preferences:   finalSetAsides,
+      min_value:               minValue ? parseInt(minValue, 10) : null,
+      max_value:               maxValue ? parseInt(maxValue, 10) : null,
       onboarding_complete:     true,
     }).eq("id", user.id);
 
     setSaving(false);
     if (err) { setError("Could not save your preferences. Please try again."); return; }
+
+    fetch("/api/onboarding/first-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ naics_codes: naics, states: states })
+    }).catch(e => console.error("Trigger error:", e));
+
+    fetch("/api/forecasts/trigger", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ naics_codes: naics })
+    }).catch(e => console.error("Forecast trigger error:", e));
+
     router.push("/dashboard");
   }
 
-  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-  const canNext = step === 1 ? naics.length > 0 : step === 2 ? true : isValidEmail(email);
+  const canNext = step === 1 ? true : step === 2 ? (naics.length > 0 || pscCodes.length > 0) : true;
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative">
@@ -526,9 +480,9 @@ export default function OnboardingPage() {
         <StepBar current={step} total={3} />
 
         <div className="flex-1 mb-8 overflow-hidden h-[340px]">
-          {step === 1 && <Step1 selected={naics}    setSelected={setNaics} />}
-          {step === 2 && <Step2 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} setAsides={setAsides} setSetAsides={setSetAsides} />}
-          {step === 3 && <Step3 email={email}  setEmail={setEmail} company={company} setCompany={setCompany} />}
+          {step === 1 && <Step1 selected={setAsides} setSelected={setSetAsides} minValue={minValue} setMinValue={setMinValue} maxValue={maxValue} setMaxValue={setMaxValue} />}
+          {step === 2 && <Step2 naics={naics} setNaics={setNaics} pscCodes={pscCodes} setPscCodes={setPscCodes} naicsList={naicsList} />}
+          {step === 3 && <Step3 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} excludeKeywords={excludeKeywords} setExcludeKeywords={setExcludeKeywords} />}
         </div>
 
         {error && (
@@ -537,57 +491,21 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex gap-3 border-t border-[var(--app-border)] pt-6 mt-auto">
           {step > 1 && (
-            <button 
-              type="button" 
-              onClick={() => setStep((s) => s - 1)} 
-              className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] text-[var(--app-muted)] font-medium text-[15px] rounded-xl transition-colors hover:text-[var(--app-text)] hover:border-[var(--app-muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] outline-none"
-            >
+            <button type="button" onClick={() => setStep((s) => s - 1)} className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] text-[var(--app-muted)] font-medium text-[15px] rounded-xl transition-colors hover:text-[var(--app-text)] hover:border-[var(--app-muted)] outline-none">
               <ArrowLeft size={16} /> Back
             </button>
           )}
 
           {step < 3 ? (
-            <button
-              type="button"
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!canNext}
-              className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${
-                canNext 
-                  ? "bg-[var(--accent)] hover:bg-[var(--accent-lt)]" 
-                  : "bg-[var(--accent)]/50 cursor-not-allowed"
-              }`}
-            >
+            <button type="button" onClick={() => setStep((s) => s + 1)} disabled={!canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${canNext ? "bg-[var(--accent)] hover:bg-[var(--accent-lt)]" : "bg-[var(--accent)]/50 cursor-not-allowed"}`}>
               Next <ArrowRight size={17} strokeWidth={2.5}/>
             </button>
           ) : (
-            <div className="flex flex-col flex-1 gap-2">
-              <button
-                type="button"
-                onClick={handleFinish}
-                disabled={saving || !canNext}
-                className={`flex items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${
-                  saving || !canNext
-                    ? "bg-[var(--accent)]/70 cursor-not-allowed" 
-                    : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"
-                }`}
-              >
-                {saving
-                  ? <><Loader2 size={18} className="animate-spin" /> Saving...</>
-                  : <><Check size={17} strokeWidth={2.5} /> Go to Dashboard</>
-                }
-              </button>
-              <button 
-                type="button" 
-                onClick={handleFinish} 
-                disabled={saving} 
-                className="text-center text-[13px] text-[var(--app-muted)] hover:text-[var(--app-text)] transition-colors py-1 outline-none focus-visible:text-[var(--accent)]"
-              >
-                Skip for now
-              </button>
-            </div>
+            <button type="button" onClick={handleFinish} disabled={saving || !canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${saving || !canNext ? "bg-[var(--accent)]/70 cursor-not-allowed" : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"}`}>
+              {saving ? <><Loader2 size={18} className="animate-spin" /> Finishing...</> : <><Check size={17} strokeWidth={2.5} /> Finish & Build Dashboard</>}
+            </button>
           )}
         </div>
       </div>

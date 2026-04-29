@@ -52,7 +52,7 @@ export async function middleware(request: NextRequest) {
   if (isDashboard && user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('plan, active, trial_ends_at, naics_codes, accepted_tos')
+      .select('plan, active, trial_ends_at, onboarding_complete, accepted_tos')
       .eq('id', user.id)
       .single()
 
@@ -77,9 +77,9 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // 3. Check if onboarding is complete (naics_codes array is empty or null)
+      // 3. Check if onboarding is complete
       if (!isOnboarding && request.nextUrl.pathname !== '/auth/terms') {
-        if (!profile.naics_codes || profile.naics_codes.length === 0) {
+        if (!profile.onboarding_complete) {
           const url = request.nextUrl.clone()
           url.pathname = '/dashboard/onboarding'
           return NextResponse.redirect(url)

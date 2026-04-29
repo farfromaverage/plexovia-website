@@ -48,12 +48,12 @@ export default function PricingPage() {
     {
       id: "pfaq-2",
       q: "What if I need to add team members?",
-      a: "Each seat is $249 per month (or $1,999/year). You can add or remove seats at any time from your account settings. For teams of 10 or more, contact us for volume pricing at enterprise@plexovia.com.",
+      a: "Each seat is $249 per month (or $2,190/year). You can add or remove seats at any time from your account settings. For teams of 10 or more, contact us for volume pricing at enterprise@plexovia.com.",
     },
     {
       id: "pfaq-3",
       q: "What payment methods do you accept?",
-      a: "We accept all major credit cards (Visa, Mastercard, American Express), debit cards, and ACH bank transfers for annual plans. All payments are processed through Stripe. We can also accommodate purchase orders for enterprise accounts.",
+      a: "We accept all major credit cards (Visa, Mastercard, American Express), debit cards, and ACH bank transfers for annual plans. All payments are processed through LemonSqueezy. We can also accommodate purchase orders for enterprise accounts.",
     },
     {
       id: "pfaq-4",

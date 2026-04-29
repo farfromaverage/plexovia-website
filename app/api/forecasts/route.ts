@@ -100,16 +100,33 @@ export async function GET() {
     // 3. Query forecasts — filter by user's NAICS if set, otherwise show all
     let forecastQuery = supabase
       .from("agency_forecasts")
-      .select("id, naics_code, agency_name, forecast_type, predicted_array, confidence_score, insight_text, predicted_dates, updated_at")
+      .select("id, naics_code, agency_name, forecast_type, predicted_array, confidence_score, insight_text, predicted_dates, run_date, updated_at")
       .order("confidence_score", { ascending: false });
 
     if (userNaics.length > 0) {
       forecastQuery = forecastQuery.in("naics_code", userNaics);
     }
 
-    const { data: forecasts, error: fErr } = await forecastQuery.limit(50);
+    const { data: forecasts, error: fErr } = await forecastQuery.limit(500);
     if (fErr) throw fErr;
     if (!forecasts || forecasts.length === 0) {
+      // Check if forecasts are being generated
+      const { data: statusCheck } = await supabase
+        .from("profiles")
+        .select("forecast_coldstart_status")
+        .eq("id", session.user.id)
+        .single();
+
+      if (statusCheck?.forecast_coldstart_status === "pending" || 
+          statusCheck?.forecast_coldstart_status === "running") {
+        return NextResponse.json({
+          forecasts: [],
+          status: "generating",
+          message: "Your intelligence forecasts are being generated. This usually takes 10–20 minutes.",
+          model: "TimesFM 2.5",
+        });
+      }
+
       return NextResponse.json({
         forecasts: [],
         generated_at: null,
@@ -122,17 +139,14 @@ export async function GET() {
     const forecastNaics = [...new Set(forecasts.map(f => f.naics_code))];
     const { data: historicals } = await supabase
       .from("historical_volumes")
-      .select("naics_code, agency_name, volume_array, month_labels")
+      .select("naics_code, agency_name, volume_array, setaside_counts, single_bidder_counts, micropurchase_counts, month_labels")
       .in("naics_code", forecastNaics);
 
     // Build lookup: "naics_code|agency_name" -> historical data
-    const histLookup = new Map<string, { volume_array: number[]; month_labels: string[] }>();
+    const histLookup = new Map<string, any>();
     if (historicals) {
       for (const h of historicals) {
-        histLookup.set(`${h.naics_code}|${h.agency_name}`, {
-          volume_array: h.volume_array || [],
-          month_labels: h.month_labels || [],
-        });
+        histLookup.set(`${h.naics_code}|${h.agency_name}`, h);
       }
     }
 
@@ -148,9 +162,14 @@ export async function GET() {
 
       const dataPoints: { period: string; historical?: number; projected?: number }[] = [];
 
-      if (hist && hist.volume_array.length > 0 && hist.month_labels.length > 0) {
+      if (hist && hist.month_labels && hist.month_labels.length > 0) {
+        let histArray = hist.volume_array || [];
+        if (f.forecast_type === "set_aside_depletion") histArray = hist.setaside_counts || [];
+        else if (f.forecast_type === "zero_competition") histArray = hist.single_bidder_counts || [];
+        else if (f.forecast_type === "micropurchase_surge") histArray = hist.micropurchase_counts || [];
+
         // Last 6 months of historical
-        const histSlice = hist.volume_array.slice(-6);
+        const histSlice = histArray.slice(-6);
         const labelSlice = hist.month_labels.slice(-6);
         for (let i = 0; i < histSlice.length; i++) {
           const label = labelSlice[i];
@@ -189,14 +208,13 @@ export async function GET() {
 
       return {
         id: f.id,
-        naics_code: f.naics_code,
         naics_label: getNaicsLabel(f.naics_code),
-        prediction_type: trend.type,
+        prediction_type: "renewal_radar",
         confidence: mapConfidence(conf),
         percent_change: Math.round(trend.pct * 10) / 10,
-        insight_text: f.insight_text || "",
+        plain_english_summary: f.insight_text || "",
         data_points: dataPoints,
-        generated_at: f.updated_at || null,
+        run_date: f.run_date || f.updated_at || null,
       };
     });
 

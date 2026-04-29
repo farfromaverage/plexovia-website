@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import DashboardNav from "./components/DashboardNav";
 import "./dashboard.css";
 
+import PaymentFailedBanner from "./components/PaymentFailedBanner";
+
 export const metadata: Metadata = {
   title: {
     template: "%s | Plexovia Dashboard",
@@ -44,6 +46,7 @@ export default function DashboardLayout({
         }}
         className="dash-content-wrapper"
       >
+        <PaymentFailedBanner />
         <main
           id="dashboard-main"
           tabIndex={-1}

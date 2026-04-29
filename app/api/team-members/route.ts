@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { getTeamRole, canManageTeam } from "@/lib/team";
 
 const RAILWAY_URL = process.env.RAILWAY_API_URL || "http://127.0.0.1:8000";
 
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const role = await getTeamRole(supabase, session.user.id);
+  if (!canManageTeam(role)) {
+    return NextResponse.json({ error: "Forbidden: Only admins can manage the team" }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

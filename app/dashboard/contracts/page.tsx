@@ -105,10 +105,14 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 const PER_PAGE = 15;
 
+import { supabase } from "@/lib/supabase";
+
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function ContractsPage() {
   const [contracts,  setContracts]  = useState<ContractRow[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [isColdStart,setIsColdStart]= useState(false);
+  const [naicsCodes, setNaicsCodes] = useState<string[]>([]);
   const [error,      setError]      = useState(false);
   const [total,      setTotal]      = useState(0);
   const [page,       setPage]       = useState(1);
@@ -118,30 +122,63 @@ export default function ContractsPage() {
   const [sortBy,     setSortBy]     = useState<SortKey>("score");
   const [sortOpen,   setSortOpen]   = useState(false);
 
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('profiles').select('naics_codes').single();
+      if (data?.naics_codes) setNaicsCodes(data.naics_codes);
+    })();
+  }, []);
+
+  const fetchMatches = async (p: number, s: number, q: string, sort: SortKey) => {
+    const params = new URLSearchParams({
+      page: String(p),
+      per_page: String(PER_PAGE),
+      min_score: String(s),
+      sort: sort,
+    });
+    if (q) params.set("search", q);
+    const res = await fetch(`/api/user-matches?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!isColdStart) setLoading(true);
     setError(false);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        per_page: String(PER_PAGE),
-        min_score: String(minScore),
-        sort: sortBy,
-      });
-      if (search) params.set("search", search);
-      const res = await fetch(`/api/user-matches?${params.toString()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setContracts((json.matches || []).map(mapRow));
+      const json = await fetchMatches(page, minScore, search, sortBy);
+      const rows = (json.matches || []).map(mapRow);
+      setContracts(rows);
       setTotal(json.pagination?.total || 0);
+
+      // Handle cold start polling if totally empty and no filters applied
+      if (rows.length === 0 && minScore === 0 && search === "" && page === 1) {
+        setIsColdStart(true);
+        const interval = setInterval(async () => {
+          try {
+            const refreshed = await fetchMatches(1, 0, "", "score");
+            if (refreshed.matches?.length > 0) {
+              setContracts(refreshed.matches.map(mapRow));
+              setTotal(refreshed.pagination?.total || 0);
+              setIsColdStart(false);
+              clearInterval(interval);
+            }
+          } catch (e) {
+            console.error("Polling error", e);
+          }
+        }, 30_000);
+        setTimeout(() => clearInterval(interval), 600_000);
+      } else {
+        setIsColdStart(false);
+      }
     } catch {
       setError(true);
     } finally {
-      setLoading(false);
+      if (!isColdStart) setLoading(false);
     }
-  }, [page, minScore, search, sortBy]);
+  }, [page, minScore, search, sortBy, isColdStart]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [page, minScore, search, sortBy]); // Removed load from dependency to prevent polling loop re-triggers if not handled carefully, actually better to just have it run once per dependency change.
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
@@ -310,7 +347,13 @@ export default function ContractsPage() {
         </div>
 
         {/* Content */}
-        {loading ? (
+        {isColdStart ? (
+          <EmptyState
+            icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />}
+            title="Matching contracts to your profile now"
+            message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page will update automatically — no refresh needed.`}
+          />
+        ) : loading ? (
           <SkeletonRows rows={6} columns={6} columnWidths="80px 1fr 140px 80px 110px 110px" />
         ) : error ? (
           <ErrorState
@@ -335,7 +378,7 @@ export default function ContractsPage() {
       </div>
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
+      {!loading && !isColdStart && totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
           <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
             Page {page} of {totalPages} · {total.toLocaleString()} total matches

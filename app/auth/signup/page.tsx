@@ -92,6 +92,17 @@ export default function SignupPage() {
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState(false);
 
+  function getPwStrength(p: string) {
+    if (!p) return -1;
+    let score = 0;
+    if (p.length > 7) score += 1;
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) score += 1;
+    if (/\d/.test(p)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(p)) score += 1;
+    return score;
+  }
+  const pwScore = getPwStrength(pw);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -226,6 +237,28 @@ export default function SignupPage() {
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            
+            {pwScore >= 0 && (
+              <div className="mt-2 flex gap-1">
+                {[...Array(4)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                      pwScore > i 
+                        ? (pwScore < 2 ? "bg-red-500" : pwScore < 4 ? "bg-amber-500" : "bg-green-500") 
+                        : "bg-[var(--app-border)]"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            {pwScore >= 0 && (
+              <p className={`text-[11px] font-medium mt-1.5 ${
+                pwScore < 2 ? "text-red-500" : pwScore < 4 ? "text-amber-500" : "text-green-500"
+              }`}>
+                {pwScore < 2 ? "Weak" : pwScore < 4 ? "Fair" : "Strong password"}
+              </p>
+            )}
           </div>
 
           {/* Terms & Conditions Checkbox */}

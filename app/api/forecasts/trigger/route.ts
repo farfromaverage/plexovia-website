@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
 
   const supabase = createServerClient(
@@ -21,31 +21,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const payload = await request.json()
+
   const engineUrl = process.env.RAILWAY_API_URL
     || process.env.NEXT_PUBLIC_RAILWAY_API_URL
     || 'https://plexovia-engine-production.up.railway.app'
+  const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY || ''
 
   try {
-    const res = await fetch(
-      `${engineUrl}/api/user/win-probability`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(8000),
-      }
-    )
+    // Fire and forget
+    fetch(`${engineUrl}/api/internal/forecasts/trigger`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-key': internalKey,
+      },
+      body: JSON.stringify({
+        user_id: session.user.id,
+        naics_codes: payload.naics_codes || []
+      })
+    }).catch(e => console.error('Forecast trigger failed', e))
 
-    if (!res.ok) {
-      const text = await res.text()
-      return NextResponse.json({ error: `Engine error: ${res.status}`, detail: text }, { status: res.status })
-    }
-
-    const data = await res.json()
-    return NextResponse.json(data)
+    return NextResponse.json({ status: 'triggered' })
   } catch (err) {
-    console.error('[/api/win-prob] Engine fetch failed:', err)
-    return NextResponse.json({ error: 'Engine unavailable', predictions: [] }, { status: 502 })
+    console.error('[/api/forecasts/trigger] Engine fetch failed:', err)
+    return NextResponse.json({ error: 'Engine unavailable' }, { status: 502 })
   }
 }

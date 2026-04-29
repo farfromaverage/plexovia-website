@@ -10,18 +10,6 @@ import {
 } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
-interface Signal {
-  id: string;
-  signal_type: string;
-  naics_code: string;
-  agency_name: string;
-  title: string;
-  signal_date: string;
-  severity: string;
-  confidence: number;
-  metadata: Record<string, unknown>;
-}
-
 interface Prediction {
   naics_code: string;
   agency_name: string;
@@ -34,8 +22,6 @@ interface BriefingSection {
   count: number;
   items: unknown[];
   narrative: string;
-  by_severity?: Record<string, number>;
-  by_type?: Record<string, number>;
   high_confidence?: number;
   agencies_tracked?: number;
   high_probability?: number;
@@ -45,35 +31,18 @@ interface BriefingSection {
 
 interface Briefing {
   headline: string;
-  signals: BriefingSection;
   forecasts: BriefingSection;
   win_probability: BriefingSection;
 }
 
-const SEVERITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  critical: { bg: "rgba(239,68,68,0.1)",  text: "#EF4444", border: "rgba(239,68,68,0.3)" },
-  high:     { bg: "rgba(249,115,22,0.1)", text: "#F97316", border: "rgba(249,115,22,0.3)" },
-  medium:   { bg: "rgba(201,168,76,0.1)", text: "#C9A84C", border: "rgba(201,168,76,0.3)" },
-  low:      { bg: "rgba(107,114,128,0.08)", text: "var(--app-muted)", border: "var(--app-border)" },
-};
-
-const SIGNAL_LABELS: Record<string, { icon: typeof AlertTriangle; label: string }> = {
-  contract_expiry:        { icon: Clock,         label: "Contract Expiry" },
-  recompete_due:          { icon: RefreshCw,     label: "Recompete Due" },
-  option_year_approaching:{ icon: TrendingUp,    label: "Option Year" },
-  budget_spike_q4:        { icon: BarChart3,     label: "Q4 Budget Surge" },
-  incumbent_vulnerable:   { icon: Target,        label: "Incumbent Vulnerable" },
-};
-
 /* ─── Component ──────────────────────────────────────────────────── */
-export default function IntelligencePage() {
+export default function WinAnalysisPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
-  const [signals, setSignals] = useState<Signal[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [expandedSection, setExpandedSection] = useState<string | null>("signals");
+  const [expandedSection, setExpandedSection] = useState<string | null>("win_probability");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -83,10 +52,9 @@ export default function IntelligencePage() {
     if (!user) { router.push("/auth/login"); return; }
 
     try {
-      // Fetch all three endpoints in parallel
-      const [intelRes, signalsRes, winProbRes] = await Promise.allSettled([
+      // Fetch data in parallel
+      const [intelRes, winProbRes] = await Promise.allSettled([
         fetch("/api/intel"),
-        fetch("/api/signals?limit=100"),
         fetch("/api/win-prob?limit=50"),
       ]);
 
@@ -96,12 +64,6 @@ export default function IntelligencePage() {
         setBriefing(data.briefing);
       }
 
-      // Parse signals
-      if (signalsRes.status === "fulfilled" && signalsRes.value.ok) {
-        const data = await signalsRes.value.json();
-        setSignals(data.signals || []);
-      }
-
       // Parse win probability
       if (winProbRes.status === "fulfilled" && winProbRes.value.ok) {
         const data = await winProbRes.value.json();
@@ -109,7 +71,7 @@ export default function IntelligencePage() {
       }
 
     } catch (e) {
-      setError("Failed to load intelligence data. The engine may be starting up.");
+      setError("Failed to load win analysis data. The engine may be starting up.");
     } finally {
       setLoading(false);
     }
@@ -125,7 +87,7 @@ export default function IntelligencePage() {
     return (
       <div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
         <RefreshCw size={18} style={{ color: "var(--app-muted)", animation: "spin 0.8s linear infinite" }} />
-        <span style={{ color: "var(--app-muted)", fontSize: "0.9rem" }}>Loading intelligence briefing…</span>
+        <span style={{ color: "var(--app-muted)", fontSize: "0.9rem" }}>Loading win analysis…</span>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -138,11 +100,11 @@ export default function IntelligencePage() {
       <div className="dash-page-header">
         <div>
           <h1 className="dash-page-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Brain size={22} style={{ color: "var(--accent)" }} />
-            Intelligence Briefing
+            <Zap size={22} style={{ color: "var(--accent)" }} />
+            Win Analysis
           </h1>
           <p className="dash-page-sub">
-            Contract lifecycle signals, AI forecasts, and win probability analysis.
+            AI-driven forecasts and win probability analysis for your NAICS codes.
           </p>
         </div>
         <button
@@ -179,114 +141,24 @@ export default function IntelligencePage() {
             {briefing.headline}
           </p>
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-            {briefing.signals.count > 0 && (
-              <span style={statPill}>
-                <AlertTriangle size={12} /> {briefing.signals.count} signals
-              </span>
-            )}
-            {briefing.forecasts.count > 0 && (
+            {briefing.forecasts?.count > 0 && (
               <span style={statPill}>
                 <TrendingUp size={12} /> {briefing.forecasts.count} forecasts
               </span>
             )}
-            {briefing.win_probability.count > 0 && (
+            {briefing.win_probability?.count > 0 && (
               <span style={statPill}>
                 <Target size={12} /> {briefing.win_probability.count} predictions
               </span>
             )}
-            {briefing.signals.count === 0 && briefing.forecasts.count === 0 && briefing.win_probability.count === 0 && (
+            {(!briefing.forecasts?.count && !briefing.win_probability?.count) && (
               <span style={{ fontSize: "0.85rem", color: "var(--app-muted)" }}>
-                Intelligence data will populate as the engine collects contract lifecycle data.
+                Win Analysis data will populate as the engine collects contract lifecycle data.
               </span>
             )}
           </div>
         </div>
       )}
-
-      {/* ── Signals Section ── */}
-      <CollapsibleSection
-        title="Contract Lifecycle Signals"
-        icon={<AlertTriangle size={16} />}
-        count={signals.length}
-        expanded={expandedSection === "signals"}
-        onToggle={() => toggleSection("signals")}
-        narrative={briefing?.signals.narrative}
-      >
-        {signals.length === 0 ? (
-          <EmptyState message="No signals detected. Signals are generated monthly as contract data accumulates." />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {signals.slice(0, 20).map((signal) => {
-              const colors = SEVERITY_COLORS[signal.severity] || SEVERITY_COLORS.low;
-              const config = SIGNAL_LABELS[signal.signal_type] || { icon: Zap, label: signal.signal_type };
-              const Icon = config.icon;
-
-              return (
-                <div
-                  key={signal.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.75rem",
-                    padding: "0.875rem 1rem",
-                    background: colors.bg,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  <Icon size={14} style={{ color: colors.text, marginTop: 2, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                      <span style={{
-                        fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase",
-                        letterSpacing: "0.06em", color: colors.text,
-                        background: colors.bg, border: `1px solid ${colors.border}`,
-                        borderRadius: 999, padding: "1px 8px",
-                      }}>
-                        {signal.severity}
-                      </span>
-                      <span style={{ fontSize: "0.75rem", color: "var(--app-muted)" }}>
-                        {config.label}
-                      </span>
-                      <span style={{ fontSize: "0.7rem", color: "var(--app-faint)", fontFamily: "var(--font-geist-mono, monospace)" }}>
-                        {signal.naics_code}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 500, marginBottom: 2, lineHeight: 1.4 }}>
-                      {signal.title || signal.agency_name || "Untitled signal"}
-                    </p>
-                    <p style={{ fontSize: "0.78rem", color: "var(--app-muted)" }}>
-                      {signal.agency_name && `${signal.agency_name} · `}
-                      Signal date: {new Date(signal.signal_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      {" · "}Confidence: {Math.round(signal.confidence * 100)}%
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CollapsibleSection>
-
-      {/* ── Forecasts Section ── */}
-      <CollapsibleSection
-        title="AI Forecasts"
-        icon={<TrendingUp size={16} />}
-        count={briefing?.forecasts.count || 0}
-        expanded={expandedSection === "forecasts"}
-        onToggle={() => toggleSection("forecasts")}
-        narrative={briefing?.forecasts.narrative}
-      >
-        {!briefing?.forecasts.count ? (
-          <EmptyState message="Forecasts generate after the engine accumulates enough historical data. This typically takes 2-3 pipeline cycles." />
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
-            <StatCard label="Active Forecasts" value={String(briefing.forecasts.count)} />
-            <StatCard label="High Confidence (≥70%)" value={String(briefing.forecasts.high_confidence || 0)} />
-            <StatCard label="Agencies Tracked" value={String(briefing.forecasts.agencies_tracked || 0)} />
-          </div>
-        )}
-      </CollapsibleSection>
 
       {/* ── Win Probability Section ── */}
       <CollapsibleSection
@@ -295,7 +167,7 @@ export default function IntelligencePage() {
         count={predictions.length}
         expanded={expandedSection === "win_probability"}
         onToggle={() => toggleSection("win_probability")}
-        narrative={briefing?.win_probability.narrative}
+        narrative={briefing?.win_probability?.narrative}
       >
         {predictions.length === 0 ? (
           <EmptyState message="Win probability model has not been trained yet. Training runs automatically on the 1st of each month." />
@@ -346,6 +218,26 @@ export default function IntelligencePage() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* ── Forecasts Section ── */}
+      <CollapsibleSection
+        title="AI Forecasts"
+        icon={<TrendingUp size={16} />}
+        count={briefing?.forecasts?.count || 0}
+        expanded={expandedSection === "forecasts"}
+        onToggle={() => toggleSection("forecasts")}
+        narrative={briefing?.forecasts?.narrative}
+      >
+        {!briefing?.forecasts?.count ? (
+          <EmptyState message="Forecasts generate after the engine accumulates enough historical data. This typically takes 2-3 pipeline cycles." />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+            <StatCard label="Active Forecasts" value={String(briefing.forecasts.count)} />
+            <StatCard label="High Confidence (≥70%)" value={String(briefing.forecasts.high_confidence || 0)} />
+            <StatCard label="Agencies Tracked" value={String(briefing.forecasts.agencies_tracked || 0)} />
           </div>
         )}
       </CollapsibleSection>

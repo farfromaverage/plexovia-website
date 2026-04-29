@@ -45,7 +45,7 @@ function ResetForm() {
 
     if (err) { setError(err.message); return; }
     setSuccess(true);
-    setTimeout(() => router.push("/auth/login"), 2500);
+    setTimeout(() => router.push("/dashboard"), 2500);
   }
 
   /* ── Success ── */
@@ -58,7 +58,7 @@ function ResetForm() {
           </div>
           <h1 className="font-bold text-2xl tracking-tight text-[var(--app-text)] mb-2">Password updated</h1>
           <p className="text-[var(--app-muted)] text-[15px] leading-relaxed mt-2">
-            Redirecting you to sign in...
+            Redirecting you to dashboard...
           </p>
         </div>
       </div>

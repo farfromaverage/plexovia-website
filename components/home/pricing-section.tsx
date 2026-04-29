@@ -21,11 +21,11 @@ type BillingCycle = "monthly" | "yearly";
 const PLANS = [
   {
     id:           "professional",
-    name:         "Full Coverage",
+    name:         "Plexovia Intelligence",
     monthly:      249,
-    yearly:       1990,
-    perMonthYr:   166,
-    savePercent:  33,
+    yearly:       2190,
+    perMonthYr:   182.50,
+    savePercent:  27,
     tagline:      "Everything included. No hidden upgrades. Built for individuals and teams.",
     audience:     "Individuals and teams. Scale by adding more seats as your team grows.",
     features: [
@@ -44,7 +44,7 @@ const PLANS = [
 ] as const;
 
 /* Yearly savings banner for toggle */
-const SAVE_BADGE = "Save 33%";
+const SAVE_BADGE = "Save 27%";
 
 export default function PricingSection() {
   const [billing, setBilling] = useState<BillingCycle>("monthly");

@@ -7,8 +7,9 @@ import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User, TrendingUp,
   Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight, Zap,
-  Sun, Moon
+  Sun, Moon, HelpCircle
 } from "lucide-react";
+import { SupportModal } from "./SupportModal";
 
 const NAV_ITEMS = [
   { href: "/dashboard",             label: "Overview",     icon: LayoutDashboard },
@@ -16,7 +17,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/profile",     label: "Profile",      icon: User },
   { href: "/dashboard/competitors", label: "Competitors",  icon: TrendingUp },
   { href: "/dashboard/forecasts",   label: "AI Forecasts", icon: Brain },
-  { href: "/dashboard/intelligence",label: "Intelligence", icon: Zap },
+  { href: "/dashboard/intelligence",label: "Win Analysis", icon: Zap },
   { href: "/dashboard/team",        label: "Team",         icon: Users },
   { href: "/dashboard/billing",     label: "Billing",      icon: CreditCard },
 ] as const;
@@ -29,6 +30,8 @@ export default function DashboardNav() {
   const [signingOut, setSigningOut] = useState(false);
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [showSupport, setShowSupport] = useState(false);
+  const [userName, setUserName] = useState<string>("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -36,10 +39,11 @@ export default function DashboardNav() {
       setUserEmail(session.user.email ?? null);
       supabase
         .from("profiles")
-        .select("trial_ends_at, plan")
+        .select("trial_ends_at, plan, full_name")
         .eq("id", session.user.id)
         .single()
         .then(({ data }) => {
+          if (data?.full_name) setUserName(data.full_name);
           if (data?.trial_ends_at && data.plan === "trial") {
             const days = Math.max(0, Math.ceil(
               (new Date(data.trial_ends_at).getTime() - Date.now()) / 86400000
@@ -200,8 +204,40 @@ export default function DashboardNav() {
             (e.currentTarget as HTMLButtonElement).style.color = "var(--app-muted)";
           }}
         >
-          {theme === "dark" ? <Sun size={13} aria-hidden="true" /> : <Moon size={13} aria-hidden="true" />}
-          {theme === "dark" ? "Light mode" : "Dark mode"}
+          {theme === "dark" ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />}
+          {theme === "dark" ? "Light theme" : "Dark theme"}
+        </button>
+        
+        {/* Support Button */}
+        <button
+          onClick={() => setShowSupport(true)}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 10px",
+            borderRadius: "7px",
+            border: "none",
+            background: "none",
+            color: "var(--app-muted)",
+            fontSize: "0.8rem",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            transition: "background 0.12s, color 0.12s",
+            marginBottom: "4px",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--app-surface-2)";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--app-text)";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "none";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--app-muted)";
+          }}
+        >
+          <HelpCircle size={14} aria-hidden="true" />
+          Contact Support
         </button>
         {userEmail && (
           <div style={{
@@ -257,6 +293,15 @@ export default function DashboardNav() {
           {signingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
+
+      {userEmail && (
+        <SupportModal 
+          isOpen={showSupport} 
+          onClose={() => setShowSupport(false)} 
+          userEmail={userEmail} 
+          userName={userName} 
+        />
+      )}
     </>
   );
 

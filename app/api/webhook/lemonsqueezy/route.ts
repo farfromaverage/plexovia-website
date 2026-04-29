@@ -90,10 +90,11 @@ export async function POST(req: Request) {
         const { error } = await supabase
           .from('profiles')
           .update({
-            plan: 'Plexovia Intelligence',
+            plan: 'active',
             active: status === 'active' || status === 'on_trial',
             trial_ends_at: trialEndsAt,
             plan_expires_at: endsAt,
+            payment_failed: false,
             ls_customer_id: customerId,
             ls_subscription_id: subscriptionId,
             updated_at: new Date().toISOString()
@@ -113,10 +114,11 @@ export async function POST(req: Request) {
         const { error } = await supabase
           .from('profiles')
           .update({
-            plan: 'Plexovia Intelligence',
+            plan: 'active',
             active: status === 'active' || status === 'on_trial',
             trial_ends_at: trialEndsAt,
             plan_expires_at: endsAt,
+            payment_failed: false,
             ls_customer_id: customerId,
             ls_subscription_id: subscriptionId,
             updated_at: new Date().toISOString()
@@ -151,9 +153,10 @@ export async function POST(req: Request) {
         await supabase
           .from('profiles')
           .update({
-            plan: 'Plexovia Intelligence',
+            plan: 'active',
             active: true,
             plan_expires_at: null,
+            payment_failed: false,
             updated_at: new Date().toISOString()
           })
           .eq('id', finalUserId);
@@ -163,8 +166,7 @@ export async function POST(req: Request) {
         break;
       }
 
-      case 'subscription_expired':
-      case 'subscription_payment_failed': {
+      case 'subscription_expired': {
         await supabase
           .from('profiles')
           .update({
@@ -172,11 +174,19 @@ export async function POST(req: Request) {
             updated_at: new Date().toISOString()
           })
           .eq('id', finalUserId);
+        break;
+      }
 
-        if (eventName === 'subscription_payment_failed') {
-          await triggerEngineEmail('/api/internal/payment-failed', { user_email: customerEmail });
-          console.log(`Payment failed mapped and email triggered for ${customerEmail}.`);
-        }
+      case 'subscription_payment_failed': {
+        await supabase
+          .from('profiles')
+          .update({
+            payment_failed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', finalUserId);
+
+        console.log(`Payment failed recorded for ${customerEmail}.`);
         break;
       }
 

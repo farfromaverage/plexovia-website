@@ -39,14 +39,20 @@ export async function GET(request: NextRequest) {
   const page      = searchParams.get('page')      || '1'
   const per_page  = searchParams.get('per_page')  || '10'
   const min_score = searchParams.get('min_score') || '0'
+  const search    = searchParams.get('search')    || ''
+  const sort      = searchParams.get('sort')      || 'score'
 
   const engineUrl = process.env.RAILWAY_API_URL
     || process.env.NEXT_PUBLIC_RAILWAY_API_URL
     || 'https://plexovia-engine-production.up.railway.app'
 
   try {
-    const res = await fetch(
-      `${engineUrl}/api/user/matches?page=${page}&per_page=${per_page}&min_score=${min_score}`,
+    let url = `${engineUrl}/api/user/matches?page=${page}&per_page=${per_page}&min_score=${min_score}&sort=${sort}`
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`
+    }
+
+    const res = await fetch(url,
       {
         headers: {
           Authorization: `Bearer ${session.access_token}`,

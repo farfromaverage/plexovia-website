@@ -14,18 +14,19 @@ interface TeamMember {
   id: string;
   name: string | null;
   email: string;
-  role: "owner" | "admin" | "member";
-  status: "active" | "pending" | "invited";
+  role: "owner" | "admin" | "member" | "viewer";
+  status: "active" | "pending" | "invited" | "deactivated";
   joined_at: string | null;
   invited_at: string | null;
 }
 
-type Role = "admin" | "member";
+type Role = "admin" | "member" | "viewer";
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 function roleMeta(role: string) {
   if (role === "owner") return { icon: <Crown size={12} aria-hidden="true" />, color: "var(--accent)",   label: "Owner: full access, cannot be removed" };
   if (role === "admin") return { icon: <Shield size={12} aria-hidden="true" />, color: "#4ADE80",        label: "Admin: can invite, view all contracts, manage members" };
+  if (role === "viewer") return { icon: <User size={12} aria-hidden="true" />,   color: "var(--app-faint)", label: "Viewer: read-only access to dashboard data" };
   return                        { icon: <User size={12} aria-hidden="true" />,   color: "var(--app-muted)", label: "Member: can view their own data only" };
 }
 function fmtDate(d: string | null) {
@@ -50,7 +51,7 @@ function RoleLegend() {
         <Shield size={12} aria-hidden="true" /> Role permissions
       </summary>
       <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {["owner", "admin", "member"].map(r => {
+        {["owner", "admin", "member", "viewer"].map(r => {
           const m = roleMeta(r);
           return (
             <div key={r} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
@@ -72,7 +73,8 @@ export default function TeamPage() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [currentRole, setCurrentRole] = useState<"owner"|"admin"|"member">("member");
+  const [currentRole, setCurrentRole] = useState<"owner"|"admin"|"member"|"viewer">("member");
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
 
   // Invite form
   const [inviteEmail,     setInviteEmail]     = useState("");
@@ -84,9 +86,9 @@ export default function TeamPage() {
   // Resend invite
   const [resending, setResending] = useState<string | null>(null);
 
-  // Remove confirm
-  const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
-  const [removing,      setRemoving]      = useState<string | null>(null);
+  // Deactivate confirm
+  const [confirmDeactivate, setConfirmDeactivate] = useState<TeamMember | null>(null);
+  const [deactivating,      setDeactivating]      = useState<string | null>(null);
 
   // Role change
   const [changingRole, setChangingRole] = useState<string | null>(null);
@@ -110,6 +112,14 @@ export default function TeamPage() {
       setMembers(list);
       const me = list.find(m => m.email === session.user.email);
       if (me) setCurrentRole(me.role);
+
+      // Fetch activity logs
+      const { data: logs } = await supabase
+        .from('team_activity_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setActivityLogs(logs || []);
     } catch (e) {
       setError(e instanceof Error ? mapApiError(e.message) : "Could not load team members.");
     } finally {
@@ -158,31 +168,31 @@ export default function TeamPage() {
     }
   }
 
-  async function handleRemove() {
-    if (!confirmRemove) return;
-    setRemoving(confirmRemove.id);
-    setConfirmRemove(null);
+  async function handleDeactivate() {
+    if (!confirmDeactivate) return;
+    setDeactivating(confirmDeactivate.id);
+    setConfirmDeactivate(null);
     try {
-      const res = await fetch(`/api/team-members?id=${confirmRemove.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/team-members/${confirmDeactivate.id}`, { method: "DELETE" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `HTTP ${res.status}`);
       }
-      setMembers(prev => prev.filter(m => m.id !== confirmRemove.id));
+      setMembers(prev => prev.filter(m => m.id !== confirmDeactivate.id));
     } catch (e) {
-      setError(mapApiError(e instanceof Error ? e.message : "Could not remove member."));
+      setError(mapApiError(e instanceof Error ? e.message : "Could not deactivate member."));
     } finally {
-      setRemoving(null);
+      setDeactivating(null);
     }
   }
 
   async function handleRoleChange(member: TeamMember, newRole: Role) {
     setChangingRole(member.id);
     try {
-      const res = await fetch("/api/team-members", {
+      const res = await fetch(`/api/team-members/${member.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: member.id, role: newRole }),
+        body: JSON.stringify({ role: newRole }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -261,6 +271,7 @@ export default function TeamPage() {
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
               </select>
             </div>
             <div style={{ display: "flex", alignItems: "flex-end" }}>
@@ -334,10 +345,10 @@ export default function TeamPage() {
               member={m}
               isCurrentUser={m.email === currentUser}
               canManage={canManage}
-              removing={removing === m.id}
+              deactivating={deactivating === m.id}
               changingRole={changingRole === m.id}
               resending={resending === m.id}
-              onRemove={() => setConfirmRemove(m)}
+              onDeactivate={() => setConfirmDeactivate(m)}
               onRoleChange={(role) => handleRoleChange(m, role)}
               onResendInvite={() => handleResendInvite(m)}
             />
@@ -345,34 +356,67 @@ export default function TeamPage() {
         )}
       </div>
 
-      {/* Confirm remove modal */}
-      {confirmRemove && (
+      {/* Confirm deactivate modal */}
+      {confirmDeactivate && (
         <ConfirmModal
-          title={`Remove ${confirmRemove.name ?? confirmRemove.email}?`}
+          title={`Deactivate ${confirmDeactivate.name ?? confirmDeactivate.email}?`}
           message={`This will immediately revoke their access to the Plexovia dashboard. They'll need a new invite to rejoin.`}
-          confirmLabel="Yes, remove"
+          confirmLabel="Yes, deactivate"
           cancelLabel="Keep them"
           danger
-          onConfirm={handleRemove}
-          onCancel={() => setConfirmRemove(null)}
+          onConfirm={handleDeactivate}
+          onCancel={() => setConfirmDeactivate(null)}
         />
       )}
+
+      {/* Activity Log Section */}
+      <div className="dash-section" style={{ marginTop: "2rem" }}>
+        <h2 className="dash-section-h">Activity Log</h2>
+        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 1rem", lineHeight: 1.5 }}>
+          Recent team management actions (last 20 entries).
+        </p>
+        <div className="dash-card">
+          {activityLogs.length === 0 ? (
+            <div style={{ padding: "1.5rem", textAlign: "center", color: "var(--app-faint)", fontSize: "0.8125rem" }}>
+              No recent activity found.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {activityLogs.map(log => (
+                <div key={log.id} style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "12px 16px", borderBottom: "1px solid var(--app-border)" }}>
+                  <div style={{ marginTop: "2px", color: "var(--app-muted)" }}>
+                    <Clock size={14} aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "0.8125rem", color: "var(--app-text)", margin: "0 0 4px" }}>
+                      <strong>{log.actor_email}</strong> {log.action.replace(/_/g, ' ')} <strong>{log.target_email}</strong>
+                    </p>
+                    <p style={{ fontSize: "0.7rem", color: "var(--app-muted)", margin: 0 }}>
+                      {fmtDate(log.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ─── Member row ──────────────────────────────────────────────── */
 function TeamMemberRow({
-  member, isCurrentUser, canManage, removing, changingRole, resending,
-  onRemove, onRoleChange, onResendInvite,
+  member, isCurrentUser, canManage, deactivating, changingRole, resending,
+  onDeactivate, onRoleChange, onResendInvite,
 }: {
   member: TeamMember;
   isCurrentUser: boolean;
   canManage: boolean;
-  removing: boolean;
+  deactivating: boolean;
   changingRole: boolean;
   resending: boolean;
-  onRemove: () => void;
+  onDeactivate: () => void;
   onRoleChange: (r: Role) => void;
   onResendInvite: () => void;
 }) {
@@ -388,7 +432,7 @@ function TeamMemberRow({
         alignItems: "center",
         gap: "0.75rem",
         padding: "0.875rem 1.5rem",
-        opacity: removing ? 0.5 : 1,
+        opacity: deactivating ? 0.5 : 1,
         transition: "opacity 0.2s",
       }}
     >
@@ -449,6 +493,7 @@ function TeamMemberRow({
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
             </select>
           </div>
         ) : (
@@ -489,12 +534,12 @@ function TeamMemberRow({
           {!isCurrentUser && member.role !== "owner" && (
             <button
               className="dash-btn dash-btn-danger"
-              onClick={onRemove}
-              disabled={removing}
-              aria-label={`Remove ${member.name ?? member.email} from team`}
+              onClick={onDeactivate}
+              disabled={deactivating}
+              aria-label={`Deactivate ${member.name ?? member.email} from team`}
               style={{ padding: "4px 8px", minHeight: 30, fontSize: "0.72rem" }}
             >
-              {removing ? "Removing…" : "Remove"}
+              {deactivating ? "Deactivating…" : "Deactivate"}
             </button>
           )}
         </div>
