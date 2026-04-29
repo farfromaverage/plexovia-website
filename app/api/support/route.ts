@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key_to_pass_build");
 const rateLimitMap = new Map<string, { count: number, resetAt: number }>()
 
 export async function POST(req: Request) {
