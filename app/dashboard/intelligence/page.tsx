@@ -170,7 +170,7 @@ export default function WinAnalysisPage() {
         narrative={briefing?.win_probability?.narrative}
       >
         {predictions.length === 0 ? (
-          <EmptyState message="Win probability model has not been trained yet. Training runs automatically on the 1st of each month." />
+          <EmptyState message="Win probability model has not been trained yet. Training runs automatically every Sunday." />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {predictions.slice(0, 15).map((pred, i) => {
