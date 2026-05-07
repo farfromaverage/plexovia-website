@@ -355,8 +355,8 @@ export default function DashboardPage() {
         {keywordCount > 0 && (
           <StatCard icon={<Tag size={14} aria-hidden="true" />}      label="Keywords"         value={String(keywordCount)}                               sub="Active keyword matching" />
         )}
-        <Link href="/dashboard/intelligence" style={{ textDecoration: "none" }}>
-          <StatCard icon={<Zap size={14} aria-hidden="true" />}     label="Win Analysis"     value="View"                                               sub="Forecasts & win probability" accent />
+        <Link href="/dashboard/forecasts" style={{ textDecoration: "none" }}>
+          <StatCard icon={<Zap size={14} aria-hidden="true" />}     label="AI Forecasts"     value="View"                                               sub="7 predictive models" accent />
         </Link>
       </div>
 

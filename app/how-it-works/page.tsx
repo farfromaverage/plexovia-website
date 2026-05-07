@@ -32,7 +32,7 @@ const steps = [
       "Add unlimited NAICS codes to your tracking profile.",
       "Add custom keywords to catch contracts your NAICS codes miss.",
       "Set your place of performance preference so irrelevant states drop out.",
-      "Track competitors to see what federal awards they win.",
+      "AI Forecasting predicts agency spend patterns, budget surges, and recompete windows.",
       "Configure your notification preferences for optional email reports.",
     ],
   },

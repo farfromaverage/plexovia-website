@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Brain, BarChart2, AlertCircle, Info, RefreshCw, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { BarChart2, AlertCircle, Info, RefreshCw, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
@@ -16,6 +16,7 @@ interface ForecastCard {
   id: string;
   naics_code: string;
   naics_label: string;
+  agency_name: string;
   forecast_type: string;
   prediction_type: "increase" | "decrease" | "stable";
   confidence: "high" | "medium" | "low";
@@ -72,27 +73,36 @@ function ForecastSkeleton() {
   );
 }
 
-/* ─── Per-Type Chart Renderers ───────────────────────────── */
+/* ─── P1: Renewal Radar — Vertical Timeline List ─────────── */
 function RenewalRadarChart({ cards }: { cards: ForecastCard[] }) {
-  // Vertical timeline list — sorted by soonest recompete (peak month)
-  const sorted = [...cards].sort((a, b) => (b.percent_change || 0) - (a.percent_change || 0));
+  // Sorted by soonest recompete: first projected data_point period (chronological)
+  const withPeak = cards.map(card => {
+    const projPoints = card.data_points.filter(d => d.projected !== undefined);
+    // Find peak projected month (highest value = recompete signal)
+    const peak = projPoints.reduce((best, d) => (!best || (d.projected || 0) > (best.projected || 0)) ? d : best, projPoints[0]);
+    return { card, peak, firstProj: projPoints[0] };
+  }).filter(x => x.firstProj);
+
+  // Sort by soonest forecast date (earliest projected period first)
+  withPeak.sort((a, b) => (a.firstProj?.period || "").localeCompare(b.firstProj?.period || ""));
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-      {sorted.map(card => {
+      {withPeak.map(({ card, peak }) => {
         const cm = confidenceMeta(card.confidence);
-        const peak = card.data_points.find(d => d.projected !== undefined);
         return (
           <div key={card.id} className="dash-card-padded" style={{ display: "flex", gap: "1rem", alignItems: "center", padding: "0.875rem 1rem" }}>
-            <div style={{ width: 4, height: 40, borderRadius: 2, background: cm.color, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--app-text)" }}>{card.naics_label}</div>
-              <div style={{ fontSize: "0.72rem", color: "var(--app-muted)", marginTop: 2 }}>
-                {card.insight_text || "No pattern detected"}
+            <div style={{ width: 4, height: 48, borderRadius: 2, background: cm.color, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--app-text)", marginBottom: 2 }}>{card.agency_name || "Federal Government"}</div>
+              <div style={{ fontSize: "0.68rem", color: "var(--app-faint)", marginBottom: 3 }}>NAICS {card.naics_code} · {card.naics_label}</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--app-muted)", lineHeight: 1.4 }}>
+                {card.insight_text || "No renewal pattern detected"}
               </div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
-              {peak && <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--app-text)" }}>{peak.period}</div>}
-              <span style={{ fontSize: "0.65rem", padding: "2px 6px", borderRadius: 999, background: cm.bg, color: cm.color, border: `1px solid ${cm.color}30` }}>{cm.label}</span>
+              {peak && <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--app-text)", marginBottom: 4 }}>{peak.period}</div>}
+              <span style={{ fontSize: "0.62rem", padding: "2px 7px", borderRadius: 999, background: cm.bg, color: cm.color, border: `1px solid ${cm.color}30` }}>{cm.label}</span>
             </div>
           </div>
         );
@@ -101,39 +111,53 @@ function RenewalRadarChart({ cards }: { cards: ForecastCard[] }) {
   );
 }
 
-function HeatmapChart({ cards }: { cards: ForecastCard[] }) {
-  // Grid heatmap — rows=agencies, cols=months, color=intensity
+/* ─── P2: Spending Heatmaps — Heatmap Grid ───────────────── */
+function SpendingHeatmapChart({ cards }: { cards: ForecastCard[] }) {
   if (!cards.length) return null;
-  const allMonths = [...new Set(cards.flatMap(c => c.data_points.filter(d => d.projected !== undefined).map(d => d.period)))];
-  const maxVal = Math.max(...cards.flatMap(c => c.data_points.map(d => d.projected || 0)), 1);
+  const projMonths = [...new Set(cards.flatMap(c => c.data_points.filter(d => d.projected !== undefined).map(d => d.period)))].slice(0, 6);
+  // Compute % increase from last historical value for color intensity
+  const rows = cards.slice(0, 20).map(card => {
+    const histPoints = card.data_points.filter(d => d.historical !== undefined);
+    const baseline = histPoints.length > 0 ? (histPoints[histPoints.length - 1].historical || 1) : 1;
+    const projData = projMonths.map(m => {
+      const dp = card.data_points.find(d => d.period === m);
+      const val = dp?.projected || 0;
+      const pctInc = baseline > 0 ? Math.round(((val - baseline) / baseline) * 100) : 0;
+      return { period: m, val, pctInc };
+    });
+    return { card, projData };
+  });
+  const maxPct = Math.max(...rows.flatMap(r => r.projData.map(d => Math.abs(d.pctInc))), 1);
+
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
         <thead>
           <tr>
             <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--app-muted)", fontWeight: 600, borderBottom: "1px solid var(--app-border)" }}>Agency</th>
-            {allMonths.slice(0, 6).map(m => (
+            {projMonths.map(m => (
               <th key={m} style={{ padding: "6px 4px", color: "var(--app-muted)", fontWeight: 500, borderBottom: "1px solid var(--app-border)", textAlign: "center" }}>{m}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {cards.slice(0, 15).map(card => (
+          {rows.map(({ card, projData }) => (
             <tr key={card.id}>
-              <td style={{ padding: "5px 8px", color: "var(--app-text)", fontSize: "0.7rem", borderBottom: "1px solid var(--app-border)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {card.naics_label}
+              <td style={{ padding: "5px 8px", color: "var(--app-text)", fontSize: "0.7rem", borderBottom: "1px solid var(--app-border)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                title={`${card.agency_name} · NAICS ${card.naics_code}`}>
+                {card.agency_name || "Federal Government"}
               </td>
-              {allMonths.slice(0, 6).map(m => {
-                const dp = card.data_points.find(d => d.period === m);
-                const val = dp?.projected || 0;
-                const intensity = Math.min(1, val / maxVal);
+              {projData.map(d => {
+                const intensity = Math.min(1, Math.abs(d.pctInc) / maxPct);
+                const isNeg = d.pctInc < 0;
                 return (
-                  <td key={m} style={{ padding: "4px", textAlign: "center", borderBottom: "1px solid var(--app-border)" }}>
-                    <div title={`${val.toFixed(0)}`} style={{
-                      width: "100%", minWidth: 28, height: 24, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
-                      background: intensity > 0 ? `rgba(201, 168, 76, ${0.1 + intensity * 0.6})` : "var(--app-surface-2)",
-                      fontSize: "0.65rem", color: intensity > 0.5 ? "var(--app-text)" : "var(--app-faint)",
-                    }}>{val > 0 ? val.toFixed(0) : ""}</div>
+                  <td key={d.period} style={{ padding: "4px", textAlign: "center", borderBottom: "1px solid var(--app-border)" }}>
+                    <div title={`${d.pctInc > 0 ? "+" : ""}${d.pctInc}% from baseline`} style={{
+                      width: "100%", minWidth: 36, height: 26, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: intensity > 0.05 ? (isNeg ? `rgba(248,113,113,${0.1 + intensity * 0.5})` : `rgba(201,168,76,${0.1 + intensity * 0.6})`) : "var(--app-surface-2)",
+                      fontSize: "0.65rem", fontWeight: intensity > 0.3 ? 600 : 400,
+                      color: intensity > 0.4 ? "var(--app-text)" : "var(--app-faint)",
+                    }}>{d.pctInc !== 0 ? `${d.pctInc > 0 ? "+" : ""}${d.pctInc}%` : ""}</div>
                   </td>
                 );
               })}
@@ -145,24 +169,24 @@ function HeatmapChart({ cards }: { cards: ForecastCard[] }) {
   );
 }
 
-function HorizontalBarChart({ cards }: { cards: ForecastCard[] }) {
-  // Used for Incumbent Vulnerability — horizontal bars showing % vulnerability
-  const data = cards.slice(0, 12).map(c => ({
-    name: c.naics_label.length > 25 ? c.naics_label.slice(0, 22) + "…" : c.naics_label,
-    value: Math.abs(c.percent_change),
-    full: c.naics_label,
-  })).sort((a, b) => b.value - a.value);
-  
+/* ─── P4: Incumbent Vulnerability — Horizontal Bar Chart ──── */
+function IncumbentVulnerabilityChart({ cards }: { cards: ForecastCard[] }) {
+  // X=Probability (0-100%), Y=Vendor+Agency, Color: green<40% amber 40-70% red>70%
+  const data = cards.slice(0, 15).map(c => {
+    const label = `${(c.agency_name || "Federal Gov").slice(0, 20)} · ${c.naics_code}`;
+    return { name: label, value: Math.min(100, Math.abs(c.percent_change)), agency: c.agency_name, naics: c.naics_label };
+  }).sort((a, b) => b.value - a.value);
+
   return (
-    <div style={{ height: Math.max(200, data.length * 36) }}>
+    <div style={{ height: Math.max(200, data.length * 38) }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" horizontal={false} />
-          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "var(--app-faint)" }} axisLine={false} tickLine={false} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "var(--app-muted)" }} axisLine={false} tickLine={false} width={150} />
+          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "var(--app-faint)" }} axisLine={false} tickLine={false} unit="%" />
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: "var(--app-muted)" }} axisLine={false} tickLine={false} width={180} />
           <Tooltip contentStyle={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 11 }}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={(value: any) => [`${value}%`, "Vulnerability"] as [string, string]} />
+            formatter={(value: any, _: any, props: any) => [`${value}%`, `Vulnerability: ${props.payload.agency}`] as [string, string]} />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>
             {data.map((d, idx) => (
               <Cell key={idx} fill={d.value > 70 ? "#F87171" : d.value > 40 ? "var(--accent)" : "#4ADE80"} />
@@ -174,21 +198,36 @@ function HorizontalBarChart({ cards }: { cards: ForecastCard[] }) {
   );
 }
 
-function CardListView({ cards }: { cards: ForecastCard[] }) {
-  // Card list — for Zero-Competition, sorted by relevance
+/* ─── P6: Zero-Competition — Card List ────────────────────── */
+function ZeroCompetitionCards({ cards }: { cards: ForecastCard[] }) {
+  // Sorted by probability desc (percent_change as proxy), each card: agency, NAICS, probability, date
   const sorted = [...cards].sort((a, b) => Math.abs(b.percent_change) - Math.abs(a.percent_change));
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "0.75rem" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "0.75rem" }}>
       {sorted.map(card => {
         const cm = confidenceMeta(card.confidence);
+        const firstProj = card.data_points.find(d => d.projected !== undefined);
+        const prob = Math.min(100, Math.abs(card.percent_change));
+        const probColor = prob > 70 ? "#4ADE80" : prob > 40 ? "var(--accent)" : "var(--app-muted)";
         return (
-          <div key={card.id} className="dash-card-padded" style={{ padding: "0.875rem 1rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span className="dash-tag dash-tag-muted dash-mono" style={{ fontSize: "0.65rem" }}>NAICS {card.naics_code}</span>
-              <span style={{ fontSize: "0.6rem", padding: "2px 6px", borderRadius: 999, background: cm.bg, color: cm.color }}>{cm.label}</span>
+          <div key={card.id} className="dash-card-padded" style={{ padding: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--app-text)" }}>{card.agency_name || "Federal Government"}</div>
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: probColor, flexShrink: 0, marginLeft: 8 }}>{prob}%</div>
             </div>
-            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--app-text)", marginBottom: 6 }}>{card.naics_label}</div>
-            <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: 0, lineHeight: 1.5 }}>{card.insight_text}</p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+              <span className="dash-tag dash-tag-muted dash-mono" style={{ fontSize: "0.62rem" }}>NAICS {card.naics_code}</span>
+              <span style={{ fontSize: "0.68rem", color: "var(--app-faint)" }}>{card.naics_label}</span>
+            </div>
+            {firstProj && (
+              <div style={{ fontSize: "0.72rem", color: "var(--app-muted)", marginBottom: 6 }}>
+                Forecast date: <strong style={{ color: "var(--app-text)" }}>{firstProj.period}</strong>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+              <p style={{ fontSize: "0.72rem", color: "var(--app-muted)", margin: 0, lineHeight: 1.4, flex: 1 }}>{card.insight_text}</p>
+              <span style={{ fontSize: "0.58rem", padding: "2px 6px", borderRadius: 999, background: cm.bg, color: cm.color, flexShrink: 0, marginLeft: 8 }}>{cm.label}</span>
+            </div>
           </div>
         );
       })}
@@ -196,60 +235,151 @@ function CardListView({ cards }: { cards: ForecastCard[] }) {
   );
 }
 
-function StandardBarChart({ cards }: { cards: ForecastCard[] }) {
-  // Default grouped bar chart with historical + projected
+/* ─── P3: Sub-Trickle — Gantt/Timeline ────────────────────── */
+function SubTrickleGantt({ cards }: { cards: ForecastCard[] }) {
+  // X=Date range, Y=Prime contractor (agency), Bar=predicted sub-RFQ window
+  if (!cards.length) return null;
+  const projMonths = [...new Set(cards.flatMap(c => c.data_points.filter(d => d.projected !== undefined).map(d => d.period)))].slice(0, 12);
+  if (!projMonths.length) return null;
+
+  // For each card, find the contiguous window of above-average projected values
+  const rows = cards.slice(0, 15).map(card => {
+    const projPoints = card.data_points.filter(d => d.projected !== undefined);
+    if (!projPoints.length) return null;
+    const avg = projPoints.reduce((s, d) => s + (d.projected || 0), 0) / projPoints.length;
+    const threshold = avg * 0.8;
+    // Find first and last month above threshold = the RFQ window
+    let startIdx = -1, endIdx = -1;
+    projPoints.forEach((d, i) => {
+      if ((d.projected || 0) > threshold) {
+        if (startIdx === -1) startIdx = i;
+        endIdx = i;
+      }
+    });
+    if (startIdx === -1) { startIdx = 0; endIdx = 0; }
+    return {
+      agency: card.agency_name || "Federal Government",
+      naics: card.naics_code,
+      startMonth: projPoints[startIdx]?.period || "",
+      endMonth: projPoints[endIdx]?.period || "",
+      startPct: (startIdx / Math.max(1, projMonths.length - 1)) * 100,
+      widthPct: Math.max(8, ((endIdx - startIdx + 1) / Math.max(1, projMonths.length)) * 100),
+      insight: card.insight_text,
+      confidence: card.confidence,
+    };
+  }).filter(Boolean) as { agency: string; naics: string; startMonth: string; endMonth: string; startPct: number; widthPct: number; insight: string; confidence: string }[];
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
-      {cards.map(card => {
-        const cm = confidenceMeta(card.confidence);
-        const trend = card.prediction_type;
-        const TrendIcon = trend === "increase" ? TrendingUp : trend === "decrease" ? TrendingDown : Minus;
-        const trendColor = trend === "increase" ? "#4ADE80" : trend === "decrease" ? "#F87171" : "var(--app-muted)";
+    <div>
+      {/* Month header */}
+      <div style={{ display: "flex", borderBottom: "1px solid var(--app-border)", paddingBottom: 4, marginBottom: 8 }}>
+        <div style={{ width: 180, flexShrink: 0, fontSize: "0.68rem", color: "var(--app-muted)", fontWeight: 600 }}>Prime Contractor</div>
+        <div style={{ flex: 1, display: "flex" }}>
+          {projMonths.map(m => (
+            <div key={m} style={{ flex: 1, textAlign: "center", fontSize: "0.62rem", color: "var(--app-faint)" }}>{m}</div>
+          ))}
+        </div>
+      </div>
+      {/* Rows */}
+      {rows.map((row, i) => {
+        const cm = confidenceMeta(row.confidence);
         return (
-          <div key={card.id} className="dash-card-padded" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div>
-                <span className="dash-tag dash-tag-muted dash-mono" style={{ fontSize: "0.65rem" }}>NAICS {card.naics_code}</span>
-                <h3 style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--app-text)", margin: "4px 0 0" }}>{card.naics_label}</h3>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, color: trendColor, fontWeight: 700, fontSize: "1.1rem" }}>
-                  <TrendIcon size={14} /> {Math.abs(card.percent_change).toFixed(0)}%
-                </div>
-                <span style={{ fontSize: "0.6rem", padding: "2px 6px", borderRadius: 999, background: cm.bg, color: cm.color }}>{cm.label}</span>
+          <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: 6, minHeight: 32 }}>
+            <div style={{ width: 180, flexShrink: 0, fontSize: "0.7rem", color: "var(--app-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              title={`${row.agency} · NAICS ${row.naics}`}>
+              {row.agency}
+            </div>
+            <div style={{ flex: 1, position: "relative", height: 24, background: "var(--app-surface-2)", borderRadius: 4 }}>
+              <div title={`Sub-RFQ window: ${row.startMonth} → ${row.endMonth}`} style={{
+                position: "absolute", top: 2, bottom: 2, borderRadius: 3,
+                left: `${row.startPct}%`, width: `${row.widthPct}%`,
+                background: `linear-gradient(90deg, ${cm.color}80, ${cm.color})`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "0.58rem", color: "#fff", fontWeight: 600, overflow: "hidden", whiteSpace: "nowrap",
+              }}>
+                {row.startMonth} → {row.endMonth}
               </div>
             </div>
-            {card.data_points.length > 0 ? (
-              <div style={{ height: 140 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={card.data_points} margin={{ top: 0, right: 0, bottom: 0, left: -30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
-                    <XAxis dataKey="period" tick={{ fontSize: 9, fill: "var(--app-faint)" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 9, fill: "var(--app-faint)" }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 11 }} />
-                    {card.data_points.some(d => d.historical !== undefined) && (
-                      <Bar dataKey="historical" fill="var(--app-muted)" name="Historical" radius={[3,3,0,0]} />
-                    )}
-                    {card.data_points.some(d => d.projected !== undefined) && (
-                      <Bar dataKey="projected" fill="var(--accent)" name="Projected" radius={[3,3,0,0]} opacity={0.75} />
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--app-faint)", fontSize: "0.75rem" }}>
-                Insufficient data to render chart
-              </div>
-            )}
-            {card.insight_text && (
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <Info size={11} color="var(--app-faint)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: 0, lineHeight: 1.5 }}>{card.insight_text}</p>
-              </div>
-            )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ─── P5: Set-Aside Depletion — Grouped Bar Chart ─────────── */
+function SetAsideDepletionChart({ cards }: { cards: ForecastCard[] }) {
+  // X=Agency, Y=Contract count, Two bars: current (last historical) vs predicted burst (max projected)
+  const data = cards.slice(0, 12).map(card => {
+    const histPoints = card.data_points.filter(d => d.historical !== undefined);
+    const projPoints = card.data_points.filter(d => d.projected !== undefined);
+    const current = histPoints.length > 0 ? Math.round(histPoints[histPoints.length - 1].historical || 0) : 0;
+    const predicted = projPoints.length > 0 ? Math.round(Math.max(0, ...projPoints.map(d => d.projected || 0))) : 0;
+    const label = (card.agency_name || "Federal Gov").length > 18 ? (card.agency_name || "Federal Gov").slice(0, 16) + "…" : (card.agency_name || "Federal Gov");
+    return { name: label, current, predicted, agency: card.agency_name, naics: card.naics_code };
+  });
+
+  return (
+    <div style={{ height: Math.max(280, 40) }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
+          <XAxis dataKey="name" tick={{ fontSize: 9, fill: "var(--app-muted)" }} axisLine={false} tickLine={false} angle={-25} textAnchor="end" height={50} />
+          <YAxis tick={{ fontSize: 9, fill: "var(--app-faint)" }} axisLine={false} tickLine={false} label={{ value: "Contract Count", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: "var(--app-faint)" } }} />
+          <Tooltip contentStyle={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 11 }} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar dataKey="current" fill="var(--app-muted)" name="Current" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="predicted" fill="var(--accent)" name="Predicted Burst" radius={[3, 3, 0, 0]} opacity={0.85} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/* ─── P7: Micro-Purchase Surge — Monthly Heatmap ──────────── */
+function MicroPurchaseSurgeChart({ cards }: { cards: ForecastCard[] }) {
+  // Y=Agency, X=Projected months, Color intensity=predicted purchase count
+  if (!cards.length) return null;
+  const projMonths = [...new Set(cards.flatMap(c => c.data_points.filter(d => d.projected !== undefined).map(d => d.period)))].slice(0, 12);
+  const maxVal = Math.max(...cards.flatMap(c => c.data_points.filter(d => d.projected !== undefined).map(d => d.projected || 0)), 1);
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--app-muted)", fontWeight: 600, borderBottom: "1px solid var(--app-border)" }}>Agency</th>
+            {projMonths.map(m => (
+              <th key={m} style={{ padding: "5px 3px", color: "var(--app-muted)", fontWeight: 500, borderBottom: "1px solid var(--app-border)", textAlign: "center", fontSize: "0.62rem" }}>{m}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {cards.slice(0, 20).map(card => (
+            <tr key={card.id}>
+              <td style={{ padding: "5px 8px", color: "var(--app-text)", fontSize: "0.7rem", borderBottom: "1px solid var(--app-border)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                title={`${card.agency_name} · NAICS ${card.naics_code}`}>
+                {card.agency_name || "Federal Government"}
+              </td>
+              {projMonths.map(m => {
+                const dp = card.data_points.find(d => d.period === m);
+                const val = dp?.projected || 0;
+                const intensity = Math.min(1, val / maxVal);
+                return (
+                  <td key={m} style={{ padding: "3px", textAlign: "center", borderBottom: "1px solid var(--app-border)" }}>
+                    <div title={`${Math.round(val)} purchases`} style={{
+                      width: "100%", minWidth: 26, height: 24, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: intensity > 0.05 ? `rgba(129, 140, 248, ${0.1 + intensity * 0.65})` : "var(--app-surface-2)",
+                      fontSize: "0.6rem", fontWeight: intensity > 0.3 ? 600 : 400,
+                      color: intensity > 0.4 ? "#fff" : "var(--app-faint)",
+                    }}>{val > 0 ? Math.round(val) : ""}</div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -274,13 +404,13 @@ function renderTabContent(tabKey: string, cards: ForecastCard[]) {
 
   switch (tabKey) {
     case "renewal_radar": return <RenewalRadarChart cards={cards} />;
-    case "budget_heatmap": return <HeatmapChart cards={cards} />;
-    case "sub_trickle": return <StandardBarChart cards={cards} />;
-    case "incumbent_vulnerability": return <HorizontalBarChart cards={cards} />;
-    case "setaside_depletion": return <StandardBarChart cards={cards} />;
-    case "zero_competition": return <CardListView cards={cards} />;
-    case "micro_purchase_surge": return <HeatmapChart cards={cards} />;
-    default: return <StandardBarChart cards={cards} />;
+    case "budget_heatmap": return <SpendingHeatmapChart cards={cards} />;
+    case "sub_trickle": return <SubTrickleGantt cards={cards} />;
+    case "incumbent_vulnerability": return <IncumbentVulnerabilityChart cards={cards} />;
+    case "setaside_depletion": return <SetAsideDepletionChart cards={cards} />;
+    case "zero_competition": return <ZeroCompetitionCards cards={cards} />;
+    case "micro_purchase_surge": return <MicroPurchaseSurgeChart cards={cards} />;
+    default: return <SpendingHeatmapChart cards={cards} />;
   }
 }
 

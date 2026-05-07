@@ -34,7 +34,7 @@ const PLANS = [
       "Unlimited NAICS codes and keywords. No caps, no add-ons, no upgrades.",
       "AI match score with a plain-English reason per contract. Know what to bid before you read it.",
       "Set-aside filtering for 8(a), WOSB, SDVOSB and HUBZone. Only contracts you qualify for.",
-      "Competitor tracking by vendor name. Know who is winning and on what contracts.",
+      "Predictive market intelligence. Know which agencies are about to spend before the RFP drops.",
       "Weekly bid calendar, performance summary and 90-day history with unlimited CSV export.",
       "Priority support with an 8-hour response SLA. A real person, not a ticket queue.",
     ],

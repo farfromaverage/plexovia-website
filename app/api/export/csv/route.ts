@@ -46,9 +46,9 @@ export async function GET(request: NextRequest) {
   
   // Build CSV
   const headers = [
-    'title', 'agency', 'state', 'naics_code', 'contract_value',
-    'set_aside_type', 'closing_date', 'posted_date',
-    'score', 'reason', 'source_url'
+    'title', 'agency', 'state', 'naics_code', 'value_min', 'value_max',
+    'set_aside', 'deadline', 'posted_date',
+    'score', 'reason', 'url'
   ]
 
   const escapeCsv = (str: any) => {
@@ -64,13 +64,14 @@ export async function GET(request: NextRequest) {
       escapeCsv(c.agency),
       escapeCsv(c.state),
       escapeCsv(c.naics_code),
-      escapeCsv(c.contract_value),
-      escapeCsv(c.set_aside_type),
-      escapeCsv(c.closing_date),
+      escapeCsv(c.value_min),
+      escapeCsv(c.value_max),
+      escapeCsv(c.set_aside),
+      escapeCsv(c.deadline),
       escapeCsv(c.posted_date),
       escapeCsv(m.score),
       escapeCsv(m.reason),
-      escapeCsv(c.source_url)
+      escapeCsv(c.url)
     ].join(',')
   })
 

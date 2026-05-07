@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
-  LayoutDashboard, FileText, User, TrendingUp,
-  Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight, Zap,
+  LayoutDashboard, FileText, User,
+  Brain, Users, CreditCard, LogOut, Menu, X, ChevronRight,
   Sun, Moon, HelpCircle
 } from "lucide-react";
 import { SupportModal } from "./SupportModal";
@@ -15,9 +15,7 @@ const NAV_ITEMS = [
   { href: "/dashboard",             label: "Overview",     icon: LayoutDashboard },
   { href: "/dashboard/contracts",   label: "Contracts",    icon: FileText },
   { href: "/dashboard/profile",     label: "Profile",      icon: User },
-  { href: "/dashboard/competitors", label: "Competitors",  icon: TrendingUp },
   { href: "/dashboard/forecasts",   label: "AI Forecasts", icon: Brain },
-  { href: "/dashboard/intelligence",label: "Win Analysis", icon: Zap },
   { href: "/dashboard/team",        label: "Team",         icon: Users },
   { href: "/dashboard/billing",     label: "Billing",      icon: CreditCard },
 ] as const;
@@ -39,11 +37,11 @@ export default function DashboardNav() {
       setUserEmail(session.user.email ?? null);
       supabase
         .from("profiles")
-        .select("trial_ends_at, plan, full_name")
+        .select("trial_ends_at, plan, company_name")
         .eq("id", session.user.id)
         .single()
         .then(({ data }) => {
-          if (data?.full_name) setUserName(data.full_name);
+          if (data?.company_name) setUserName(data.company_name);
           if (data?.trial_ends_at && data.plan === "trial") {
             const days = Math.max(0, Math.ceil(
               (new Date(data.trial_ends_at).getTime() - Date.now()) / 86400000

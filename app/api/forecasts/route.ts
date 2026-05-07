@@ -164,9 +164,9 @@ export async function GET() {
 
       if (hist && hist.month_labels && hist.month_labels.length > 0) {
         let histArray = hist.volume_array || [];
-        if (f.forecast_type === "set_aside_depletion") histArray = hist.setaside_counts || [];
+        if (f.forecast_type === "setaside_depletion") histArray = hist.setaside_counts || [];
         else if (f.forecast_type === "zero_competition") histArray = hist.single_bidder_counts || [];
-        else if (f.forecast_type === "micropurchase_surge") histArray = hist.micropurchase_counts || [];
+        else if (f.forecast_type === "micro_purchase_surge") histArray = hist.micropurchase_counts || [];
 
         // Last 6 months of historical
         const histSlice = histArray.slice(-6);
@@ -208,11 +208,14 @@ export async function GET() {
 
       return {
         id: f.id,
+        naics_code: f.naics_code,
         naics_label: getNaicsLabel(f.naics_code),
-        prediction_type: "renewal_radar",
+        agency_name: f.agency_name || "",
+        forecast_type: f.forecast_type,
+        prediction_type: trend.type,
         confidence: mapConfidence(conf),
         percent_change: Math.round(trend.pct * 10) / 10,
-        plain_english_summary: f.insight_text || "",
+        insight_text: f.insight_text || "",
         data_points: dataPoints,
         run_date: f.run_date || f.updated_at || null,
       };

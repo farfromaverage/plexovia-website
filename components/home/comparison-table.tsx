@@ -9,7 +9,7 @@ import { fadeInUp } from "@/lib/motion";
 /* ─────────────────────────────────────────────────────────
    ComparisonTable
    Plexovia vs "the typical alternative" — no names
-   Named competitor comparison lives on /pricing page.
+   Plexovia vs "the typical alternative" — no names.
 
    Icon key:
    ✓  Check (green)  = included / advantage
@@ -60,9 +60,9 @@ const ROWS: Row[] = [
     alternative: { type: "minus" },
   },
   {
-    feature:     "Competitor award tracking",
-    plexovia:    { type: "check" },
-    alternative: { type: "text", value: "Partial / extra cost" },
+    feature:     "Predictive market intelligence",
+    plexovia:    { type: "text", value: "7 AI models forecast agency spend before RFPs drop", highlight: true },
+    alternative: { type: "minus" },
   },
   {
     feature:     "Annual contract required",

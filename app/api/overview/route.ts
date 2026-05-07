@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   // Fetch current period matches
   const { data: matchesCurrent } = await supabase
     .from('matches')
-    .select('score, contracts(contract_value, set_aside_type, title, agency, id)')
+    .select('score, contracts(value_min, value_max, set_aside, title, agency, id)')
     .eq('user_id', session.user.id)
     .gte('created_at', periodStart.toISOString())
 
@@ -69,14 +69,14 @@ export async function GET(request: NextRequest) {
     matchesCurrent.forEach(m => {
       const c: any = Array.isArray(m.contracts) ? (m.contracts[0] || {}) : (m.contracts || {})
       
-      // Aggregate total value
-      const val = c.contract_value
+      // Aggregate total value (use value_max as the representative contract value)
+      const val = c.value_max || c.value_min
       if (val && !isNaN(Number(val))) {
         totalValue += Number(val)
       }
 
       // Aggregate set asides
-      const sa = c.set_aside_type || 'None'
+      const sa = c.set_aside || 'None'
       setAsideBreakdown[sa] = (setAsideBreakdown[sa] || 0) + 1
       
       // Collect top matches
