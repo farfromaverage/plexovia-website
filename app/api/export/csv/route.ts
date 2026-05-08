@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getTeamRole, canWriteData } from '@/lib/team'
 
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
@@ -20,11 +19,6 @@ export async function GET(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
     return new NextResponse('Unauthorized', { status: 401 })
-  }
-
-  const role = await getTeamRole(supabase, session.user.id);
-  if (!canWriteData(role)) {
-    return new NextResponse('Forbidden: Viewers cannot export data', { status: 403 })
   }
 
   // ── Parse days parameter (1–90, default 90) ──────────────────────────

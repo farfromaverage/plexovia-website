@@ -47,21 +47,16 @@ export default function PricingPage() {
     },
     {
       id: "pfaq-2",
-      q: "What if I need to add team members?",
-      a: "Each seat is $249 per month (or $2,190/year). You can add or remove seats at any time from your account settings. For teams of 10 or more, contact us for volume pricing at enterprise@plexovia.com.",
-    },
-    {
-      id: "pfaq-3",
       q: "What payment methods do you accept?",
       a: "We accept all major credit cards (Visa, Mastercard, American Express), debit cards, and ACH bank transfers for annual plans. All payments are processed through LemonSqueezy. We can also accommodate purchase orders for enterprise accounts.",
     },
     {
-      id: "pfaq-4",
+      id: "pfaq-3",
       q: "Is there a refund policy?",
       a: "If you are not satisfied within your first 30 days as a paying customer, email support@plexovia.com and we will issue a full refund. No questions asked. After 30 days, cancellation stops future charges but does not refund the current cycle.",
     },
     {
-      id: "pfaq-5",
+      id: "pfaq-4",
       q: "How does the set-aside precision filter work?",
       a: "When you set up your profile, you specify your certifications (8(a), WOSB, SDVOSB, HUBZone, etc.). The engine applies strict prefiltering so your digest only includes contracts where your set-aside eligibility gives you a legal priority. Contracts that do not match your certifications are excluded before scoring.",
     },

@@ -74,29 +74,6 @@ export async function GET(request: Request) {
           await supabase.from('profiles').update(updates).eq('id', user.id)
         }
 
-        // Process invite token if exists
-        const inviteToken = cookieStore.get('plexovia_invite')?.value
-        if (inviteToken) {
-          const { data: invite } = await supabase.from('team_profiles').select('*').eq('invite_token', inviteToken).single()
-          if (invite && invite.status === 'pending') {
-            await supabase.from('team_profiles').update({
-              member_id: user.id,
-              status: 'active',
-              accepted_at: new Date().toISOString()
-            }).eq('invite_token', inviteToken)
-
-            // Log the action
-            await supabase.from('team_activity_log').insert({
-              org_id: invite.org_id,
-              actor_user_id: user.id,
-              actor_email: user.email,
-              action: 'invite_accepted',
-              target_email: invite.invited_email
-            })
-          }
-          cookieStore.delete('plexovia_invite')
-        }
-
         const redirectUrl = isComplete ? `${origin}${next}` : `${origin}/dashboard/onboarding`
         return NextResponse.redirect(redirectUrl)
       }

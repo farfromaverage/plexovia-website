@@ -23,21 +23,6 @@ export async function POST(request: NextRequest) {
 
   const payload = await request.json()
 
-  // Also create the team_profiles row here since we are the backend proxy
-  // The instruction said: "The system must automatically create the owner's team_profiles row on onboarding completion:"
-  const { error: teamError } = await supabase.from('team_profiles').upsert({
-    org_id: session.user.id,
-    user_id: session.user.id,
-    role: 'admin',
-    invited_email: session.user.email || payload.email || '',
-    status: 'active',
-    accepted_at: new Date().toISOString()
-  }, { onConflict: 'org_id,invited_email' })
-
-  if (teamError) {
-    console.error('Failed to create team profile', teamError)
-  }
-
   const engineUrl = process.env.RAILWAY_API_URL
     || process.env.NEXT_PUBLIC_RAILWAY_API_URL
     || 'https://plexovia-engine-production.up.railway.app'
