@@ -1,24 +1,38 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  FileText, MapPin, Shield, ExternalLink, Tag,
+  FileText, MapPin, Shield, ExternalLink, Tag, DollarSign,
   ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
-  ArrowUpDown, Download,
+  ArrowUpDown, Download, Calendar,
 } from "lucide-react";
 import ScoreBadge from "../components/ScoreBadge";
 import SkeletonRows from "../components/SkeletonRows";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
-import type { Metadata } from "next";
 
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface ContractRow {
-  id: string; title: string; agency: string; naics: string;
-  state: string; value: string; posted: string; deadline: string;
+  id: string;
+  title: string;
+  agency: string;
+  naics: string;
+  psc: string;
+  state: string;
+  value: string;
+  valueMin: number | null;
+  valueMax: number | null;
+  posted: string;
+  postedRaw: string | null;
+  deadline: string;
+  deadlineRaw: string | null;
   deadlineDays: number | null;
-  score: number; type: string; matchedBy: "naics" | "keyword";
-  matchLabel: string; url: string | null;
+  score: number;
+  setAside: string;
+  matchedBy: "naics" | "keyword";
+  matchLabel: string;
+  url: string | null;
+  matchedAt: string | null;
 }
 
 type SortKey = "score" | "deadline" | "value_min" | "posted_date";
@@ -32,7 +46,7 @@ function fmt$(n: number) {
 }
 function fmtVal(min: number | null, max: number | null) {
   if (!min && !max) return "TBD";
-  if (min && max && min !== max) return `${fmt$(min)} to ${fmt$(max)}`;
+  if (min && max && min !== max) return `${fmt$(min)} – ${fmt$(max)}`;
   return fmt$(min || max || 0);
 }
 function fmtDate(d: string | null) {
@@ -68,34 +82,26 @@ function mapRow(m: any): ContractRow {
     title: c.title || "Untitled",
     agency: c.agency || "Federal Agency",
     naics: c.naics_code || "",
-    state: c.state || "Federal",
+    psc: c.psc_code || "",
+    state: c.state || "",
     value: fmtVal(c.value_min, c.value_max),
+    valueMin: c.value_min ?? null,
+    valueMax: c.value_max ?? null,
     posted: fmtDate(c.posted_date),
+    postedRaw: c.posted_date || null,
     deadline: dl.label,
+    deadlineRaw: c.deadline || null,
     deadlineDays: dl.days,
     score: m.score,
-    type: c.set_aside || "Full & Open",
+    setAside: c.set_aside || "",
     matchedBy,
     matchLabel,
     url: c.url || null,
+    matchedAt: m.matched_at || null,
   };
 }
 
-/* ─── CSV Export ──────────────────────────────────────────────────── */
-function exportCSV(contracts: ContractRow[]) {
-  const headers = ["Score", "Title", "Agency", "NAICS", "State", "Value", "Posted", "Deadline", "Type", "URL"];
-  const rows = contracts.map(c => [
-    c.score, `"${c.title.replace(/"/g, '""')}"`, `"${c.agency.replace(/"/g, '""')}"`,
-    c.naics, c.state, c.value, c.posted, c.deadline, c.type, c.url || "",
-  ]);
-  const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `plexovia-contracts-${new Date().toISOString().split("T")[0]}.csv`;
-  link.click();
-}
-
+/* ─── Sort options ────────────────────────────────────────────────── */
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "score",        label: "Best match" },
   { value: "deadline",     label: "Soonest deadline" },
@@ -104,6 +110,8 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 ];
 
 const PER_PAGE = 15;
+
+const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
 import { supabase } from "@/lib/supabase";
 
@@ -121,12 +129,26 @@ export default function ContractsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [sortBy,     setSortBy]     = useState<SortKey>("score");
   const [sortOpen,   setSortOpen]   = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting,  setExporting]  = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('profiles').select('naics_codes').single();
       if (data?.naics_codes) setNaicsCodes(data.naics_codes);
     })();
+  }, []);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const fetchMatches = async (p: number, s: number, q: string, sort: SortKey) => {
@@ -178,7 +200,7 @@ export default function ContractsPage() {
     }
   }, [page, minScore, search, sortBy, isColdStart]);
 
-  useEffect(() => { load(); }, [page, minScore, search, sortBy]); // Removed load from dependency to prevent polling loop re-triggers if not handled carefully, actually better to just have it run once per dependency change.
+  useEffect(() => { load(); }, [page, minScore, search, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
@@ -190,6 +212,28 @@ export default function ContractsPage() {
 
   function handlePageChange(newPage: number) {
     setPage(Math.max(1, Math.min(totalPages, newPage)));
+  }
+
+  async function handleExportCSV(days: number) {
+    setExporting(true);
+    setExportOpen(false);
+    try {
+      const res = await fetch(`/api/export/csv?days=${days}`);
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const today = new Date().toISOString().split("T")[0];
+      a.download = `plexovia-matches-${days}d-${today}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("CSV export failed:", err);
+      alert("Failed to export CSV. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Best match";
@@ -209,17 +253,74 @@ export default function ContractsPage() {
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-          {/* Export */}
+          {/* Export CSV with day range dropdown */}
           {contracts.length > 0 && (
-            <button
-              className="dash-btn"
-              onClick={() => exportCSV(contracts)}
-              aria-label="Export current page results as CSV"
-              title="Export to CSV"
-            >
-              <Download size={13} aria-hidden="true" /> Export CSV
-            </button>
+            <div ref={exportRef} style={{ position: "relative" }}>
+              <button
+                className="dash-btn"
+                onClick={() => setExportOpen(v => !v)}
+                disabled={exporting}
+                aria-haspopup="listbox"
+                aria-expanded={exportOpen}
+                aria-label="Export contracts as CSV"
+              >
+                {exporting ? (
+                  <RefreshCw size={13} className="spin" aria-hidden="true" />
+                ) : (
+                  <Download size={13} aria-hidden="true" />
+                )}
+                {exporting ? "Exporting…" : "Export CSV"}
+              </button>
+              {exportOpen && (
+                <div
+                  role="listbox"
+                  aria-label="Export date range"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    right: 0,
+                    background: "var(--app-surface)",
+                    border: "1px solid var(--app-border)",
+                    borderRadius: "10px",
+                    padding: "4px",
+                    zIndex: 50,
+                    minWidth: "170px",
+                    boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
+                  }}
+                >
+                  {EXPORT_DAY_OPTIONS.map(d => (
+                    <button
+                      key={d}
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => handleExportCSV(d)}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "7px 10px",
+                        borderRadius: "7px",
+                        border: "none",
+                        background: "none",
+                        color: "var(--app-muted)",
+                        fontSize: "0.8125rem",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        textAlign: "left",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.1)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                    >
+                      <Calendar size={12} aria-hidden="true" />
+                      Last {d} days
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
+
           {/* Refresh */}
           <button
             className="dash-btn"
@@ -336,11 +437,10 @@ export default function ContractsPage() {
         {/* Table head */}
         <div
           className="dash-table-head dash-hide-mobile"
-          style={{ display: "grid", gridTemplateColumns: "80px 1fr 140px 80px 110px 110px" }}
+          style={{ display: "grid", gridTemplateColumns: "70px 1fr 80px 100px 110px" }}
         >
           <span className="dash-th">Score</span>
           <span className="dash-th">Contract</span>
-          <span className="dash-th">Agency</span>
           <span className="dash-th">State</span>
           <span className="dash-th">Value</span>
           <span className="dash-th">Deadline</span>
@@ -354,7 +454,7 @@ export default function ContractsPage() {
             message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page will update automatically — no refresh needed.`}
           />
         ) : loading ? (
-          <SkeletonRows rows={6} columns={6} columnWidths="80px 1fr 140px 80px 110px 110px" />
+          <SkeletonRows rows={6} columns={5} columnWidths="70px 1fr 80px 100px 110px" />
         ) : error ? (
           <ErrorState
             message="Could not load your contract matches. The engine may be starting up."
@@ -425,7 +525,7 @@ function ContractRowUI({ c }: { c: ContractRow }) {
       className="dash-table-row"
       style={{
         display: "grid",
-        gridTemplateColumns: "80px 1fr 140px 80px 110px 110px",
+        gridTemplateColumns: "70px 1fr 80px 100px 110px",
         alignItems: "center",
         gap: "0.75rem",
         padding: "1rem 1.5rem",
@@ -436,32 +536,34 @@ function ContractRowUI({ c }: { c: ContractRow }) {
         <ScoreBadge score={c.score} />
       </div>
 
-      {/* Title + badges */}
+      {/* Title + all match signal badges */}
       <div style={{ minWidth: 0 }}>
         <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: "0 0 4px", lineHeight: 1.3 }}>
           {c.title}
         </p>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          <span className={`dash-tag ${c.matchedBy === "naics" ? "dash-tag-green" : "dash-tag-blue"}`}>
-            {c.matchedBy === "naics" ? <FileText size={9} aria-hidden="true" /> : <Tag size={9} aria-hidden="true" />}
-            {c.matchLabel}
-          </span>
-          {c.type !== "Full & Open" && (
-            <span className="dash-tag dash-tag-amber" aria-label={`Set-aside type: ${c.type}`}>
-              {c.type}
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {/* NAICS badge */}
+          {c.naics && (
+            <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}>
+              <FileText size={9} aria-hidden="true" />
+              NAICS {c.naics}
+            </span>
+          )}
+          {/* PSC badge */}
+          {c.psc && (
+            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>
+              <Tag size={9} aria-hidden="true" />
+              PSC {c.psc}
+            </span>
+          )}
+          {/* Set-aside badge */}
+          {c.setAside && c.setAside !== "Full & Open" && (
+            <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}>
+              <Shield size={9} aria-hidden="true" />
+              {c.setAside}
             </span>
           )}
         </div>
-      </div>
-
-      {/* Agency */}
-      <div
-        className="dash-hide-mobile"
-        style={{ fontSize: "0.78rem", color: "var(--app-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-        title={c.agency}
-      >
-        <Shield size={10} color="var(--app-faint)" style={{ marginRight: 4, flexShrink: 0 }} aria-hidden="true" />
-        {c.agency}
       </div>
 
       {/* State */}
@@ -470,13 +572,13 @@ function ContractRowUI({ c }: { c: ContractRow }) {
         style={{ fontSize: "0.78rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 4 }}
       >
         <MapPin size={10} color="var(--app-faint)" aria-hidden="true" />
-        {c.state}
+        {c.state || "—"}
       </div>
 
       {/* Value */}
       <div
         className="dash-mono"
-        style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--app-text)" }}
+        style={{ fontSize: "0.8125rem", fontWeight: 600, color: c.value === "TBD" ? "var(--app-muted)" : "var(--app-text)" }}
         aria-label={`Value: ${c.value}`}
       >
         {c.value}

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // ── Build the main query ────────────────────────────────────────────
     const selectClause =
       'id, score, match_reasons, created_at, ' +
-      'contracts!inner(id, title, url, state, agency, naics_code, ' +
+      'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
       'deadline, posted_date, value_min, value_max, set_aside)'
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,6 +113,7 @@ export async function GET(request: NextRequest) {
           value_min:   contract.value_min ?? null,
           value_max:   contract.value_max ?? null,
           set_aside:   contract.set_aside ?? null,
+          psc_code:    contract.psc_code ?? null,
         },
       }
     })

@@ -27,14 +27,24 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Forbidden: Viewers cannot export data', { status: 403 })
   }
 
-  const ninetyDaysAgo = new Date()
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  // ── Parse days parameter (1–90, default 90) ──────────────────────────
+  const { searchParams } = new URL(request.url)
+  const daysParam = parseInt(searchParams.get('days') || '90', 10)
+  const days = Math.min(90, Math.max(1, isNaN(daysParam) ? 90 : daysParam))
 
-  const { data, error } = await supabase
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - days)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from('matches')
-    .select('score, reason, contracts(*)')
+    .select(
+      'score, match_reasons, created_at, ' +
+      'contracts!inner(title, state, naics_code, psc_code, value_min, value_max, ' +
+      'set_aside, deadline, posted_date, url)'
+    )
     .eq('user_id', session.user.id)
-    .gte('created_at', ninetyDaysAgo.toISOString())
+    .gte('created_at', cutoffDate.toISOString())
     .order('score', { ascending: false })
 
   if (error) {
@@ -43,46 +53,70 @@ export async function GET(request: NextRequest) {
   }
 
   const matches = data || []
-  
-  // Build CSV
+
+  // ── CSV column order (exactly as specified, no keywords) ─────────────
   const headers = [
-    'title', 'agency', 'state', 'naics_code', 'value_min', 'value_max',
-    'set_aside', 'deadline', 'posted_date',
-    'score', 'reason', 'url'
+    'Score',
+    'Title',
+    'NAICS Code',
+    'PSC Code',
+    'State',
+    'Set-Aside',
+    'Value Min',
+    'Value Max',
+    'Posted Date',
+    'Deadline',
+    'Matched Date',
+    'URL',
   ]
 
-  const escapeCsv = (str: any) => {
-    if (str === null || str === undefined) return ''
-    const s = String(str).replace(/"/g, '""')
-    return `"${s}"`
+  const escapeCsv = (val: unknown): string => {
+    if (val === null || val === undefined) return ''
+    const s = String(val).replace(/"/g, '""')
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s}"`
+      : s
   }
 
-  const rows = matches.map(m => {
-    const c: any = Array.isArray(m.contracts) ? (m.contracts[0] || {}) : (m.contracts || {})
+  const fmtDate = (d: string | null): string => {
+    if (!d) return ''
+    try {
+      return new Date(d).toISOString().split('T')[0]
+    } catch {
+      return d
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = matches.map((m: any) => {
+    const c = Array.isArray(m.contracts)
+      ? (m.contracts[0] || {})
+      : (m.contracts || {})
+
     return [
+      m.score ?? '',
       escapeCsv(c.title),
-      escapeCsv(c.agency),
-      escapeCsv(c.state),
       escapeCsv(c.naics_code),
-      escapeCsv(c.value_min),
-      escapeCsv(c.value_max),
+      escapeCsv(c.psc_code),
+      escapeCsv(c.state),
       escapeCsv(c.set_aside),
-      escapeCsv(c.deadline),
-      escapeCsv(c.posted_date),
-      escapeCsv(m.score),
-      escapeCsv(m.reason),
-      escapeCsv(c.url)
+      c.value_min ?? '',
+      c.value_max ?? '',
+      fmtDate(c.posted_date),
+      fmtDate(c.deadline),
+      fmtDate(m.created_at),
+      escapeCsv(c.url),
     ].join(',')
   })
 
   const csvContent = [headers.join(','), ...rows].join('\n')
 
   const today = new Date().toISOString().split('T')[0]
-  
+
   return new NextResponse(csvContent, {
     headers: {
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="plexovia-matches-${today}.csv"`
-    }
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="plexovia-matches-${days}d-${today}.csv"`,
+    },
   })
 }
