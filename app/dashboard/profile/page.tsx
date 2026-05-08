@@ -48,7 +48,7 @@ interface ProfileData {
   states: string[] | null;
   keywords: string[] | null;
   exclude_keywords: string[] | null;
-  alert_frequency: string | null;
+  email_frequency: string | null;
   set_aside_preferences: string[] | null;
   min_value: number | null;
   max_value: number | null;
@@ -115,7 +115,7 @@ export default function ProfilePage() {
 
     const { data, error: err } = await supabase
       .from("profiles")
-      .select("id,company_name,naics_codes,psc_codes,states,keywords,exclude_keywords,alert_frequency,set_aside_preferences,min_value,max_value")
+      .select("id,company_name,naics_codes,psc_codes,states,keywords,exclude_keywords,email_frequency,set_aside_preferences,min_value,max_value")
       .eq("id", user.id)
       .single();
 
@@ -130,7 +130,7 @@ export default function ProfilePage() {
       setSelectedStates(d.states ?? []);
       setKeywords(d.keywords ?? []);
       setExcludeKeywords(d.exclude_keywords ?? []);
-      setFrequency(d.alert_frequency ?? "daily");
+      setFrequency(d.email_frequency ?? "daily");
       setSetAsides(d.set_aside_preferences ?? []);
       setMinValue(d.min_value !== null ? String(d.min_value) : "");
       setMaxValue(d.max_value !== null ? String(d.max_value) : "");
@@ -265,7 +265,7 @@ export default function ProfilePage() {
         states:                   selectedStates,
         keywords:                 keywords,
         exclude_keywords:         excludeKeywords,
-        alert_frequency:          frequency,
+        email_frequency:          frequency,
         set_aside_preferences:    finalSetAsides,
         min_value:                minValue ? parseInt(minValue, 10) : null,
         max_value:                maxValue ? parseInt(maxValue, 10) : null,
