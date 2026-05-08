@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2,
-  Search, Plus, Tag, MapPin, DollarSign, ShieldAlert
+  Search, Plus, Tag, MapPin, DollarSign, ShieldAlert, Zap
 } from "lucide-react";
 
 /* ─── Shared data and logic ───────────────────────────────────────── */
