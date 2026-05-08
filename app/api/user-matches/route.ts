@@ -1,25 +1,25 @@
 /**
  * Plexovia — GET /api/user-matches
- * Server-side proxy to engine /api/user/matches.
+ * Queries Supabase directly for the authenticated user's contract matches.
  *
- * Why a proxy?
- * - Reads the Supabase session from SSR cookies → no NEXT_PUBLIC_ env needed
- * - Forwards the JWT to the engine server-to-server (no CORS constraint)
- * - Dashboard client just calls /api/user-matches (same origin)
+ * Previous architecture proxied through Railway engine, which introduced
+ * a fragile network hop (Vercel → Railway → Supabase → back). This caused
+ * persistent "Could not load contracts" errors due to timeout/connectivity
+ * issues between Vercel serverless functions and Railway.
  *
- * Supported query params (forwarded): page, per_page, min_score
+ * Current architecture: Vercel → Supabase (direct). Same DB, zero Railway
+ * dependency for reads. The engine is only needed for WRITES (matching, fetching).
+ *
+ * Supported query params: page, per_page, min_score, search, sort
  */
 
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const maxDuration = 60;
-
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
 
-  // ── Read session from SSR cookies ─────────────────────────────────────────
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,43 +36,125 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // ── Forward query params ───────────────────────────────────────────────────
+  // ── Parse query params ──────────────────────────────────────────────
   const { searchParams } = new URL(request.url)
-  const page      = searchParams.get('page')      || '1'
-  const per_page  = searchParams.get('per_page')  || '10'
-  const min_score = searchParams.get('min_score') || '0'
-  const search    = searchParams.get('search')    || ''
-  const sort      = searchParams.get('sort')      || 'score'
+  const page      = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+  const per_page  = Math.min(100, Math.max(1, parseInt(searchParams.get('per_page') || '10', 10)))
+  const min_score = Math.max(0, parseInt(searchParams.get('min_score') || '0', 10))
+  const search    = searchParams.get('search') || ''
+  const sort      = searchParams.get('sort') || 'score'
 
-  const engineUrl = process.env.RAILWAY_API_URL
-    || process.env.NEXT_PUBLIC_RAILWAY_API_URL
-    || 'https://plexovia-engine-production.up.railway.app'
+  const offset = (page - 1) * per_page
 
   try {
-    let url = `${engineUrl}/api/user/matches?page=${page}&per_page=${per_page}&min_score=${min_score}&sort=${sort}`
+    // ── Build the main query ────────────────────────────────────────────
+    const selectClause =
+      'id, score, match_reasons, created_at, ' +
+      'contracts!inner(id, title, url, state, agency, naics_code, ' +
+      'deadline, posted_date, value_min, value_max, set_aside)'
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase
+      .from('matches')
+      .select(selectClause)
+      .eq('user_id', session.user.id)
+      .gte('score', min_score)
+
     if (search) {
-      url += `&search=${encodeURIComponent(search)}`
+      query = query.ilike('contracts.title', `%${search}%`)
     }
 
-    const res = await fetch(url,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+    if (sort === 'date') {
+      query = query.order('created_at', { ascending: false })
+    } else {
+      query = query.order('score', { ascending: false })
+    }
+
+    const { data: rows, error: queryError } = await query.range(offset, offset + per_page - 1)
+
+    if (queryError) {
+      console.error('[/api/user-matches] Supabase query error:', queryError)
+      return NextResponse.json(
+        { error: 'Database query failed', detail: queryError.message },
+        { status: 500 }
+      )
+    }
+
+    // ── Format response to match the shape the frontend expects ─────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matches = (rows || []).map((row: any) => {
+      const contract = Array.isArray(row.contracts) ? (row.contracts[0] || {}) : (row.contracts || {})
+      const reasons = row.match_reasons || []
+
+      // Build explanation string from reasons
+      const explanationParts = reasons.map((r: string) => {
+        if (r.startsWith('naics:')) return `NAICS code ${r.replace('naics:', '')} matched`
+        if (r.startsWith('keyword:')) return `Keyword "${r.replace('keyword:', '')}" found in title`
+        if (r.startsWith('psc:')) return `PSC code ${r.replace('psc:', '')} matched`
+        if (r.startsWith('state:')) return `State ${r.replace('state:', '')} matched`
+        return r
+      })
+
+      return {
+        match_id:    row.id,
+        score:       row.score ?? 0,
+        explanation: explanationParts.join('. ') || 'Profile match',
+        reasons:     reasons,
+        matched_at:  row.created_at,
+        contract: {
+          id:          contract.id ?? null,
+          title:       contract.title ?? null,
+          url:         contract.url ?? null,
+          state:       contract.state ?? null,
+          agency:      contract.agency ?? null,
+          naics_code:  contract.naics_code ?? null,
+          deadline:    contract.deadline ?? null,
+          posted_date: contract.posted_date ?? null,
+          value_min:   contract.value_min ?? null,
+          value_max:   contract.value_max ?? null,
+          set_aside:   contract.set_aside ?? null,
         },
-        signal: AbortSignal.timeout(25000),
       }
-    )
+    })
 
-    if (!res.ok) {
-      const text = await res.text()
-      return NextResponse.json({ error: `Engine error: ${res.status}`, detail: text }, { status: res.status })
+    // ── Count query for pagination ────────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let countQuery: any = supabase
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
+      .gte('score', min_score)
+
+    if (search) {
+      countQuery = supabase
+        .from('matches')
+        .select('id, contracts!inner(title)', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .gte('score', min_score)
+        .ilike('contracts.title', `%${search}%`)
     }
 
-    const data = await res.json()
-    return NextResponse.json(data)
+    const { count: totalCount } = await countQuery
+    const total = totalCount ?? 0
+
+    return NextResponse.json({
+      matches,
+      pagination: {
+        page,
+        per_page,
+        total,
+        total_pages: Math.max(1, Math.ceil(total / per_page)),
+        has_next:    (offset + per_page) < total,
+      },
+      user: {
+        user_id: session.user.id,
+      },
+    })
   } catch (err) {
-    console.error('[/api/user-matches] Engine fetch failed:', err)
-    return NextResponse.json({ error: 'Engine unavailable', matches: [], pagination: { total: 0 } }, { status: 502 })
+    console.error('[/api/user-matches] Unexpected error:', err)
+    return NextResponse.json(
+      { error: 'Failed to load matches', matches: [], pagination: { total: 0 } },
+      { status: 500 }
+    )
   }
 }
