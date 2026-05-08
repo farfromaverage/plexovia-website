@@ -14,6 +14,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const maxDuration = 60;
+
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
 
