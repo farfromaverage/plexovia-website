@@ -428,14 +428,19 @@ export default function OnboardingPage() {
     })();
   }, []);
 
+  const [buildingDashboard, setBuildingDashboard] = useState(false);
+  const [buildStatus, setBuildStatus] = useState("");
+
   async function handleFinish() {
     setSaving(true);
     setError("");
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/auth/login"); return; }
+    if (!user) { window.location.href = "/auth/login"; return; }
 
     const finalSetAsides = setAsides.includes("none") ? [] : setAsides;
 
+    // Phase 1: Save profile
+    setBuildStatus("Saving your preferences…");
     const { error: err } = await supabase.from("profiles").update({
       naics_codes:             naics,
       psc_codes:               pscCodes,
@@ -448,22 +453,38 @@ export default function OnboardingPage() {
       onboarding_complete:     true,
     }).eq("id", user.id);
 
+    if (err) {
+      setSaving(false);
+      setError("Could not save your preferences. Please try again.");
+      return;
+    }
+
+    // Phase 2: Trigger pipelines — show building state
     setSaving(false);
-    if (err) { setError("Could not save your preferences. Please try again."); return; }
+    setBuildingDashboard(true);
+    setBuildStatus("Starting contract matching engine…");
 
-    fetch("/api/onboarding/first-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ naics_codes: naics, states: states })
-    }).catch(e => console.error("Trigger error:", e));
+    // Fire both triggers in parallel
+    await Promise.allSettled([
+      fetch("/api/onboarding/first-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ naics_codes: naics, states: states })
+      }),
+      fetch("/api/forecasts/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ naics_codes: naics })
+      })
+    ]);
 
-    fetch("/api/forecasts/trigger", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ naics_codes: naics })
-    }).catch(e => console.error("Forecast trigger error:", e));
+    setBuildStatus("Redirecting to your dashboard…");
 
-    router.push("/dashboard");
+    // Small delay so user sees the status, then hard redirect
+    // Hard redirect (window.location) avoids Next.js router cache issues
+    // and ensures middleware re-evaluates onboarding_complete = true
+    await new Promise(r => setTimeout(r, 1200));
+    window.location.href = "/dashboard";
   }
 
   const canNext = step === 1 ? true : step === 2 ? (naics.length > 0 || pscCodes.length > 0) : true;
@@ -477,6 +498,25 @@ export default function OnboardingPage() {
       </div>
 
       <div className="w-full max-w-[580px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl min-h-[580px] flex flex-col">
+        {buildingDashboard ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center py-12">
+            <div className="relative">
+              <div style={{ width: 56, height: 56, border: "3px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
+              <Zap size={22} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--accent)]" />
+            </div>
+            <div>
+              <h2 className="font-bold text-xl text-[var(--app-text)] mb-2">Building Your Dashboard</h2>
+              <p className="text-[var(--app-muted)] text-sm leading-relaxed max-w-[360px]">
+                We&apos;re matching contracts to your profile and generating AI forecasts. This takes a few seconds.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-full">
+              <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
+              <span className="text-sm text-[var(--app-muted)]">{buildStatus}</span>
+            </div>
+          </div>
+        ) : (
+        <>
         <StepBar current={step} total={3} />
 
         <div className="flex-1 mb-8 overflow-hidden h-[340px]">
@@ -503,11 +543,13 @@ export default function OnboardingPage() {
               Next <ArrowRight size={17} strokeWidth={2.5}/>
             </button>
           ) : (
-            <button type="button" onClick={handleFinish} disabled={saving || !canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${saving || !canNext ? "bg-[var(--accent)]/70 cursor-not-allowed" : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"}`}>
-              {saving ? <><Loader2 size={18} className="animate-spin" /> Finishing...</> : <><Check size={17} strokeWidth={2.5} /> Finish & Build Dashboard</>}
+            <button type="button" onClick={handleFinish} disabled={saving || buildingDashboard || !canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${saving || buildingDashboard || !canNext ? "bg-[var(--accent)]/70 cursor-not-allowed" : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"}`}>
+              {saving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Check size={17} strokeWidth={2.5} /> Finish & Build Dashboard</>}
             </button>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

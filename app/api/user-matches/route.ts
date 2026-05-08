@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(25000),
       }
     )
 
