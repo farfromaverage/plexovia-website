@@ -62,8 +62,8 @@ function GoogleIcon() {
 
 /* ─── Trust indicators for left panel ─────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield,    label: "15,000+ solicitations scanned weekly — only your NAICS matches surface" },
-  { icon: BarChart3, label: "TimesFM AI forecasts which agencies post next, before the solicitation drops" },
+  { icon: Shield,    label: "SAM.gov contracts matched daily" },
+  { icon: BarChart3, label: "AI scoring and forecasting built in" },
 ];
 
 /* ─── Inner content (uses useSearchParams — must be wrapped) ─────── */
@@ -210,10 +210,9 @@ function BrandPanel() {
       {/* Center — headline + trust signals */}
       <div className="relative z-10 -mt-8">
         <h2 className="text-white text-[32px] font-bold leading-tight tracking-tight mb-10">
-          Every federal contract<br/>
-          that fits your business.<br/>
-          Scored. Ranked.<br/>
-          Ready in your dashboard.
+          Federal contracts<br/>
+          matched to your business.<br/>
+          Every day.
         </h2>
         <div className="flex flex-col gap-4">
           {TRUST_POINTS.map(({ icon: Icon, label }) => (
