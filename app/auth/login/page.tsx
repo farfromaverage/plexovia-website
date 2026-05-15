@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, Shield, BarChart3 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, Shield, BarChart3, Zap } from "lucide-react";
 
 /* ─── Google button ───────────────────────────────────────────────── */
 function GoogleButton() {
@@ -62,8 +62,9 @@ function GoogleIcon() {
 
 /* ─── Trust indicators for left panel ─────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield,    label: "SAM.gov contract opportunities reviewed daily" },
-  { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
+  { icon: Shield,    label: "SAM.gov contracts matched to your NAICS codes, daily" },
+  { icon: BarChart3, label: "AI scoring and forecasting — know what's coming next" },
+  { icon: Zap,       label: "14-day free trial. No credit card required." },
 ];
 
 /* ─── Inner content (uses useSearchParams — must be wrapped) ─────── */
@@ -97,11 +98,6 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-[420px]">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Welcome back</h1>
-        <p className="text-[var(--app-muted)] text-[15px]">Sign in to access your dashboard</p>
-      </div>
 
       {/* Google — primary CTA */}
       <GoogleButton />
