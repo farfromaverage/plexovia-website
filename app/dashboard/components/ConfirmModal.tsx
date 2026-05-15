@@ -84,7 +84,7 @@ export default function ConfirmModal({
         <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "1.25rem" }}>
           <AlertTriangle
             size={20}
-            color={danger ? "#F87171" : "var(--accent)"}
+            color={danger ? "var(--danger)" : "var(--accent)"}
             style={{ flexShrink: 0, marginTop: 2 }}
             aria-hidden="true"
           />

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, Shield, BarChart3, Zap } from "lucide-react";
 
 /* ─── Google button ───────────────────────────────────────────────── */
 function GoogleButton() {
@@ -31,17 +31,17 @@ function GoogleButton() {
         id="google-login"
         onClick={handleGoogle}
         disabled={loading}
-        className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 bg-[#FFFFFF] border border-[#E2DDD6] rounded-xl text-[#1C1917] font-semibold text-[15px] transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.18)] disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:shadow-none"
+        className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 bg-[var(--app-surface)] border border-[var(--app-border)] rounded-xl text-[var(--app-text)] font-semibold text-[15px] transition-all hover:shadow-[0_2px_8px_rgba(15,13,26,0.12)] disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:shadow-none"
       >
         {loading ? (
-          <Loader2 size={18} className="animate-spin text-[#1C1917]" />
+          <Loader2 size={18} className="animate-spin text-[var(--app-text)]" />
         ) : (
           <GoogleIcon />
         )}
         Continue with Google
       </button>
       {err && (
-        <p className="flex items-center gap-1.5 text-xs text-red-400 mt-2">
+        <p className="flex items-center gap-1.5 text-xs text-[var(--danger)] mt-2">
           <AlertCircle size={13} /> {err}
         </p>
       )}
@@ -59,6 +59,13 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+/* ─── Trust indicators for left panel ─────────────────────────────── */
+const TRUST_POINTS = [
+  { icon: Shield, label: "SAM.gov contract opportunities reviewed daily" },
+  { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
+  { icon: Zap, label: "7-day free trial. No charge until Day 8." },
+];
 
 /* ─── Inner content (uses useSearchParams — must be wrapped) ─────── */
 function LoginForm() {
@@ -90,25 +97,25 @@ function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl relative z-10">
+    <div className="w-full max-w-[420px]">
       {/* Header */}
-      <div className="text-center mb-7">
-        <h1 className="font-bold text-2xl xl:text-[26px] tracking-tight text-[var(--app-text)] mb-2">Welcome back</h1>
-        <p className="text-[var(--app-muted)] text-[15px]">Sign in to your Plexovia account</p>
+      <div className="mb-8">
+        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Welcome back</h1>
+        <p className="text-[var(--app-muted)] text-[15px]">Sign in to access your dashboard</p>
       </div>
 
       {/* Google — primary CTA */}
       <GoogleButton />
 
       {/* Divider */}
-      <div className="flex items-center gap-3 my-5">
+      <div className="flex items-center gap-3 my-6">
         <div className="flex-1 h-px bg-[var(--app-border)]" />
         <span className="text-xs text-[var(--app-faint)] lowercase tracking-wide">or</span>
         <div className="flex-1 h-px bg-[var(--app-border)]" />
       </div>
 
       {/* Email / password */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">Email</label>
           <input 
@@ -116,10 +123,10 @@ function LoginForm() {
             type="email" 
             value={email} 
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com" 
+            placeholder="work@yourcompany.com" 
             required 
             autoComplete="email" 
-            className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+            className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 placeholder-[var(--app-faint)]"
           />
         </div>
 
@@ -136,10 +143,10 @@ function LoginForm() {
               type={showPw ? "text" : "password"} 
               value={pw}
               onChange={(e) => setPw(e.target.value)} 
-              placeholder="Your password"
+              placeholder="Enter your password"
               required 
               autoComplete="current-password"
-              className="w-full px-4 py-3 pr-12 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+              className="w-full px-4 py-3 pr-12 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 placeholder-[var(--app-faint)]"
             />
             <button 
               type="button" 
@@ -154,7 +161,7 @@ function LoginForm() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm mt-1">
+          <div className="flex items-center gap-2 p-3 bg-[var(--danger)]/8 border border-[var(--danger)]/20 rounded-lg text-[var(--danger)] text-sm">
             <AlertCircle size={15} className="shrink-0" />
             <p>{error}</p>
           </div>
@@ -164,14 +171,14 @@ function LoginForm() {
           type="submit" 
           id="email-login" 
           disabled={loading} 
-          className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-2 bg-[var(--accent)] text-[#1C1917] font-bold text-[15px] rounded-xl transition-colors hover:bg-[var(--accent-lt)] disabled:opacity-75 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-1 bg-[var(--accent)] text-white font-bold text-[15px] rounded-xl transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20 disabled:opacity-75 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <>Sign In <ArrowRight size={17} strokeWidth={2.5} /></>}
         </button>
       </form>
 
-      <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-6">
-        No account? <Link href="/auth/signup" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Create account &rarr;</Link>
+      <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-8">
+        New here? <Link href="/auth/signup" className="text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">Start your free trial &rarr;</Link>
       </p>
       <p className="text-center text-[13px] text-[var(--app-faint)] mt-3">
         Need help? <a href="mailto:support@plexovia.com" className="hover:text-[var(--app-muted)] transition-colors">support@plexovia.com</a>
@@ -180,25 +187,92 @@ function LoginForm() {
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────────── */
-export default function LoginPage() {
+/* ─── Decorative Panel (left side — desktop only) ─────────────────── */
+function BrandPanel() {
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative overflow-hidden">
-      <Wordmark />
-      <Suspense fallback={<div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl text-center text-[var(--app-muted)]"><Loader2 size={24} className="animate-spin mx-auto text-[var(--accent)]" /></div>}>
-        <LoginForm />
-      </Suspense>
+    <div className="hidden lg:flex flex-col justify-between w-[480px] min-h-screen p-12 relative overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, #635BFF 0%, #4B44D6 40%, #3B35B0 100%)",
+      }}
+    >
+      {/* Subtle grid pattern overlay */}
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-rule='evenodd'%3E%3Cpath d='M0 0h1v40H0zM39 0h1v40h-1zM0 0h40v1H0zM0 39h40v1H0z'/%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
+
+      {/* Floating gradient orbs */}
+      <div className="absolute top-20 right-10 w-64 h-64 bg-white/[0.06] rounded-full blur-3xl" />
+      <div className="absolute bottom-32 left-10 w-48 h-48 bg-white/[0.04] rounded-full blur-3xl" />
+
+      {/* Top wordmark */}
+      <div className="relative z-10">
+        <Link href="/" className="font-bold text-2xl tracking-tight text-white/90 hover:text-white transition-colors">
+          Plexovia
+        </Link>
+      </div>
+
+      {/* Center value proposition */}
+      <div className="relative z-10 -mt-8">
+        <h2 className="text-white text-[32px] font-bold leading-tight tracking-tight mb-6">
+          Every federal contract<br/>
+          that fits your business.<br/>
+          Scored. Ranked.<br/>
+          Ready in your dashboard.
+        </h2>
+        <div className="flex flex-col gap-4 mt-8">
+          {TRUST_POINTS.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                <Icon size={16} className="text-white/80" />
+              </div>
+              <span className="text-white/70 text-[14px] leading-snug">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom social proof */}
+      <div className="relative z-10">
+        <p className="text-white/40 text-[13px]">
+          Built for government contractors who win federal work
+        </p>
+      </div>
     </div>
   );
 }
 
-/* ─── Shared ──────────────────────────────────────────────────────── */
-function Wordmark() {
+/* ─── Page ────────────────────────────────────────────────────────── */
+export default function LoginPage() {
   return (
-    <div className="absolute top-6 left-7 z-20">
-      <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
-        <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
-      </Link>
+    <div className="flex min-h-screen" style={{ animationName: "auth-fade-in", animationDuration: "400ms", animationTimingFunction: "cubic-bezier(0.25, 1, 0.5, 1)", animationFillMode: "both" }}>
+      {/* Left: Brand panel — desktop only */}
+      <BrandPanel />
+
+      {/* Right: Auth form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[var(--app-bg)] relative">
+        {/* Mobile wordmark (shown when brand panel is hidden) */}
+        <div className="lg:hidden absolute top-6 left-7 z-20">
+          <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+            <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
+          </Link>
+        </div>
+
+        <Suspense fallback={
+          <div className="w-full max-w-[420px] text-center text-[var(--app-muted)]">
+            <Loader2 size={24} className="animate-spin mx-auto text-[var(--accent)]" />
+          </div>
+        }>
+          <LoginForm />
+        </Suspense>
+      </div>
+
+      {/* Mount animation */}
+      <style>{`
+        @keyframes auth-fade-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

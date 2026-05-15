@@ -64,7 +64,7 @@ export function SupportModal({ isOpen, onClose, userEmail, userName }: { isOpen:
         ) : (
           <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm">
+              <div className="flex items-center gap-2 p-3 rounded-lg text-sm" style={{ background: "var(--danger-subtle)", border: "1px solid rgba(194,59,59,0.2)", color: "var(--danger)" }}>
                 <AlertCircle size={15} />
                 <span>{error}</span>
               </div>
@@ -85,7 +85,7 @@ export function SupportModal({ isOpen, onClose, userEmail, userName }: { isOpen:
               <textarea value={message} onChange={e => setMessage(e.target.value)} required minLength={20} placeholder="Please provide details (minimum 20 characters)..." rows={4} className="w-full px-3 py-2.5 bg-[var(--app-bg)] border border-[var(--app-border)] rounded-lg text-[var(--app-text)] text-sm outline-none focus:border-[var(--accent)] transition-colors resize-none" />
             </div>
 
-            <button type="submit" disabled={loading} className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[var(--accent)] text-[#1C1917] font-semibold text-sm hover:bg-[var(--accent-lt)] transition-colors disabled:opacity-70">
+            <button type="submit" disabled={loading} className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-70">
               {loading ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16} /> Send Message</>}
             </button>
           </form>

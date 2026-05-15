@@ -23,18 +23,43 @@ const REGIONS: Record<string, string[]> = {
 /* ─── Components ──────────────────────────────────────────────────── */
 
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["Basics", "NAICS & PSC Codes", "Location & Keywords"];
+  const labels = ["Set-Asides & Value", "NAICS & PSC Codes", "Location & Keywords"];
+  const estimatedMinutes = 4 - current; // decreasing as user progresses
   return (
     <div className="mb-7">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-3">
         <span className="text-sm text-[var(--app-muted)]">Step {current} of {total}</span>
-        <span className="text-sm text-[var(--accent)] font-semibold">{labels[current - 1]}</span>
+        <span className="text-[12px] text-[var(--app-faint)]">{estimatedMinutes > 0 ? `About ${estimatedMinutes} min left` : "Almost done!"}</span>
       </div>
-      <div className="h-1 bg-[var(--app-border)] rounded-full overflow-hidden">
-        <div 
-          className="h-full bg-[var(--accent)] rounded-full transition-all duration-300 ease-out" 
-          style={{ width: `${(current / total) * 100}%` }} 
-        />
+      {/* Step indicator pills */}
+      <div className="flex gap-2 mb-3">
+        {labels.map((label, i) => {
+          const stepNum = i + 1;
+          const isActive = stepNum === current;
+          const isDone = stepNum < current;
+          return (
+            <div key={label} className="flex-1 flex flex-col gap-1.5">
+              <div className={`h-1.5 rounded-full transition-all duration-300 ${
+                isDone ? "bg-[var(--accent)]" :
+                isActive ? "bg-[var(--accent)]" :
+                "bg-[var(--app-border)]"
+              }`} />
+              <div className="flex items-center gap-1">
+                {isDone && (
+                  <svg width="12" height="12" viewBox="0 0 12 12" className="text-[var(--accent)] shrink-0">
+                    <circle cx="6" cy="6" r="6" fill="currentColor" opacity="0.15" />
+                    <path d="M3.5 6L5.5 8L8.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                )}
+                <span className={`text-[11px] font-medium truncate ${
+                  isActive ? "text-[var(--accent)]" :
+                  isDone ? "text-[var(--app-muted)]" :
+                  "text-[var(--app-faint)]"
+                }`}>{label}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -73,12 +98,12 @@ function Step1({
     <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
       <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Set-Asides & Value</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
-        Select your eligible socio-economic certifications and target contract value.
+        Select the set-aside categories your business qualifies for. We&apos;ll prioritize contracts reserved for your designations.
       </p>
 
       <div className="mb-6">
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-3 pl-0.5">
-          <span className="flex items-center gap-1.5"><ShieldAlert size={14} /> Certifications</span>
+          <span className="flex items-center gap-1.5"><ShieldAlert size={14} /> Set-Asides</span>
         </label>
         <div className="flex flex-wrap gap-2.5">
           {options.map(({ code, label }) => {
@@ -103,7 +128,7 @@ function Step1({
 
       <div>
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-3 pl-0.5">
-          <span className="flex items-center gap-1.5"><DollarSign size={14} /> Target Contract Value (Optional)</span>
+          <span className="flex items-center gap-1.5"><DollarSign size={14} /> Preferred Contract Size (optional)</span>
         </label>
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
@@ -112,7 +137,7 @@ function Step1({
               type="number"
               value={minValue}
               onChange={(e) => setMinValue(e.target.value)}
-              placeholder="Min value (e.g. 50000)"
+              placeholder="e.g. $25,000"
               className="w-full pl-7 pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
             />
           </div>
@@ -123,7 +148,7 @@ function Step1({
               type="number"
               value={maxValue}
               onChange={(e) => setMaxValue(e.target.value)}
-              placeholder="Max value (e.g. 1000000)"
+              placeholder="e.g. $500,000"
               className="w-full pl-7 pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
             />
           </div>
@@ -168,9 +193,9 @@ function Step2({
 
   return (
     <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Industry Codes</h2>
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">NAICS & PSC Codes</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-4">
-        Define your NAICS codes and Federal Supply/PSC Codes.
+        Add the NAICS codes that describe your business. We use these to find contracts you&apos;re qualified to win.
       </p>
 
       {/* Selected NAICS */}
@@ -199,7 +224,7 @@ function Step2({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && canAddCustom) { toggleNaics(trimmed); setQuery(""); } }}
-          placeholder="Search NAICS codes..."
+          placeholder="Search by code or keyword (e.g. 541511 or engineering)"
           className="w-full pl-[38px] pr-4 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)]"
         />
       </div>
@@ -230,13 +255,13 @@ function Step2({
       {/* PSC Codes */}
       <div className="mt-4 border-t border-[var(--app-border)] pt-4 flex-shrink-0">
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
-          <span className="flex items-center gap-1.5">PSC / FSC Codes</span>
+          <span className="flex items-center gap-1.5">Product & Service Codes (PSC)</span>
         </label>
         <div className="flex flex-wrap gap-2 mb-2">
           {pscCodes.map((code) => (
             <span key={code} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-md text-[13px] font-mono text-[var(--app-text)]">
               {code}
-              <button type="button" onClick={() => setPscCodes(pscCodes.filter(c => c !== code))} className="text-[var(--app-muted)] hover:text-red-400"><X size={12}/></button>
+              <button type="button" onClick={() => setPscCodes(pscCodes.filter(c => c !== code))} className="text-[var(--app-muted)] hover:text-[var(--danger)]"><X size={12}/></button>
             </span>
           ))}
         </div>
@@ -246,7 +271,7 @@ function Step2({
             value={pscInput}
             onChange={(e) => setPscInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addPsc(); }}
-            placeholder="e.g. D302, 1005"
+            placeholder="e.g. D302, R425"
             className="flex-1 px-3 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-lg text-[var(--app-text)] text-[13px] outline-none focus:border-[var(--accent)] uppercase"
           />
           <button type="button" onClick={addPsc} className="px-4 py-2 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-lg text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">Add</button>
@@ -311,7 +336,7 @@ function Step3({
       {/* Target States */}
       <div className="mb-5 mt-2">
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-2 pl-0.5">
-          <span className="flex items-center gap-1.5"><MapPin size={14} /> State Monitoring</span>
+          <span className="flex items-center gap-1.5"><MapPin size={14} /> States You Operate In</span>
         </label>
         <div className="p-3 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-xl max-h-[110px] overflow-y-auto custom-scroll">
           {Object.entries(REGIONS).map(([region, regionStates]) => (
@@ -342,7 +367,7 @@ function Step3({
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-1 pl-0.5">
           <span className="flex items-center gap-1.5"><Tag size={14} /> Positive Keywords</span>
         </label>
-        <p className="text-[12px] text-[var(--app-faint)] mb-2 pl-0.5">Do NOT use generic words like "services" or "management". Be highly specific.</p>
+        <p className="text-[12px] text-[var(--app-faint)] mb-2 pl-0.5">Be specific. Generic terms like &quot;services&quot; will match thousands of irrelevant contracts.</p>
         <div className="min-h-[60px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--accent)]" onClick={() => inputRef.current?.focus()}>
           {keywords.map((kw) => (
             <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[12px] text-[var(--accent)]">
@@ -350,31 +375,30 @@ function Step3({
               <button type="button" onClick={() => setKeywords(keywords.filter((k) => k !== kw))} className="text-[var(--accent)] hover:text-white"><X size={12} strokeWidth={2.5} /></button>
             </span>
           ))}
-          <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'pos')} onBlur={() => flush('pos')} placeholder={keywords.length === 0 ? "e.g. cybersecurity, hvac..." : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
+          <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'pos')} onBlur={() => flush('pos')} placeholder={keywords.length === 0 ? "e.g. cybersecurity, network infrastructure" : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
         </div>
       </div>
 
       {/* Negative Keywords */}
       <div>
         <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-1 pl-0.5">
-          <span className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-red-400/70" /> Negative Keywords</span>
+          <span className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-[var(--danger)]/70" /> Negative Keywords</span>
         </label>
-        <p className="text-[12px] text-[var(--app-faint)] mb-2 pl-0.5">Exclude contracts containing these words (e.g. hardware, cleaning).</p>
-        <div className="min-h-[60px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-red-500/50" onClick={() => exRef.current?.focus()}>
+        <p className="text-[12px] text-[var(--app-faint)] mb-2 pl-0.5">Filter out contracts you&apos;d never bid on. Examples: hardware, janitorial, construction.</p>
+        <div className="min-h-[60px] p-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl flex flex-wrap gap-2 items-start cursor-text transition-colors focus-within:border-[var(--danger)]/50" onClick={() => exRef.current?.focus()}>
           {excludeKeywords.map((kw) => (
-            <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-[12px] text-red-400">
+            <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--danger)]/8 border border-[var(--danger)]/25 rounded-full text-[12px] text-[var(--danger)]">
               {kw}
-              <button type="button" onClick={() => setExcludeKeywords(excludeKeywords.filter((k) => k !== kw))} className="text-red-400 hover:text-red-300"><X size={12} strokeWidth={2.5} /></button>
+              <button type="button" onClick={() => setExcludeKeywords(excludeKeywords.filter((k) => k !== kw))} className="text-[var(--danger)] hover:text-[var(--danger)]/70"><X size={12} strokeWidth={2.5} /></button>
             </span>
           ))}
-          <input ref={exRef} type="text" value={exInput} onChange={(e) => setExInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'neg')} onBlur={() => flush('neg')} placeholder={excludeKeywords.length === 0 ? "Exclude words..." : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
+          <input ref={exRef} type="text" value={exInput} onChange={(e) => setExInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'neg')} onBlur={() => flush('neg')} placeholder={excludeKeywords.length === 0 ? "e.g. janitorial, landscaping" : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────────── */
 export default function OnboardingPage() {
   const router = useRouter();
   const [step,     setStep]     = useState(1);
@@ -455,7 +479,7 @@ export default function OnboardingPage() {
 
     if (err) {
       setSaving(false);
-      setError("Could not save your preferences. Please try again.");
+      setError("Something went wrong saving your profile. Please try again.");
       return;
     }
 
@@ -464,50 +488,80 @@ export default function OnboardingPage() {
     setBuildingDashboard(true);
     setBuildStatus("Starting contract matching engine…");
 
-    // Fire both triggers in parallel
-    await Promise.allSettled([
+    // Trigger both pipelines in parallel, but AWAIT the responses
+    // so we can report accurate status to the user.
+    const [matchResult, forecastResult] = await Promise.allSettled([
       fetch("/api/onboarding/first-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ naics_codes: naics, states: states })
+      }).then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        return { ok: r.ok, status: data.status };
       }),
       fetch("/api/forecasts/trigger", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ naics_codes: naics })
+      }).then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        return { ok: r.ok, status: data.status };
       })
     ]);
 
-    setBuildStatus("Redirecting to your dashboard…");
+    // Check if matching succeeded — this determines user's first impression
+    const matchOk = matchResult.status === "fulfilled" && matchResult.value.ok;
 
-    // Small delay so user sees the status, then hard redirect
-    // Hard redirect (window.location) avoids Next.js router cache issues
-    // and ensures middleware re-evaluates onboarding_complete = true
-    await new Promise(r => setTimeout(r, 1200));
+    if (matchOk) {
+      setBuildStatus("Contracts matched! Redirecting to your dashboard…");
+    } else {
+      // Engine was slow/down, but profile is saved. Daily pipeline will catch up.
+      setBuildStatus("Your dashboard is being prepared. Redirecting…");
+    }
+
+    // Brief delay so user sees the final status message
+    await new Promise(r => setTimeout(r, 1500));
     window.location.href = "/dashboard";
   }
 
   const canNext = step === 1 ? true : step === 2 ? (naics.length > 0 || pscCodes.length > 0) : true;
 
+  async function handleSkip() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { window.location.href = "/auth/login"; return; }
+    await supabase.from("profiles").update({ onboarding_complete: true }).eq("id", user.id);
+    window.location.href = "/dashboard";
+  }
+
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative">
+    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)] relative"
+      style={{ animationName: "onboard-fade-in", animationDuration: "400ms", animationTimingFunction: "cubic-bezier(0.25, 1, 0.5, 1)", animationFillMode: "both" }}
+    >
+      {/* Header: Wordmark + Skip */}
       <div className="absolute top-6 left-7 z-20">
         <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
           <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
         </Link>
       </div>
+      <button
+        type="button"
+        onClick={handleSkip}
+        className="absolute top-6 right-7 z-20 text-[13px] text-[var(--app-faint)] hover:text-[var(--app-muted)] transition-colors underline underline-offset-2 decoration-transparent hover:decoration-[var(--app-faint)]"
+      >
+        Skip for now
+      </button>
 
       <div className="w-full max-w-[580px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl min-h-[580px] flex flex-col">
         {buildingDashboard ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center py-12">
-            <div className="relative">
+            <div className="relative" style={{ animationName: "onboard-spin-in", animationDuration: "600ms", animationTimingFunction: "cubic-bezier(0.25, 1, 0.5, 1)", animationFillMode: "both" }}>
               <div style={{ width: 56, height: 56, border: "3px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
               <Zap size={22} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--accent)]" />
             </div>
             <div>
-              <h2 className="font-bold text-xl text-[var(--app-text)] mb-2">Building Your Dashboard</h2>
+              <h2 className="font-bold text-xl text-[var(--app-text)] mb-2">Preparing Your Intelligence</h2>
               <p className="text-[var(--app-muted)] text-sm leading-relaxed max-w-[360px]">
-                We&apos;re matching contracts to your profile and generating AI forecasts. This takes a few seconds.
+                Matching federal contracts to your profile and generating predictive intelligence. This usually takes 10–30 seconds.
               </p>
             </div>
             <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-full">
@@ -526,31 +580,36 @@ export default function OnboardingPage() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm mb-4">
+          <div className="flex items-center gap-2 p-3 bg-[var(--danger)]/8 border border-[var(--danger)]/20 rounded-lg text-[var(--danger)] text-sm mb-4">
             <p className="flex items-center gap-1.5"><X size={15}/> {error}</p>
           </div>
         )}
 
         <div className="flex gap-3 border-t border-[var(--app-border)] pt-6 mt-auto">
           {step > 1 && (
-            <button type="button" onClick={() => setStep((s) => s - 1)} className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] text-[var(--app-muted)] font-medium text-[15px] rounded-xl transition-colors hover:text-[var(--app-text)] hover:border-[var(--app-muted)] outline-none">
+            <button type="button" onClick={() => setStep((s) => s - 1)} className="flex items-center justify-center gap-1.5 px-5 py-3.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] text-[var(--app-muted)] font-medium text-[15px] rounded-xl transition-colors hover:text-[var(--app-text)] hover:border-[var(--app-muted)] outline-none active:scale-[0.98]">
               <ArrowLeft size={16} /> Back
             </button>
           )}
 
           {step < 3 ? (
-            <button type="button" onClick={() => setStep((s) => s + 1)} disabled={!canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${canNext ? "bg-[var(--accent)] hover:bg-[var(--accent-lt)]" : "bg-[var(--accent)]/50 cursor-not-allowed"}`}>
+            <button type="button" onClick={() => setStep((s) => s + 1)} disabled={!canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-white text-[15px] rounded-xl transition-all active:scale-[0.98] ${canNext ? "bg-[var(--accent)] hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20" : "bg-[var(--accent)]/50 cursor-not-allowed"}`}>
               Next <ArrowRight size={17} strokeWidth={2.5}/>
             </button>
           ) : (
-            <button type="button" onClick={handleFinish} disabled={saving || buildingDashboard || !canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-[#1C1917] text-[15px] rounded-xl transition-all ${saving || buildingDashboard || !canNext ? "bg-[var(--accent)]/70 cursor-not-allowed" : "bg-[var(--accent)] hover:bg-[var(--accent-lt)]"}`}>
-              {saving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Check size={17} strokeWidth={2.5} /> Finish & Build Dashboard</>}
+            <button type="button" onClick={handleFinish} disabled={saving || buildingDashboard || !canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-white text-[15px] rounded-xl transition-all active:scale-[0.98] ${saving || buildingDashboard || !canNext ? "bg-[var(--accent)]/70 cursor-not-allowed" : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20"}`}>
+              {saving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Check size={17} strokeWidth={2.5} /> Activate Monitoring</>}
             </button>
           )}
         </div>
         </>
         )}
       </div>
+
+      <style>{`
+        @keyframes onboard-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes onboard-spin-in { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+      `}</style>
     </div>
   );
 }

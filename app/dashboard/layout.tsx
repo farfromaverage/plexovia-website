@@ -61,17 +61,11 @@ export default function DashboardLayout({
         </main>
       </div>
 
-      {/* Mobile: push content below fixed 52px header */}
-      <style>{`
-        @media (max-width: 768px) {
-          .dash-hide-mobile  { display: none !important; }
-          .dash-show-mobile  { display: flex !important; }
-          .dash-content-wrapper { padding-top: 52px; }
-        }
-        @media (min-width: 769px) {
-          .dash-show-mobile { display: none !important; }
-        }
-      `}</style>
+      {/*
+       * Mobile responsive utilities are now in dashboard.css:
+       * .dash-hide-mobile, .dash-show-mobile, .dash-content-wrapper padding
+       * No inline <style> blocks needed.
+       */}
     </div>
   );
 }

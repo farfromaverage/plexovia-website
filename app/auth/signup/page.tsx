@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, BarChart3, Zap } from "lucide-react";
 
 /* ─── Google button ───────────────────────────────────────────────── */
 function GoogleButton() {
@@ -31,17 +31,17 @@ function GoogleButton() {
         id="google-signup"
         onClick={handleGoogle}
         disabled={loading}
-        className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 bg-[#FFFFFF] border border-[#E2DDD6] rounded-xl text-[#1C1917] font-semibold text-[15px] transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.18)] disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:shadow-none"
+        className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 bg-[var(--app-surface)] border border-[var(--app-border)] rounded-xl text-[var(--app-text)] font-semibold text-[15px] transition-all hover:shadow-[0_2px_8px_rgba(15,13,26,0.12)] disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:shadow-none"
       >
         {loading ? (
-          <Loader2 size={18} className="animate-spin text-[#1C1917]" />
+          <Loader2 size={18} className="animate-spin text-[var(--app-text)]" />
         ) : (
           <GoogleIcon />
         )}
         Continue with Google
       </button>
       {err && (
-        <p className="flex items-center gap-1.5 text-xs text-red-400 mt-2">
+        <p className="flex items-center gap-1.5 text-xs text-[var(--danger)] mt-2">
           <AlertCircle size={13} /> {err}
         </p>
       )}
@@ -60,26 +60,12 @@ function GoogleIcon() {
   );
 }
 
-/* ─── Shared ──────────────────────────────────────────────────────── */
-function Wordmark() {
-  return (
-    <div className="absolute top-6 left-7">
-      <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
-        <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
-      </Link>
-    </div>
-  );
-}
-
-function Divider() {
-  return (
-    <div className="flex items-center gap-3 my-4">
-      <div className="flex-1 h-px bg-[var(--app-border)]" />
-      <span className="text-xs text-[var(--app-faint)] lowercase tracking-wide">or</span>
-      <div className="flex-1 h-px bg-[var(--app-border)]" />
-    </div>
-  );
-}
+/* ─── Trust indicators ────────────────────────────────────────────── */
+const TRUST_POINTS = [
+  { icon: Shield, label: "SAM.gov contract opportunities reviewed daily" },
+  { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
+  { icon: Zap, label: "7-day free trial. No charge until Day 8." },
+];
 
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function SignupPage() {
@@ -102,6 +88,9 @@ export default function SignupPage() {
     return score;
   }
   const pwScore = getPwStrength(pw);
+
+  const PW_COLORS = ["var(--danger)", "var(--danger)", "var(--warning)", "var(--warning)", "var(--success)"];
+  const PW_LABELS = ["", "Weak", "Fair", "Good", "Strong"];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -156,160 +145,231 @@ export default function SignupPage() {
   /* ── Success state ── */
   if (success) {
     return (
-      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)]">
-        <Wordmark />
-        <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-2xl">
-          <div className="text-center flex flex-col items-center">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 flex items-center justify-center mb-5 shadow-inner">
-              <CheckCircle2 size={26} className="text-[var(--accent)]" />
+      <div className="flex min-h-screen" style={{ animationName: "auth-fade-in", animationDuration: "400ms", animationTimingFunction: "cubic-bezier(0.25, 1, 0.5, 1)", animationFillMode: "both" }}>
+        <BrandPanel />
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[var(--app-bg)] relative">
+          <div className="lg:hidden absolute top-6 left-7 z-20">
+            <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+              <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
+            </Link>
+          </div>
+          <div className="w-full max-w-[420px] text-center">
+            <div className="w-16 h-16 rounded-2xl bg-[var(--accent)]/8 border border-[var(--accent)]/25 flex items-center justify-center mx-auto mb-6" style={{ animationName: "auth-check-pop", animationDuration: "500ms", animationTimingFunction: "cubic-bezier(0.25, 1, 0.5, 1)", animationFillMode: "both", animationDelay: "200ms" }}>
+              <CheckCircle2 size={28} className="text-[var(--accent)]" />
             </div>
-            <h1 className="font-bold text-2xl tracking-tight text-[var(--app-text)] mb-2">Check your inbox</h1>
+            <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-3">Check your email</h1>
             <p className="text-[var(--app-muted)] text-[15px] leading-relaxed">
-              Confirmation link sent to <strong className="text-[var(--app-text)] font-semibold">{email}</strong>.<br />
-              Click it to verify your account.
+              We sent a verification link to <strong className="text-[var(--app-text)] font-semibold">{email}</strong>.<br />
+              Click it to activate your account.
             </p>
-            <p className="text-[14px] text-[var(--app-muted)] mt-6">
-              Already confirmed? <Link href="/auth/login" className="text-[var(--accent)] font-semibold hover:text-[var(--accent-lt)] transition-colors">Sign in &rarr;</Link>
+            <p className="text-[14px] text-[var(--app-muted)] mt-8">
+              Already verified? <Link href="/auth/login" className="text-[var(--accent)] font-semibold hover:text-[var(--accent-hover)] transition-colors">Sign in &rarr;</Link>
             </p>
           </div>
         </div>
+        <style>{`
+          @keyframes auth-fade-in { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes auth-check-pop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col items-center justify-center p-5 selection:bg-[var(--accent)] selection:text-[var(--pub-text)]">
-      <Wordmark />
+    <div className="flex min-h-screen" style={{ animationName: "auth-fade-in", animationDuration: "400ms", animationTimingFunction: "cubic-bezier(0.25, 1, 0.5, 1)", animationFillMode: "both" }}>
+      <BrandPanel />
 
-      <div className="w-full max-w-[420px] bg-[var(--app-surface)] border border-[var(--app-border)] rounded-2xl p-8 shadow-xl">
-        {/* Header */}
-        <div className="text-center mb-7">
-          <h1 className="font-bold text-2xl xl:text-[26px] tracking-tight text-[var(--app-text)] mb-2">
-            Create your account
-          </h1>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-[var(--app-bg)] relative">
+        <div className="lg:hidden absolute top-6 left-7 z-20">
+          <Link href="/" className="font-bold text-xl tracking-tight hover:opacity-80 transition-opacity">
+            <span className="text-[var(--accent)]">P</span><span className="text-[var(--app-text)]">lexovia</span>
+          </Link>
         </div>
 
-        {/* Google — primary CTA */}
-        <GoogleButton />
-
-        <Divider />
-
-        {/* Email / password form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">
-              Email
-            </label>
-            <input 
-              id="email" 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com" 
-              required 
-              className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-            />
+        <div className="w-full max-w-[420px]">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">
+              Start your free trial
+            </h1>
+            <p className="text-[var(--app-muted)] text-[15px]">Takes 3 minutes to set up. Free for 7 days.</p>
           </div>
 
-          {/* Password */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">
-              Password
-            </label>
-            <div className="relative">
+          {/* Google — primary CTA */}
+          <GoogleButton />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-[var(--app-border)]" />
+            <span className="text-xs text-[var(--app-faint)] lowercase tracking-wide">or</span>
+            <div className="flex-1 h-px bg-[var(--app-border)]" />
+          </div>
+
+          {/* Email / password form */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">
+                Email
+              </label>
               <input 
-                id="password" 
-                type={showPw ? "text" : "password"} 
-                value={pw} 
-                onChange={(e) => setPw(e.target.value)}
-                placeholder="8+ characters" 
+                id="email" 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com" 
                 required 
-                className="w-full px-4 py-3 pr-12 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
+                className="w-full px-4 py-3 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 placeholder-[var(--app-faint)]"
               />
-              <button 
-                type="button" 
-                onClick={() => setShowPw(!showPw)} 
-                tabIndex={-1}
-                aria-label={showPw ? "Hide password" : "Show password"}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--app-faint)] hover:text-[var(--app-muted)] transition-colors"
-              >
-                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
             </div>
-            
-            {pwScore >= 0 && (
-              <div className="mt-2 flex gap-1">
-                {[...Array(4)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                      pwScore > i 
-                        ? (pwScore < 2 ? "bg-red-500" : pwScore < 4 ? "bg-amber-500" : "bg-green-500") 
-                        : "bg-[var(--app-border)]"
-                    }`}
-                  />
-                ))}
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--app-muted)] mb-1.5 pl-0.5">
+                Password
+              </label>
+              <div className="relative">
+                <input 
+                  id="password" 
+                  type={showPw ? "text" : "password"} 
+                  value={pw} 
+                  onChange={(e) => setPw(e.target.value)}
+                  placeholder="Minimum 8 characters" 
+                  required 
+                  className="w-full px-4 py-3 pr-12 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[15px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 placeholder-[var(--app-faint)]"
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPw(!showPw)} 
+                  tabIndex={-1}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--app-faint)] hover:text-[var(--app-muted)] transition-colors"
+                >
+                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              
+              {pwScore >= 0 && (
+                <div className="mt-2.5 flex gap-1">
+                  {[...Array(4)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="h-1 flex-1 rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor: pwScore > i ? PW_COLORS[pwScore] : "var(--app-border)",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              {pwScore >= 0 && (
+                <p className="text-[11px] font-medium mt-1.5" style={{ color: PW_COLORS[pwScore] }}>
+                  {PW_LABELS[pwScore]}
+                </p>
+              )}
+            </div>
+
+            {/* Terms & Conditions Checkbox */}
+            <div className="flex items-start gap-3 mt-1 mb-1">
+              <div className="flex items-center h-5">
+                <input
+                  id="terms"
+                  type="checkbox"
+                  required
+                  aria-required="true"
+                  checked={terms}
+                  onChange={(e) => setTerms(e.target.checked)}
+                  className="w-4 h-4 rounded appearance-none border border-[var(--app-faint)] bg-[var(--app-surface-2)] checked:bg-[var(--accent)] checked:border-[var(--accent)] relative cursor-pointer outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--app-bg)] after:content-[''] after:absolute after:top-[2px] after:left-[5px] after:w-1.5 after:h-2.5 after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:hidden checked:after:block"
+                />
+              </div>
+              <label htmlFor="terms" className="text-sm text-[var(--app-muted)] leading-tight cursor-pointer">
+                I agree to the{" "}
+                <Link href="/legal/terms" className="text-[var(--app-text)] hover:text-[var(--accent)] underline decoration-[var(--app-border)] underline-offset-2 transition-colors">
+                  Terms of Service
+                </Link>
+                {" "}and{" "}
+                <Link href="/legal/privacy" className="text-[var(--app-text)] hover:text-[var(--accent)] underline decoration-[var(--app-border)] underline-offset-2 transition-colors">
+                  Privacy Policy
+                </Link>.
+              </label>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-[var(--danger)]/8 border border-[var(--danger)]/20 rounded-lg text-[var(--danger)] text-sm">
+                <AlertCircle size={15} className="shrink-0" />
+                <p>{error}</p>
               </div>
             )}
-            {pwScore >= 0 && (
-              <p className={`text-[11px] font-medium mt-1.5 ${
-                pwScore < 2 ? "text-red-500" : pwScore < 4 ? "text-amber-500" : "text-green-500"
-              }`}>
-                {pwScore < 2 ? "Weak" : pwScore < 4 ? "Fair" : "Strong password"}
-              </p>
-            )}
-          </div>
 
-          {/* Terms & Conditions Checkbox */}
-          <div className="flex items-start gap-3 mt-1 mb-1">
-            <div className="flex items-center h-5">
-              <input
-                id="terms"
-                type="checkbox"
-                required
-                aria-required="true"
-                checked={terms}
-                onChange={(e) => setTerms(e.target.checked)}
-                className="w-4 h-4 rounded appearance-none border border-[var(--app-faint)] bg-[var(--app-surface-2)] checked:bg-[var(--accent)] checked:border-[var(--accent)] relative cursor-pointer outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--app-bg)] after:content-[''] after:absolute after:top-[2px] after:left-[5px] after:w-1.5 after:h-2.5 after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:hidden checked:after:block"
-              />
+            <button 
+              type="submit" 
+              id="email-signup" 
+              disabled={loading} 
+              className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-1 bg-[var(--accent)] text-white font-bold text-[15px] rounded-xl transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20 disabled:opacity-75 disabled:cursor-not-allowed active:scale-[0.98]"
+            >
+              {loading ? <Loader2 size={18} className="animate-spin" /> : <>Start Free Trial <ArrowRight size={17} strokeWidth={2.5} /></>}
+            </button>
+          </form>
+
+          {/* Footer link */}
+          <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-8">
+            Already have an account? <Link href="/auth/login" className="text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">Sign in &rarr;</Link>
+          </p>
+          <p className="text-center text-[13px] text-[var(--app-faint)] mt-3">
+            Need help? <a href="mailto:support@plexovia.com" className="hover:text-[var(--app-muted)] transition-colors">support@plexovia.com</a>
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes auth-fade-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─── Brand Panel (shared layout) ─────────────────────────────────── */
+function BrandPanel() {
+  return (
+    <div className="hidden lg:flex flex-col justify-between w-[480px] min-h-screen p-12 relative overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #635BFF 0%, #4B44D6 40%, #3B35B0 100%)" }}
+    >
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-rule='evenodd'%3E%3Cpath d='M0 0h1v40H0zM39 0h1v40h-1zM0 0h40v1H0zM0 39h40v1H0z'/%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
+      <div className="absolute top-20 right-10 w-64 h-64 bg-white/[0.06] rounded-full blur-3xl" />
+      <div className="absolute bottom-32 left-10 w-48 h-48 bg-white/[0.04] rounded-full blur-3xl" />
+
+      <div className="relative z-10">
+        <Link href="/" className="font-bold text-2xl tracking-tight text-white/90 hover:text-white transition-colors">
+          Plexovia
+        </Link>
+      </div>
+
+      <div className="relative z-10 -mt-8">
+        <h2 className="text-white text-[32px] font-bold leading-tight tracking-tight mb-6">
+          Every federal contract<br/>that fits your business.<br/>Scored. Ranked.<br/>Ready in your dashboard.
+        </h2>
+        <div className="flex flex-col gap-4 mt-8">
+          {[
+            { icon: Shield, label: "SAM.gov contract opportunities reviewed daily" },
+            { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
+            { icon: Zap, label: "7-day free trial. No charge until Day 8." },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                <Icon size={16} className="text-white/80" />
+              </div>
+              <span className="text-white/70 text-[14px] leading-snug">{label}</span>
             </div>
-            <label htmlFor="terms" className="text-sm text-[var(--app-muted)] leading-tight cursor-pointer">
-              I agree to the{" "}
-              <Link href="/legal/terms" className="text-[var(--app-text)] hover:text-[var(--accent)] underline decoration-[var(--app-border)] underline-offset-2 transition-colors">
-                Terms of Service
-              </Link>
-              {" "}and{" "}
-              <Link href="/legal/privacy" className="text-[var(--app-text)] hover:text-[var(--accent)] underline decoration-[var(--app-border)] underline-offset-2 transition-colors">
-                Privacy Policy
-              </Link>.
-            </label>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Error */}
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm">
-              <AlertCircle size={15} className="shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
-
-          <button 
-            type="submit" 
-            id="email-signup" 
-            disabled={loading} 
-            className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-2 bg-[var(--accent)] text-[#1C1917] font-bold text-[15px] rounded-xl transition-colors hover:bg-[var(--accent-lt)] disabled:opacity-75 disabled:cursor-not-allowed"
-          >
-            {loading ? <Loader2 size={18} className="animate-spin" /> : <>Create Account <ArrowRight size={17} strokeWidth={2.5} /></>}
-          </button>
-        </form>
-
-        {/* Footer link */}
-        <p className="text-center text-[14px] font-medium text-[var(--app-muted)] mt-6">
-          Already have an account? <Link href="/auth/login" className="text-[var(--accent)] hover:text-[var(--accent-lt)] transition-colors">Sign in &rarr;</Link>
-        </p>
-        <p className="text-center text-[13px] text-[var(--app-faint)] mt-3">
-          Need help? <a href="mailto:support@plexovia.com" className="hover:text-[var(--app-muted)] transition-colors">support@plexovia.com</a>
+      <div className="relative z-10">
+        <p className="text-white/40 text-[13px]">
+          Built for government contractors who win federal work
         </p>
       </div>
     </div>

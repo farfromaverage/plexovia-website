@@ -10,19 +10,19 @@ const PLAN_DETAILS = {
   trial: {
     name: "Trial",
     price: "Free",
-    color: "#C9A84C",
+    color: "var(--accent)",
     features: ["All federal sources", "Unlimited NAICS codes", "Daily contract monitoring", "AI Forecasting", "Match explanations", "90-day history"],
   },
   active: {
     name: "Plexovia Intelligence",
     price: "$249/mo",
-    color: "#4ADE80",
+    color: "var(--success)",
     features: ["All federal sources", "Unlimited NAICS codes", "Daily contract monitoring", "AI Forecasting", "Match explanations", "90-day history"],
   },
   cancelled: {
     name: "Cancelled",
     price: "N/A",
-    color: "#F87171",
+    color: "var(--danger)",
     features: [],
   },
 } as const;
@@ -93,7 +93,7 @@ export default function BillingPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <span style={s.planBadge}><Zap size={12} /> {details.name}</span>
                 {isTrialing && (
-                  <span style={{ background: "#1E2A1E", border: "1px solid #2D5A2D", borderRadius: "999px", padding: "3px 10px", fontSize: "0.78rem", color: "#4ADE80" }}>
+                  <span style={{ background: "var(--success-subtle)", border: "1px solid rgba(26,119,66,0.2)", borderRadius: "999px", padding: "3px 10px", fontSize: "0.78rem", color: "var(--success)" }}>
                     Trial: {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left
                   </span>
                 )}
@@ -107,7 +107,7 @@ export default function BillingPage() {
                 </div>
               )}
               {plan === "cancelled" && (
-                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, color: "#F87171", fontSize: "0.85rem" }}>
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, color: "var(--danger)", fontSize: "0.85rem" }}>
                   <AlertCircle size={14} /> Your subscription has been cancelled.
                 </div>
               )}
@@ -131,7 +131,7 @@ export default function BillingPage() {
                   href="https://plexovia.lemonsqueezy.com/checkout/buy/pro-monthly"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ ...s.actionBtn, background: "#1C1917", color: "#fff" }}
+                  style={{ ...s.actionBtn, background: "var(--accent)", color: "#fff" }}
                 >
                   <Zap size={14} /> Subscribe to Plexovia Intelligence
                 </a>
@@ -154,11 +154,51 @@ export default function BillingPage() {
           )}
         </div>
 
+        {/* Plan comparison table (V6 Addition) */}
+        <div style={s.card}>
+          <div style={{ fontSize: "0.78rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16 }}>Compare Plans</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "2px solid var(--app-border)", color: "var(--app-muted)", fontWeight: 500, fontSize: "0.8rem" }}>Feature</th>
+                  <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "2px solid var(--app-border)", color: "var(--accent)", fontWeight: 700, fontSize: "0.85rem" }}>Trial</th>
+                  <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "2px solid var(--app-border)", color: "var(--success)", fontWeight: 700, fontSize: "0.85rem" }}>Intelligence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feature: "All federal sources", trial: true, intel: true },
+                  { feature: "Unlimited NAICS codes", trial: true, intel: true },
+                  { feature: "Daily contract monitoring", trial: true, intel: true },
+                  { feature: "AI Forecasting", trial: true, intel: true },
+                  { feature: "Match explanations", trial: true, intel: true },
+                  { feature: "90-day history", trial: false, intel: true },
+                  { feature: "Priority support", trial: false, intel: true },
+                  { feature: "Advanced filters", trial: false, intel: true },
+                ].map((row, i) => (
+                  <tr key={row.feature} style={{ background: i % 2 === 0 ? "transparent" : "var(--app-surface-2)" }}>
+                    <td style={{ padding: "10px 12px", color: "var(--app-text)", borderBottom: "1px solid var(--app-border)" }}>{row.feature}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1px solid var(--app-border)", color: row.trial ? "var(--success)" : "var(--app-faint)", fontSize: "1rem" }}>{row.trial ? "✓" : "—"}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1px solid var(--app-border)", color: row.intel ? "var(--success)" : "var(--app-faint)", fontSize: "1rem" }}>{row.intel ? "✓" : "—"}</td>
+                  </tr>
+                ))}
+                {/* Price row — highlighted */}
+                <tr>
+                  <td style={{ padding: "12px", fontWeight: 700, color: "var(--app-text)" }}>Price</td>
+                  <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "var(--accent)", fontSize: "1rem" }}>Free</td>
+                  <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, background: "var(--accent-subtle)", color: "var(--accent)", fontSize: "1rem", borderRadius: "0 0 var(--radius-sm) 0" }}>$249/mo</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Agency / Enterprise card */}
         <div style={{ ...s.card, textAlign: "center" }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Need Agency or Enterprise access?</div>
           <p style={{ color: "var(--app-muted)", fontSize: "0.85rem", margin: "0 0 1rem" }}>
-            The Plexovia Intelligence system remains the same. You can purchase multiple subscriptions to scale your team.
+            Need a custom plan or volume pricing? Reach out and we&apos;ll tailor a solution for your business.
           </p>
           <a
             href="mailto:support@plexovia.com?subject=Enterprise Inquiry"

@@ -28,10 +28,10 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
       .attr("height", height)
       .style("overflow", "visible");
 
-    // Colors
-    const primaryColor = "#C9A84C";
-    const gradientTop = "rgba(201, 168, 76, 0.4)";
-    const gradientBottom = "rgba(201, 168, 76, 0.0)";
+    // Colors — uses design token values
+    const primaryColor = "#635BFF";  /* var(--accent) */
+    const gradientTop = "rgba(99, 91, 255, 0.25)";
+    const gradientBottom = "rgba(99, 91, 255, 0.0)";
 
     // Defs for gradient and glow
     const defs = svg.append("defs");
@@ -103,10 +103,10 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
     // Style axes
     svg.selectAll(".domain").remove();
     svg.selectAll(".tick line")
-      .attr("stroke", "#3D3830")
+      .attr("stroke", "var(--app-border)")
       .attr("stroke-dasharray", "3,3");
     svg.selectAll(".tick text")
-      .attr("fill", "#6B6560")
+      .attr("fill", "var(--app-muted)")
       .style("font-family", "var(--font-inter), sans-serif")
       .style("font-size", "0.75rem");
 
@@ -163,21 +163,21 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
       .attr("role", "tooltip")
       .style("position", "absolute")
       .style("visibility", "hidden")
-      .style("background", "rgba(26,25,23,0.96)")
-      .style("border", "1px solid #2E2C2A")
+      .style("background", "var(--app-surface)")
+      .style("border", "1px solid var(--app-border)")
       .style("padding", "8px 12px")
       .style("border-radius", "8px")
-      .style("color", "#F7F5F0")
+      .style("color", "var(--app-text)")
       .style("font-family", "var(--font-inter), sans-serif")
       .style("font-size", "0.75rem")
       .style("pointer-events", "none")
-      .style("box-shadow", "0 10px 15px -3px rgba(0,0,0,0.5)")
+      .style("box-shadow", "var(--shadow-md)")
       .style("z-index", "10");
 
     const focusLine = g.append("line")
       .attr("y1", 0)
       .attr("y2", innerHeight)
-      .attr("stroke", "#C9A84C")
+      .attr("stroke", "#635BFF")
       .attr("stroke-width", 1)
       .attr("stroke-dasharray", "4,4")
       .style("opacity", 0)
@@ -185,8 +185,8 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
 
     const focusCircle = g.append("circle")
       .attr("r", 5)
-      .attr("fill", "#1C1917")
-      .attr("stroke", "#C9A84C")
+      .attr("fill", "var(--app-surface)")
+      .attr("stroke", "#635BFF")
       .attr("stroke-width", 2)
       .style("opacity", 0)
       .style("pointer-events", "none");
@@ -224,8 +224,8 @@ export default function ActivityChart({ data }: { data: ChartDataPoint[] }) {
         focusCircle.attr("cx", cx).attr("cy", cy);
 
         tooltipEl
-          .html(`<div style="color:#A8A29E;margin-bottom:4px;">${d3.timeFormat("%b %d, %Y")(d.date)}</div>
-                 <div style="font-weight:700;font-size:0.875rem;color:#FCD34D;">${d.value} Matches</div>`)
+          .html(`<div style="color:var(--app-muted);margin-bottom:4px;">${d3.timeFormat("%b %d, %Y")(d.date)}</div>
+                 <div style="font-weight:700;font-size:0.875rem;color:#635BFF;">${d.value} Matches</div>`)
           .style("top", (event.pageY - 60) + "px")
           .style("left", (event.pageX + 15) + "px");
       })

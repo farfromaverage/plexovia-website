@@ -3,9 +3,9 @@ interface Props {
 }
 
 export default function ScoreBadge({ score }: Props) {
-  const color = score >= 90 ? "#4ADE80" : score >= 75 ? "var(--accent)" : "var(--app-muted)";
-  const bg    = score >= 90 ? "rgba(74,222,128,0.1)"  : score >= 75 ? "rgba(201,168,76,0.1)"  : "var(--app-surface-2)";
-  const bd    = score >= 90 ? "rgba(74,222,128,0.25)" : score >= 75 ? "rgba(201,168,76,0.3)"  : "var(--app-border)";
+  const color = score >= 90 ? "var(--success)" : score >= 75 ? "var(--accent)" : "var(--app-muted)";
+  const bg    = score >= 90 ? "var(--success-subtle)"  : score >= 75 ? "var(--accent-subtle)"  : "var(--app-surface-2)";
+  const bd    = score >= 90 ? "rgba(26,119,66,0.2)" : score >= 75 ? "var(--accent-border)"  : "var(--app-border)";
   const label = score >= 90 ? "High match" : score >= 75 ? "Medium match" : "Low match";
 
   return (

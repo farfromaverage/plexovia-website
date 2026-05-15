@@ -3,9 +3,9 @@
 /* ═══════════════════════════════════════════════════════════
    PLEXOVIA DESIGN SYSTEM — Dual-tone authority
    Public pages  : warm parchment canvas  (#F7F5F0)
-   Dashboard     : near-dark data surface (#111110)
-   Unified thread: gold accent            (#C9A84C)
-   Reference     : Bloomberg × Brex × top-tier law firm
+   Dashboard     : light data surface     (#F7F7FB)
+   Unified thread: indigo accent          (#635BFF)
+   Reference     : Stripe × Linear × Bloomberg
 ═══════════════════════════════════════════════════════════ */
 
 :root {
@@ -18,21 +18,21 @@
   --pub-muted:     #6B6560; /* secondary, captions — warm medium gray       */
   --pub-faint:     #A8A29E; /* disabled, placeholders — warm light gray     */
 
-  /* ── APP / DASHBOARD: Near-Dark Data Surface ── */
-  --app-bg:        #111110; /* dark warm charcoal — NOT pure black          */
-  --app-surface:   #1A1917; /* cards, sidebars                              */
-  --app-surface-2: #222120; /* nested elements, hover states                */
-  --app-border:    #2E2C2A; /* warm dark dividers                           */
-  --app-text:      #F5F3EE; /* primary — warm off-white, NOT pure white     */
-  --app-muted:     #8A8580; /* secondary — warm mid-gray                    */
-  --app-faint:     #4A4845; /* disabled, timestamps                         */
+  /* ── APP / DASHBOARD: Light Data Surface ── */
+  --app-bg:        #F7F7FB; /* cool parchment — NOT stark white            */
+  --app-surface:   #FFFFFF; /* cards, sidebars                              */
+  --app-surface-2: #F0F0F6; /* nested elements, hover states                */
+  --app-border:    #E0E0EA; /* cool gray dividers                           */
+  --app-text:      #0F0D1A; /* primary — near-black with cool undertone     */
+  --app-muted:     #6E6B82; /* secondary — cool mid-gray                    */
+  --app-faint:     #9896AB; /* disabled, timestamps                         */
 
-  /* ── UNIFIED GOLD ACCENT — works on BOTH surfaces ── */
-  --accent:        #C9A84C; /* gold — WCAG AA on parchment and dark         */
-  --accent-h:      #B8922D; /* gold hover on parchment (darker)             */
-  --accent-lt:     #E8C06A; /* gold hover on dark surface (lighter)         */
-  --accent-bg-pub: rgba(201, 168, 76, 0.09); /* subtle gold tint on parchment */
-  --accent-bg-app: rgba(201, 168, 76, 0.08); /* subtle gold tint on dark      */
+  /* ── UNIFIED INDIGO ACCENT — works on BOTH surfaces ── */
+  --accent:        #635BFF; /* indigo — WCAG AA on parchment and light      */
+  --accent-h:      #7B74FF; /* indigo hover (lighter)                       */
+  --accent-lt:     #8B5CF6; /* secondary violet                             */
+  --accent-bg-pub: rgba(99, 91, 255, 0.07); /* subtle indigo tint on parchment */
+  --accent-bg-app: rgba(99, 91, 255, 0.07); /* subtle indigo tint on light     */
 
   /* ── MATCH SCORE SYSTEM — WCAG AA on both ── */
   --success: #16A34A; /* score 70+  — forest green  */
@@ -97,10 +97,10 @@
   100% { background-position:  200% center; }
 }
 
-@keyframes pulse-gold {
+@keyframes pulse-accent {
   0%,
-  100% { box-shadow: 0 0 0 0   rgba(201, 168, 76, 0); }
-  50%  { box-shadow: 0 0 0 8px rgba(201, 168, 76, 0.12); }
+  100% { box-shadow: 0 0 0 0   rgba(99, 91, 255, 0); }
+  50%  { box-shadow: 0 0 0 8px rgba(99, 91, 255, 0.12); }
 }
 
 @keyframes fade-in-up {

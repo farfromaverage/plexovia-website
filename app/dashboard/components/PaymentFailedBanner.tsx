@@ -28,9 +28,9 @@ export default function PaymentFailedBanner() {
 
   return (
     <div style={{
-      background: "rgba(220, 38, 38, 0.15)",
-      borderBottom: "1px solid rgba(220, 38, 38, 0.3)",
-      color: "rgb(239, 68, 68)",
+      background: "var(--danger-subtle)",
+      borderBottom: "1px solid rgba(194,59,59,0.2)",
+      color: "var(--danger)",
       padding: "10px 20px",
       display: "flex",
       alignItems: "center",

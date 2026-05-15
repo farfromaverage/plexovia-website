@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   // Fetch current period matches
   const { data: matchesCurrent } = await supabase
     .from('matches')
-    .select('score, contracts(value_min, value_max, set_aside, title, agency, id)')
+    .select('score, matched_at, contracts(value_min, value_max, set_aside, title, agency, id, deadline, url, naics_code)')
     .eq('user_id', session.user.id)
     .gte('created_at', periodStart.toISOString())
 
@@ -79,13 +79,17 @@ export async function GET(request: NextRequest) {
       const sa = c.set_aside || 'None'
       setAsideBreakdown[sa] = (setAsideBreakdown[sa] || 0) + 1
       
-      // Collect top matches
+      // Collect top matches (now includes deadline, url, naics_code for IntelligenceBriefing)
       if (topMatches.length < 5) {
         topMatches.push({
           id: c.id || `m-${m.score}`,
           title: c.title || 'Unknown Contract',
           agency: c.agency || 'Unknown Agency',
           score: m.score,
+          deadline: c.deadline || null,
+          url: c.url || null,
+          naics_code: c.naics_code || null,
+          matched_at: m.matched_at || null,
         })
       }
     })

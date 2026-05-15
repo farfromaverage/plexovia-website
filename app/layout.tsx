@@ -203,8 +203,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-dvh flex flex-col bg-[#F7F5F0] text-[#1C1917] font-sans antialiased"
-        style={{ fontFamily: 'var(--font-inter), system-ui, -apple-system, sans-serif' }}
+      <body className="min-h-dvh flex flex-col font-sans antialiased"
+        style={{
+          backgroundColor: 'var(--pub-bg)',
+          color: 'var(--pub-text)',
+          fontFamily: 'var(--font-inter), system-ui, -apple-system, sans-serif',
+        }}
       >
         <Providers>
           <ConditionalLayout>

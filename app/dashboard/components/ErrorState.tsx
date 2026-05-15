@@ -22,9 +22,9 @@ export default function ErrorState({
         gap: "0.75rem",
       }}
     >
-      <AlertCircle size={28} color="#F87171" aria-hidden="true" />
+      <AlertCircle size={28} style={{ color: "var(--danger)" }} aria-hidden="true" />
       <p style={{
-        color: "#F87171",
+        color: "var(--danger)",
         fontSize: "0.875rem",
         margin: 0,
         maxWidth: 380,

@@ -1,47 +1,36 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
-  FileText, MapPin, Shield, ExternalLink, Tag, DollarSign,
+  FileText, MapPin, Shield, ExternalLink, Tag, Star,
   ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
-  ArrowUpDown, Download, Calendar,
+  ArrowUpDown, Download, Calendar, X,
 } from "lucide-react";
 import ScoreBadge from "../components/ScoreBadge";
 import SkeletonRows from "../components/SkeletonRows";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
+import { useContractStatus } from "@/hooks/useContractStatus";
+import { supabase } from "@/lib/supabase";
 
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface ContractRow {
-  id: string;
-  title: string;
-  agency: string;
-  naics: string;
-  psc: string;
-  state: string;
-  value: string;
-  valueMin: number | null;
-  valueMax: number | null;
-  posted: string;
-  postedRaw: string | null;
-  deadline: string;
-  deadlineRaw: string | null;
-  deadlineDays: number | null;
-  score: number;
-  setAside: string;
-  matchedBy: "naics" | "keyword";
-  matchLabel: string;
-  url: string | null;
-  matchedAt: string | null;
+  id: string; title: string; agency: string; naics: string; psc: string;
+  state: string; value: string; valueMin: number | null; valueMax: number | null;
+  posted: string; postedRaw: string | null; deadline: string;
+  deadlineRaw: string | null; deadlineDays: number | null;
+  score: number; setAside: string; matchedBy: "naics" | "keyword";
+  matchLabel: string; url: string | null; matchedAt: string | null;
 }
-
 type SortKey = "score" | "deadline" | "value_min" | "posted_date";
+type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
 function fmt$(n: number) {
   if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)         return `$${(n / 1_000).toFixed(0)}K`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toLocaleString()}`;
 }
 function fmtVal(min: number | null, max: number | null) {
@@ -71,71 +60,81 @@ function mapRow(m: any): ContractRow {
   const c = m.contract || {};
   const reasons = m.reasons || [];
   const naicsR = reasons.find((r: string) => r.startsWith("naics:"));
-  const kwR    = reasons.find((r: string) => r.startsWith("keyword:"));
+  const kwR = reasons.find((r: string) => r.startsWith("keyword:"));
   const matchedBy = naicsR ? "naics" : "keyword";
   const matchLabel = naicsR
     ? `NAICS ${naicsR.replace("naics:", "")}`
     : kwR ? `Keyword: ${kwR.replace("keyword:", "")}` : "Keyword match";
   const dl = fmtDeadline(c.deadline);
   return {
-    id: m.match_id,
-    title: c.title || "Untitled",
-    agency: c.agency || "Federal Agency",
-    naics: c.naics_code || "",
-    psc: c.psc_code || "",
-    state: c.state || "",
+    id: m.match_id, title: c.title || "Untitled",
+    agency: c.agency || "Federal Agency", naics: c.naics_code || "",
+    psc: c.psc_code || "", state: c.state || "",
     value: fmtVal(c.value_min, c.value_max),
-    valueMin: c.value_min ?? null,
-    valueMax: c.value_max ?? null,
-    posted: fmtDate(c.posted_date),
-    postedRaw: c.posted_date || null,
-    deadline: dl.label,
-    deadlineRaw: c.deadline || null,
-    deadlineDays: dl.days,
-    score: m.score,
-    setAside: c.set_aside || "",
-    matchedBy,
-    matchLabel,
-    url: c.url || null,
+    valueMin: c.value_min ?? null, valueMax: c.value_max ?? null,
+    posted: fmtDate(c.posted_date), postedRaw: c.posted_date || null,
+    deadline: dl.label, deadlineRaw: c.deadline || null, deadlineDays: dl.days,
+    score: m.score, setAside: c.set_aside || "",
+    matchedBy, matchLabel, url: c.url || null,
     matchedAt: m.matched_at || null,
   };
 }
 
-/* ─── Sort options ────────────────────────────────────────────────── */
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "score",        label: "Best match" },
-  { value: "deadline",     label: "Soonest deadline" },
-  { value: "value_min",    label: "Highest value" },
-  { value: "posted_date",  label: "Most recent" },
+  { value: "score", label: "Best match" },
+  { value: "deadline", label: "Soonest deadline" },
+  { value: "value_min", label: "Highest value" },
+  { value: "posted_date", label: "Most recent" },
 ];
-
 const PER_PAGE = 15;
-
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
-import { supabase } from "@/lib/supabase";
-
 /* ─── Page ────────────────────────────────────────────────────────── */
-export default function ContractsPage() {
-  const [contracts,  setContracts]  = useState<ContractRow[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [isColdStart,setIsColdStart]= useState(false);
+export default function ContractsPageWrapper() {
+  return (
+    <Suspense fallback={<div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}><div style={{ width: 28, height: 28, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /></div>}>
+      <ContractsPage />
+    </Suspense>
+  );
+}
+
+function ContractsPage() {
+  const searchParams = useSearchParams(); // Gap 2 fix
+  const [contracts, setContracts] = useState<ContractRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isColdStart, setIsColdStart] = useState(false);
   const [naicsCodes, setNaicsCodes] = useState<string[]>([]);
-  const [error,      setError]      = useState(false);
-  const [total,      setTotal]      = useState(0);
-  const [page,       setPage]       = useState(1);
-  const [minScore,   setMinScore]   = useState(0);
-  const [search,     setSearch]     = useState("");
+  const [error, setError] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [minScore, setMinScore] = useState(0);
+  const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [sortBy,     setSortBy]     = useState<SortKey>("score");
-  const [sortOpen,   setSortOpen]   = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>("score");
+  const [sortOpen, setSortOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exporting,  setExporting]  = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [undoId, setUndoId] = useState<string | null>(null);
+  const [undoTitle, setUndoTitle] = useState("");
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  const cs = useContractStatus();
+
+  // Gap 2: read ?search= from URL on mount
+  useEffect(() => {
+    const urlSearch = searchParams.get("search");
+    if (urlSearch) {
+      setSearch(urlSearch);
+      setSearchInput(urlSearch);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('profiles').select('naics_codes').single();
+      const { data } = await supabase.from("profiles").select("naics_codes").single();
       if (data?.naics_codes) setNaicsCodes(data.naics_codes);
     })();
   }, []);
@@ -143,21 +142,15 @@ export default function ContractsPage() {
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
-        setExportOpen(false);
-      }
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const fetchMatches = async (p: number, s: number, q: string, sort: SortKey) => {
-    const params = new URLSearchParams({
-      page: String(p),
-      per_page: String(PER_PAGE),
-      min_score: String(s),
-      sort: sort,
-    });
+    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: String(s), sort });
     if (q) params.set("search", q);
     const res = await fetch(`/api/user-matches?${params.toString()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -172,8 +165,6 @@ export default function ContractsPage() {
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
       setTotal(json.pagination?.total || 0);
-
-      // Handle cold start polling if totally empty and no filters applied
       if (rows.length === 0 && minScore === 0 && search === "" && page === 1) {
         setIsColdStart(true);
         const interval = setInterval(async () => {
@@ -185,38 +176,46 @@ export default function ContractsPage() {
               setIsColdStart(false);
               clearInterval(interval);
             }
-          } catch (e) {
-            console.error("Polling error", e);
-          }
+          } catch { /* polling error — silent */ }
         }, 30_000);
         setTimeout(() => clearInterval(interval), 600_000);
-      } else {
-        setIsColdStart(false);
-      }
-    } catch {
-      setError(true);
-    } finally {
-      if (!isColdStart) setLoading(false);
-    }
+      } else { setIsColdStart(false); }
+    } catch { setError(true); }
+    finally { if (!isColdStart) setLoading(false); }
   }, [page, minScore, search, sortBy, isColdStart]);
 
   useEffect(() => { load(); }, [page, minScore, search, sortBy]);
 
+  /* ── Status-filtered contracts ── */
+  const filteredContracts = contracts.filter(c => {
+    if (statusFilter === "bookmarked") return cs.isBookmarked(c.id);
+    if (statusFilter === "dismissed") return cs.isDismissed(c.id);
+    if (statusFilter === "new") return !cs.isViewed(c.id) && !cs.isDismissed(c.id);
+    // "all" — show everything except dismissed
+    return !cs.isDismissed(c.id);
+  });
+
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Best match";
 
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSearch(searchInput);
-    setPage(1);
+  function handleSearchSubmit(e: React.FormEvent) { e.preventDefault(); setSearch(searchInput); setPage(1); }
+  function handlePageChange(np: number) { setPage(Math.max(1, Math.min(totalPages, np))); }
+
+  /* ── Dismiss with undo ── */
+  function handleDismiss(c: ContractRow) {
+    cs.dismiss(c.id);
+    setUndoTitle(c.title);
+    setUndoId(c.id);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => setUndoId(null), cs.UNDO_WINDOW_MS);
   }
-
-  function handlePageChange(newPage: number) {
-    setPage(Math.max(1, Math.min(totalPages, newPage)));
+  function handleUndo() {
+    if (undoId) { cs.undoDismiss(undoId); setUndoId(null); }
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }
 
   async function handleExportCSV(days: number) {
-    setExporting(true);
-    setExportOpen(false);
+    setExporting(true); setExportOpen(false);
     try {
       const res = await fetch(`/api/export/csv?days=${days}`);
       if (!res.ok) throw new Error(`Export failed: ${res.status}`);
@@ -224,23 +223,17 @@ export default function ContractsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const today = new Date().toISOString().split("T")[0];
-      a.download = `plexovia-matches-${days}d-${today}.csv`;
+      a.download = `plexovia-matches-${days}d-${new Date().toISOString().split("T")[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("CSV export failed:", err);
-      alert("Failed to export CSV. Please try again.");
-    } finally {
-      setExporting(false);
-    }
+    } catch { alert("Failed to export CSV. Please try again."); }
+    finally { setExporting(false); }
   }
 
-  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Best match";
+  const allIds = contracts.map(c => c.id);
 
   return (
-    <div className="dash-main">
-
+    <div className="dash-main dash-fade-in">
       {/* Page header */}
       <div className="dash-page-header">
         <div>
@@ -248,182 +241,92 @@ export default function ContractsPage() {
           <p className="dash-page-sub">
             {total > 0
               ? `${total.toLocaleString()} contracts matched your profile · Sorted by ${currentSortLabel.toLowerCase()}`
-              : "Matches appear here after the engine's nightly scan"}
+              : "Matches will appear here once your profile is set up"}
           </p>
         </div>
-
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-          {/* Export CSV with day range dropdown */}
           {contracts.length > 0 && (
             <div ref={exportRef} style={{ position: "relative" }}>
-              <button
-                className="dash-btn"
-                onClick={() => setExportOpen(v => !v)}
-                disabled={exporting}
-                aria-haspopup="listbox"
-                aria-expanded={exportOpen}
-                aria-label="Export contracts as CSV"
-              >
-                {exporting ? (
-                  <RefreshCw size={13} className="spin" aria-hidden="true" />
-                ) : (
-                  <Download size={13} aria-hidden="true" />
-                )}
+              <button className="dash-btn" onClick={() => setExportOpen(v => !v)} disabled={exporting} aria-haspopup="listbox" aria-expanded={exportOpen} aria-label="Export contracts as CSV">
+                {exporting ? <RefreshCw size={13} className="spin" aria-hidden="true" /> : <Download size={13} aria-hidden="true" />}
                 {exporting ? "Exporting…" : "Export CSV"}
               </button>
               {exportOpen && (
-                <div
-                  role="listbox"
-                  aria-label="Export date range"
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 4px)",
-                    right: 0,
-                    background: "var(--app-surface)",
-                    border: "1px solid var(--app-border)",
-                    borderRadius: "10px",
-                    padding: "4px",
-                    zIndex: 50,
-                    minWidth: "170px",
-                    boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
-                  }}
-                >
+                <div className="dash-dropdown-menu" role="listbox" aria-label="Export date range">
                   {EXPORT_DAY_OPTIONS.map(d => (
-                    <button
-                      key={d}
-                      role="option"
-                      aria-selected={false}
-                      onClick={() => handleExportCSV(d)}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "7px 10px",
-                        borderRadius: "7px",
-                        border: "none",
-                        background: "none",
-                        color: "var(--app-muted)",
-                        fontSize: "0.8125rem",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        textAlign: "left",
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.1)")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "none")}
-                    >
-                      <Calendar size={12} aria-hidden="true" />
-                      Last {d} days
+                    <button key={d} className="dash-dropdown-item" role="option" aria-selected={false} onClick={() => handleExportCSV(d)}>
+                      <Calendar size={12} aria-hidden="true" /> Last {d} days
                     </button>
                   ))}
                 </div>
               )}
             </div>
           )}
-
-          {/* Refresh */}
-          <button
-            className="dash-btn"
-            onClick={load}
-            aria-label="Refresh contract matches"
-            disabled={loading}
-          >
-            <RefreshCw size={13} aria-hidden="true" className={loading ? "spin" : ""} />
-            Refresh
+          <button className="dash-btn" onClick={load} aria-label="Refresh contract matches" disabled={loading}>
+            <RefreshCw size={13} aria-hidden="true" className={loading ? "spin" : ""} /> Refresh
           </button>
+        </div>
+      </div>
+
+      {/* Status filter tabs */}
+      <div style={{ display: "flex", gap: "var(--space-4)", marginBottom: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
+        <div className="dash-status-tabs" role="tablist" aria-label="Contract status filter">
+          {([
+            { key: "all", label: "All" },
+            { key: "new", label: "New" },
+            { key: "bookmarked", label: "Saved" },
+            { key: "dismissed", label: "Dismissed" },
+          ] as { key: StatusFilter; label: string }[]).map(tab => (
+            <button
+              key={tab.key}
+              className="dash-status-tab"
+              data-active={statusFilter === tab.key ? "true" : undefined}
+              role="tab"
+              aria-selected={statusFilter === tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+            >
+              {tab.label}
+              {tab.key === "bookmarked" && cs.bookmarkedCount(allIds) > 0 && (
+                <span className="dash-tab-count">{cs.bookmarkedCount(allIds)}</span>
+              )}
+              {tab.key === "dismissed" && cs.dismissedCount(allIds) > 0 && (
+                <span className="dash-tab-count">{cs.dismissedCount(allIds)}</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Filters row */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
-
-        {/* Server-side search */}
         <form onSubmit={handleSearchSubmit} style={{ position: "relative", flex: 1, minWidth: "220px" }} role="search">
           <label htmlFor="contract-search" className="sr-only">Search contracts</label>
-          <Search
-            size={13}
-            style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--app-muted)", pointerEvents: "none" }}
-            aria-hidden="true"
-          />
+          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--app-muted)", pointerEvents: "none" }} aria-hidden="true" />
           <input
-            id="contract-search"
-            type="search"
-            value={searchInput}
+            id="contract-search" type="search" value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { setSearch(searchInput); setPage(1); } }}
             placeholder="Search title, agency, NAICS, state…"
-            className="dash-input"
-            style={{ paddingLeft: 30 }}
+            className="dash-input" style={{ paddingLeft: 30 }}
           />
         </form>
-
-        {/* Min score filter */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }} role="group" aria-label="Minimum match score filter">
-          <Filter size={12} color="var(--app-muted)" aria-hidden="true" />
+          <Filter size={12} style={{ color: "var(--app-muted)" }} aria-hidden="true" />
           <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", whiteSpace: "nowrap" }}>Min score:</span>
           {[0, 50, 75, 90].map(s => (
-            <button
-              key={s}
-              className={`dash-pill${minScore === s ? " active" : ""}`}
-              aria-pressed={minScore === s}
-              onClick={() => { setMinScore(s); setPage(1); }}
-            >
+            <button key={s} className={`dash-pill${minScore === s ? " active" : ""}`} aria-pressed={minScore === s} onClick={() => { setMinScore(s); setPage(1); }}>
               {s === 0 ? "All" : `${s}+`}
             </button>
           ))}
         </div>
-
-        {/* Sort dropdown */}
-        <div style={{ position: "relative" }}>
-          <button
-            className="dash-btn"
-            onClick={() => setSortOpen(v => !v)}
-            aria-haspopup="listbox"
-            aria-expanded={sortOpen}
-            aria-label={`Sort by: ${currentSortLabel}`}
-          >
-            <ArrowUpDown size={12} aria-hidden="true" />
-            {currentSortLabel}
+        <div ref={sortRef} style={{ position: "relative" }}>
+          <button className="dash-btn" onClick={() => setSortOpen(v => !v)} aria-haspopup="listbox" aria-expanded={sortOpen} aria-label={`Sort by: ${currentSortLabel}`}>
+            <ArrowUpDown size={12} aria-hidden="true" /> {currentSortLabel}
           </button>
           {sortOpen && (
-            <div
-              role="listbox"
-              aria-label="Sort options"
-              style={{
-                position: "absolute",
-                top: "calc(100% + 4px)",
-                right: 0,
-                background: "var(--app-surface)",
-                border: "1px solid var(--app-border)",
-                borderRadius: "10px",
-                padding: "4px",
-                zIndex: 50,
-                minWidth: "160px",
-                boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
-              }}
-            >
+            <div className="dash-dropdown-menu" role="listbox" aria-label="Sort options">
               {SORT_OPTIONS.map(o => (
-                <button
-                  key={o.value}
-                  role="option"
-                  aria-selected={sortBy === o.value}
-                  onClick={() => { setSortBy(o.value); setSortOpen(false); setPage(1); }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "7px 10px",
-                    borderRadius: "7px",
-                    border: "none",
-                    background: sortBy === o.value ? "rgba(201,168,76,0.1)" : "none",
-                    color: sortBy === o.value ? "var(--accent)" : "var(--app-muted)",
-                    fontSize: "0.8125rem",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    textAlign: "left",
-                  }}
-                >
+                <button key={o.value} className="dash-dropdown-item" role="option" data-active={sortBy === o.value ? "true" : undefined} aria-selected={sortBy === o.value} onClick={() => { setSortBy(o.value); setSortOpen(false); setPage(1); }}>
                   {o.label}
                 </button>
               ))}
@@ -434,45 +337,37 @@ export default function ContractsPage() {
 
       {/* Table */}
       <div className="dash-card" style={{ marginBottom: "1rem" }}>
-        {/* Table head */}
-        <div
-          className="dash-table-head dash-hide-mobile"
-          style={{ display: "grid", gridTemplateColumns: "70px 1fr 80px 100px 110px" }}
-        >
+        <div className="dash-table-head dash-hide-mobile" style={{ display: "grid", gridTemplateColumns: "70px 1fr 80px 100px 110px 60px" }}>
           <span className="dash-th">Score</span>
           <span className="dash-th">Contract</span>
           <span className="dash-th">State</span>
           <span className="dash-th">Value</span>
           <span className="dash-th">Deadline</span>
+          <span className="dash-th" style={{ textAlign: "center" }}>Actions</span>
         </div>
 
-        {/* Content */}
         {isColdStart ? (
-          <EmptyState
-            icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />}
-            title="Matching contracts to your profile now"
-            message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page will update automatically — no refresh needed.`}
-          />
+          <EmptyState icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />} title="Matching contracts to your profile now" message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page will update automatically — no refresh needed.`} />
         ) : loading ? (
-          <SkeletonRows rows={6} columns={5} columnWidths="70px 1fr 80px 100px 110px" />
+          <SkeletonRows rows={6} columns={6} columnWidths="70px 1fr 80px 100px 110px 60px" />
         ) : error ? (
-          <ErrorState
-            message="Could not load your contract matches. The engine may be starting up."
-            onRetry={load}
-          />
-        ) : contracts.length === 0 ? (
+          <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
+        ) : filteredContracts.length === 0 ? (
           <EmptyState
             icon={<FileText size={28} />}
-            title={total === 0 ? "No matches yet" : "No contracts match your search"}
-            message={
-              total === 0
-                ? "The engine scans nightly. Set up your NAICS codes and keywords in Profile, then check back tomorrow."
-                : "Try adjusting your search or lowering the score threshold."
-            }
+            title={statusFilter !== "all" ? `No ${statusFilter} contracts` : total === 0 ? "No matches yet" : "No contracts match your search"}
+            message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts matching your criteria will appear here automatically." : "Try adjusting your search or lowering the score threshold."}
           />
         ) : (
-          contracts.map(c => (
-            <ContractRowUI key={c.id} c={c} />
+          filteredContracts.map(c => (
+            <ContractRowUI
+              key={c.id} c={c}
+              isBookmarked={cs.isBookmarked(c.id)}
+              isViewed={cs.isViewed(c.id)}
+              onToggleBookmark={() => cs.toggleBookmark(c.id)}
+              onDismiss={() => handleDismiss(c)}
+              onView={() => cs.markViewed(c.id)}
+            />
           ))
         )}
       </div>
@@ -480,31 +375,26 @@ export default function ContractsPage() {
       {/* Pagination */}
       {!loading && !isColdStart && totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-          <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
-            Page {page} of {totalPages} · {total.toLocaleString()} total matches
-          </span>
+          <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>Page {page} of {totalPages} · {total.toLocaleString()} total matches</span>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button
-              className="dash-btn"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-              aria-label="Previous page"
-            >
+            <button className="dash-btn" onClick={() => handlePageChange(page - 1)} disabled={page === 1} aria-label="Previous page">
               <ChevronLeft size={13} aria-hidden="true" /> Prev
             </button>
-            <button
-              className="dash-btn"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page === totalPages}
-              aria-label="Next page"
-            >
+            <button className="dash-btn" onClick={() => handlePageChange(page + 1)} disabled={page === totalPages} aria-label="Next page">
               Next <ChevronRight size={13} aria-hidden="true" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Spin animation */}
+      {/* Undo toast */}
+      {undoId && (
+        <div className="dash-undo-toast" role="alert">
+          <span>Contract dismissed</span>
+          <button onClick={handleUndo}>Undo</button>
+        </div>
+      )}
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 0.8s linear infinite; }
@@ -513,96 +403,68 @@ export default function ContractsPage() {
   );
 }
 
-/* ─── Row component ───────────────────────────────────────────────── */
-function ContractRowUI({ c }: { c: ContractRow }) {
+/* ─── Row Component ───────────────────────────────────────────────── */
+function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss, onView }: {
+  c: ContractRow; isBookmarked: boolean; isViewed: boolean;
+  onToggleBookmark: () => void; onDismiss: () => void; onView: () => void;
+}) {
   const deadlineColor =
-    c.deadline === "Expired" ? "#F87171"
-    : c.deadlineDays !== null && c.deadlineDays <= 7 ? "#FBBF24"
+    c.deadline === "Expired" ? "var(--danger)"
+    : c.deadlineDays !== null && c.deadlineDays <= 7 ? "var(--warning)"
     : "var(--app-muted)";
 
   return (
     <div
       className="dash-table-row"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "70px 1fr 80px 100px 110px",
-        alignItems: "center",
-        gap: "0.75rem",
-        padding: "1rem 1.5rem",
-      }}
+      style={{ display: "grid", gridTemplateColumns: "70px 1fr 80px 100px 110px 60px", alignItems: "center", gap: "0.75rem", padding: "1rem 1.5rem" }}
+      onMouseEnter={onView}
     >
-      {/* Score */}
-      <div>
+      {/* Score + viewed dot */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {!isViewed && <span className="dash-viewed-dot" title="New — not yet viewed" />}
         <ScoreBadge score={c.score} />
       </div>
 
-      {/* Title + all match signal badges */}
+      {/* Title + badges */}
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: "0 0 4px", lineHeight: 1.3 }}>
-          {c.title}
-        </p>
+        <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: "0 0 4px", lineHeight: 1.3 }}>{c.title}</p>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {/* NAICS badge */}
-          {c.naics && (
-            <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}>
-              <FileText size={9} aria-hidden="true" />
-              NAICS {c.naics}
-            </span>
-          )}
-          {/* PSC badge */}
-          {c.psc && (
-            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>
-              <Tag size={9} aria-hidden="true" />
-              PSC {c.psc}
-            </span>
-          )}
-          {/* Set-aside badge */}
-          {c.setAside && c.setAside !== "Full & Open" && (
-            <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}>
-              <Shield size={9} aria-hidden="true" />
-              {c.setAside}
-            </span>
-          )}
+          {c.naics && <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}><FileText size={9} aria-hidden="true" /> NAICS {c.naics}</span>}
+          {c.psc && <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}><Tag size={9} aria-hidden="true" /> PSC {c.psc}</span>}
+          {c.setAside && c.setAside !== "Full & Open" && <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}><Shield size={9} aria-hidden="true" /> {c.setAside}</span>}
         </div>
       </div>
 
       {/* State */}
-      <div
-        className="dash-hide-mobile"
-        style={{ fontSize: "0.78rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 4 }}
-      >
-        <MapPin size={10} color="var(--app-faint)" aria-hidden="true" />
-        {c.state || "—"}
+      <div className="dash-hide-mobile" style={{ fontSize: "0.78rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+        <MapPin size={10} style={{ color: "var(--app-faint)" }} aria-hidden="true" /> {c.state || "—"}
       </div>
 
       {/* Value */}
-      <div
-        className="dash-mono"
-        style={{ fontSize: "0.8125rem", fontWeight: 600, color: c.value === "TBD" ? "var(--app-muted)" : "var(--app-text)" }}
-        aria-label={`Value: ${c.value}`}
-      >
+      <div className="dash-mono" style={{ fontSize: "0.8125rem", fontWeight: 600, color: c.value === "TBD" ? "var(--app-muted)" : "var(--app-text)" }} aria-label={`Value: ${c.value}`}>
         {c.value}
       </div>
 
-      {/* Deadline + link */}
+      {/* Deadline + SAM link */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-        <span
-          style={{ fontSize: "0.72rem", color: deadlineColor, fontWeight: c.deadlineDays !== null && c.deadlineDays <= 7 ? 600 : 400 }}
-          aria-label={`Deadline: ${c.deadline}`}
-        >
+        <span style={{ fontSize: "0.72rem", color: deadlineColor, fontWeight: c.deadlineDays !== null && c.deadlineDays <= 7 ? 600 : 400 }} aria-label={`Deadline: ${c.deadline}`}>
           {c.deadline}
         </span>
         {c.url && (
-          <a
-            href={c.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`View on SAM.gov: ${c.title}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.72rem", color: "var(--accent)", textDecoration: "none" }}
-          >
+          <a href={c.url} target="_blank" rel="noopener noreferrer" aria-label={`View on SAM.gov: ${c.title}`} className="dash-link-subtle" style={{ fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
             SAM.gov <ExternalLink size={9} aria-hidden="true" />
           </a>
         )}
+      </div>
+
+      {/* Actions: Bookmark + Dismiss */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <button className="dash-action-bookmark" data-active={isBookmarked ? "true" : undefined} onClick={onToggleBookmark} aria-label={isBookmarked ? "Remove bookmark" : "Bookmark contract"} title={isBookmarked ? "Saved" : "Save"}>
+          <Star size={14} fill={isBookmarked ? "currentColor" : "none"} aria-hidden="true" />
+        </button>
+        <button className="dash-action-dismiss" onClick={onDismiss} aria-label="Dismiss contract" title="Dismiss">
+          <X size={14} aria-hidden="true" />
+        </button>
       </div>
     </div>
   );

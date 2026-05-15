@@ -9,8 +9,8 @@ export default function ComingSoon() {
       <div style={{ textAlign: "center", maxWidth: 340 }}>
         <div style={{
           width: 52, height: 52, borderRadius: 14,
-          background: "rgba(201,168,76,0.08)",
-          border: "1px solid rgba(201,168,76,0.2)",
+          background: "var(--accent-subtle)",
+          border: "1px solid var(--accent-border)",
           display: "flex", alignItems: "center", justifyContent: "center",
           margin: "0 auto 1.5rem",
         }}>

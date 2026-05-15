@@ -280,6 +280,17 @@ export default function ProfilePage() {
       setIsDirty(false);
       setTimeout(() => setSaved(false), 3500);
 
+      // Trigger re-matching so profile changes take immediate effect.
+      // Without this, users who change NAICS codes, keywords, or states
+      // would see stale/incorrect matches until the next daily pipeline
+      // run (up to 24 hours). The rematch endpoint re-evaluates all
+      // active contracts against the updated profile and purges matches
+      // that no longer qualify (e.g., removed NAICS codes).
+      fetch("/api/profile/rematch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }).catch(e => console.error("Profile rematch trigger error:", e));
+
       // Trigger forecast cold start for any newly added NAICS codes
       const newCodes = naicsCodes.filter(c => !originalNaicsCodes.includes(c));
       if (newCodes.length > 0) {
@@ -297,9 +308,9 @@ export default function ProfilePage() {
 
   const completeness = getCompleteness(companyName, naicsCodes, selectedStates, keywords);
   const completenessColor =
-    completeness.score === 100 ? "#4ADE80"
+    completeness.score === 100 ? "var(--success)"
     : completeness.score >= 60  ? "var(--accent)"
-    :                              "#F87171";
+    :                              "var(--danger)";
 
   if (loading) {
     return (
@@ -404,13 +415,13 @@ export default function ProfilePage() {
           </button>
         </div>
         {naicsError && (
-          <p id="naics-error" role="alert" style={{ fontSize: "0.78rem", color: "#F87171", margin: "0 0 0.5rem" }}>
+          <p id="naics-error" role="alert" style={{ fontSize: "0.78rem", color: "var(--danger)", margin: "0 0 0.5rem" }}>
             {naicsError}
           </p>
         )}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list">
           {naicsCodes.map(code => (
-            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
+            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--accent-subtle)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
               {code}
               <button onClick={() => removeNaics(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}>
                 <X size={11} aria-hidden="true" />
@@ -424,7 +435,7 @@ export default function ProfilePage() {
       {/* PSC Codes */}
       <div className="dash-section">
         <div className="dash-section-h">
-          <span>PSC / FSC Codes</span>
+          <span>Product &amp; Service Codes (PSC)</span>
           <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
             {pscCodes.length} added
           </span>
@@ -449,7 +460,7 @@ export default function ProfilePage() {
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list">
           {pscCodes.map(code => (
-            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
+            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--accent-subtle)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
               {code}
               <button onClick={() => removePsc(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}>
                 <X size={11} aria-hidden="true" />
@@ -514,8 +525,8 @@ export default function ProfilePage() {
                 onClick={() => toggleState(st)}
                 style={{
                   padding: "5px 4px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: active ? 700 : 400,
-                  cursor: "pointer", border: `1px solid ${active ? "rgba(201,168,76,0.5)" : "var(--app-border)"}`,
-                  background: active ? "rgba(201,168,76,0.1)" : "var(--app-surface-2)", color: active ? "var(--accent)" : "var(--app-muted)",
+                  cursor: "pointer", border: `1px solid ${active ? "var(--accent-border)" : "var(--app-border)"}`,
+                  background: active ? "var(--accent-subtle)" : "var(--app-surface-2)", color: active ? "var(--accent)" : "var(--app-muted)",
                 }}
               >
                 {st}
@@ -552,7 +563,7 @@ export default function ProfilePage() {
       {/* Negative Keywords */}
       <div className="dash-section">
         <div className="dash-section-h">
-          <span style={{ color: "#F87171" }}>Negative Keywords</span>
+          <span style={{ color: "var(--danger)" }}>Negative Keywords</span>
           <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>{excludeKeywords.length} / {MAX_KEYWORDS}</span>
         </div>
         <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
@@ -568,9 +579,9 @@ export default function ProfilePage() {
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {excludeKeywords.map(kw => (
-            <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", color: "#F87171" }}>
+            <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--danger-subtle)", border: "1px solid rgba(194,59,59,0.2)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", color: "var(--danger)" }}>
               {kw}
-              <button onClick={() => { setExcludeKeywords(k => k.filter(x => x !== kw)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#FCA5A5" }}><X size={11} /></button>
+              <button onClick={() => { setExcludeKeywords(k => k.filter(x => x !== kw)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)" }}><X size={11} /></button>
             </span>
           ))}
         </div>
@@ -589,8 +600,8 @@ export default function ProfilePage() {
                 className="dash-pill"
                 style={{
                   fontSize: "0.8rem", padding: "6px 12px",
-                  background: active ? "rgba(201,168,76,0.1)" : undefined,
-                  borderColor: active ? "rgba(201,168,76,0.4)" : undefined,
+                  background: active ? "var(--accent-subtle)" : undefined,
+                  borderColor: active ? "var(--accent-border)" : undefined,
                   color: active ? "var(--accent)" : undefined, fontWeight: active ? 600 : undefined,
                 }}
               >
@@ -612,7 +623,7 @@ export default function ProfilePage() {
           {saving ? <><RefreshCw size={14} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Changes</>}
         </button>
         {saved && (
-          <span style={{ color: "#4ADE80", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ color: "var(--success)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
             <CheckCircle size={14} /> Profile updated. New matches will reflect your changes after tonight's update.
           </span>
         )}

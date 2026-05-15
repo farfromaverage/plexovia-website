@@ -139,7 +139,7 @@ export default function AlertSettingsPage() {
             description="Your dashboard updates daily with matched contracts, ranked by AI score. No action needed."
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.78rem", color: "#4ADE80", fontWeight: 600 }}>Active</span>
+              <span style={{ fontSize: "0.78rem", color: "var(--success)", fontWeight: 600 }}>Active</span>
               <Toggle id="daily-monitoring" checked={true} onChange={() => {}} disabled={true} />
             </div>
           </SettingRow>
@@ -150,7 +150,7 @@ export default function AlertSettingsPage() {
             description="Alerts at 3 days and 1 day before a tracked bid closes."
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.78rem", color: "#4ADE80", fontWeight: 600 }}>Active</span>
+              <span style={{ fontSize: "0.78rem", color: "var(--success)", fontWeight: 600 }}>Active</span>
               <Toggle id="deadline-reminders" checked={true} onChange={() => {}} disabled={true} />
             </div>
           </SettingRow>
