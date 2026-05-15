@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, BarChart3, Zap } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, BarChart3 } from "lucide-react";
 
 /* ─── Google button ───────────────────────────────────────────────── */
 function GoogleButton() {
@@ -62,9 +62,8 @@ function GoogleIcon() {
 
 /* ─── Trust indicators ────────────────────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield,    label: "SAM.gov contracts reviewed and matched to your NAICS codes daily" },
-  { icon: BarChart3, label: "Every match scored 0–100. AI forecasts predict what’s next." },
-  { icon: Zap,       label: "14-day free trial. No credit card required." },
+  { icon: Shield,    label: "15,000+ solicitations scanned weekly — only your NAICS matches surface" },
+  { icon: BarChart3, label: "TimesFM AI forecasts which agencies post next, before the solicitation drops" },
 ];
 
 /* ─── Page ────────────────────────────────────────────────────────── */
@@ -190,7 +189,6 @@ export default function SignupPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Create account</h1>
-            <p className="text-[var(--app-muted)] text-[15px]">Start finding contracts in under 3 minutes</p>
           </div>
 
           {/* Google — primary CTA */}
