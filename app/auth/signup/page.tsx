@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, BarChart3, Zap } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, BarChart3 } from "lucide-react";
 
 /* ─── Google button ───────────────────────────────────────────────── */
 function GoogleButton() {
@@ -64,7 +64,6 @@ function GoogleIcon() {
 const TRUST_POINTS = [
   { icon: Shield,    label: "SAM.gov contract opportunities reviewed daily" },
   { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
-  { icon: Zap,       label: "7-day free trial. No charge until Day 8." },
 ];
 
 /* ─── Page ────────────────────────────────────────────────────────── */

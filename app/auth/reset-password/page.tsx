@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowRight, Shield, BarChart3, Zap } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowRight, Shield, BarChart3 } from "lucide-react";
 
 /* ─── Inner form ─────────────────────────────────────────────────── */
 function ResetForm() {
@@ -206,7 +206,6 @@ function BrandPanel() {
           {[
             { icon: Shield, label: "SAM.gov contract opportunities reviewed daily" },
             { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
-            { icon: Zap, label: "7-day free trial. No charge until Day 8." },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
