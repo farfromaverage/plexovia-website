@@ -62,9 +62,9 @@ function GoogleIcon() {
 
 /* ─── Trust indicators for left panel ─────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield, label: "SAM.gov contract opportunities reviewed daily" },
-  { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
-  { icon: Zap, label: "7-day free trial. No charge until Day 8." },
+  { icon: Shield,    label: "SAM.gov contracts matched daily" },
+  { icon: BarChart3, label: "AI scoring and forecasting built in" },
+  { icon: Zap,       label: "Free 14-day trial. No card required." },
 ];
 
 /* ─── Inner content (uses useSearchParams — must be wrapped) ─────── */
@@ -98,10 +98,9 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-[420px]">
-      {/* Header */}
+      {/* Header — removed generic copy per brand guidelines */}
       <div className="mb-8">
-        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Welcome back</h1>
-        <p className="text-[var(--app-muted)] text-[15px]">Sign in to access your dashboard</p>
+        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Sign in to Plexovia</h1>
       </div>
 
       {/* Google — primary CTA */}
@@ -171,7 +170,7 @@ function LoginForm() {
           type="submit" 
           id="email-login" 
           disabled={loading} 
-          className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-1 bg-[var(--accent)] text-white font-bold text-[15px] rounded-xl transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20 disabled:opacity-75 disabled:cursor-not-allowed active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 w-full px-5 py-3.5 mt-1 bg-[#635BFF] text-white font-bold text-[15px] rounded-xl transition-all hover:bg-[#4F48CC] hover:shadow-lg hover:shadow-[#635BFF]/20 disabled:opacity-75 disabled:cursor-not-allowed active:scale-[0.98]"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <>Sign In <ArrowRight size={17} strokeWidth={2.5} /></>}
         </button>
@@ -190,17 +189,15 @@ function LoginForm() {
 /* ─── Decorative Panel (left side — desktop only) ─────────────────── */
 function BrandPanel() {
   return (
-    <div className="hidden lg:flex flex-col justify-between w-[480px] min-h-screen p-12 relative overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, #635BFF 0%, #4B44D6 40%, #3B35B0 100%)",
-      }}
+    <div
+      className="hidden lg:flex flex-col justify-between w-[480px] min-h-screen p-12 relative overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #635BFF 0%, #4B44D6 40%, #3B35B0 100%)" }}
     >
-      {/* Subtle grid pattern overlay */}
+      {/* Subtle grid overlay */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-rule='evenodd'%3E%3Cpath d='M0 0h1v40H0zM39 0h1v40h-1zM0 0h40v1H0zM0 39h40v1H0z'/%3E%3C/g%3E%3C/svg%3E")`,
       }} />
-
-      {/* Floating gradient orbs */}
+      {/* Ambient glow */}
       <div className="absolute top-20 right-10 w-64 h-64 bg-white/[0.06] rounded-full blur-3xl" />
       <div className="absolute bottom-32 left-10 w-48 h-48 bg-white/[0.04] rounded-full blur-3xl" />
 
@@ -211,27 +208,26 @@ function BrandPanel() {
         </Link>
       </div>
 
-      {/* Center value proposition */}
+      {/* Center — headline + trust signals */}
       <div className="relative z-10 -mt-8">
-        <h2 className="text-white text-[32px] font-bold leading-tight tracking-tight mb-6">
-          Every federal contract<br/>
-          that fits your business.<br/>
-          Scored. Ranked.<br/>
-          Ready in your dashboard.
+        <h2 className="text-white text-[32px] font-bold leading-tight tracking-tight mb-10">
+          Federal contracts<br/>
+          matched to your business.<br/>
+          Every day.
         </h2>
-        <div className="flex flex-col gap-4 mt-8">
+        <div className="flex flex-col gap-4">
           {TRUST_POINTS.map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
                 <Icon size={16} className="text-white/80" />
               </div>
-              <span className="text-white/70 text-[14px] leading-snug">{label}</span>
+              <span className="text-white/70 text-[14px]">{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Bottom social proof */}
+      {/* Bottom */}
       <div className="relative z-10">
         <p className="text-white/40 text-[13px]">
           Built for government contractors who win federal work
