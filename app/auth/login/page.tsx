@@ -62,9 +62,9 @@ function GoogleIcon() {
 
 /* ─── Trust indicators for left panel ─────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield,    label: "SAM.gov contracts matched daily" },
-  { icon: BarChart3, label: "AI scoring and forecasting built in" },
-  { icon: Zap,       label: "Free 14-day trial. No card required." },
+  { icon: Shield,    label: "SAM.gov contract opportunities reviewed daily" },
+  { icon: BarChart3, label: "Every match scored 0–100 by relevance to your profile" },
+  { icon: Zap,       label: "7-day free trial. No charge until Day 8." },
 ];
 
 /* ─── Inner content (uses useSearchParams — must be wrapped) ─────── */
@@ -98,9 +98,10 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-[420px]">
-      {/* Header — removed generic copy per brand guidelines */}
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Sign in to Plexovia</h1>
+        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Welcome back</h1>
+        <p className="text-[var(--app-muted)] text-[15px]">Sign in to access your dashboard</p>
       </div>
 
       {/* Google — primary CTA */}
@@ -211,9 +212,10 @@ function BrandPanel() {
       {/* Center — headline + trust signals */}
       <div className="relative z-10 -mt-8">
         <h2 className="text-white text-[32px] font-bold leading-tight tracking-tight mb-10">
-          Federal contracts<br/>
-          matched to your business.<br/>
-          Every day.
+          Every federal contract<br/>
+          that fits your business.<br/>
+          Scored. Ranked.<br/>
+          Ready in your dashboard.
         </h2>
         <div className="flex flex-col gap-4">
           {TRUST_POINTS.map(({ icon: Icon, label }) => (
