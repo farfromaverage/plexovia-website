@@ -62,8 +62,8 @@ function GoogleIcon() {
 
 /* ─── Trust indicators for left panel ─────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield,    label: "SAM.gov contracts matched to your NAICS codes, daily" },
-  { icon: BarChart3, label: "AI scoring and forecasting — know what's coming next" },
+  { icon: Shield,    label: "SAM.gov contracts reviewed and matched to your NAICS codes daily" },
+  { icon: BarChart3, label: "Every match scored 0–100. AI forecasts predict what’s next." },
   { icon: Zap,       label: "14-day free trial. No credit card required." },
 ];
 
@@ -98,6 +98,11 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-[420px]">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="font-bold text-[28px] tracking-tight text-[var(--app-text)] mb-2">Sign in</h1>
+        <p className="text-[var(--app-muted)] text-[15px]">Access your contract dashboard</p>
+      </div>
 
       {/* Google — primary CTA */}
       <GoogleButton />
