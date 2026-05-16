@@ -515,7 +515,7 @@ export default function OnboardingPage() {
     if (matchOk) {
       setBuildStatus("Contracts matched! Redirecting to your dashboard…");
     } else {
-      // Engine was slow/down, but profile is saved. Daily pipeline will catch up.
+      // Engine was slow/down, but profile is saved. Twice-daily pipeline will catch up.
       setBuildStatus("Your dashboard is being prepared. Redirecting…");
     }
 

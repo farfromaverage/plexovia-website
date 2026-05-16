@@ -22,7 +22,7 @@ const payload = {
       customer_id: 112233,
       status: 'on_trial',
       ends_at: null,
-      trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
     }
   }
 };

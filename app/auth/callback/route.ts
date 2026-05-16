@@ -47,7 +47,7 @@ export async function GET(request: Request) {
         if (!profile) {
           // First time — create profile
           const trialEndsAt = new Date()
-          trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+          trialEndsAt.setDate(trialEndsAt.getDate() + 14)
           
           await supabase.from('profiles').insert({
             id: user.id,
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
           
           if (!profile.trial_ends_at) {
             const trialEndsAt = new Date()
-            trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+            trialEndsAt.setDate(trialEndsAt.getDate() + 14)
             updates.trial_ends_at = trialEndsAt.toISOString()
             updates.active = true
           }

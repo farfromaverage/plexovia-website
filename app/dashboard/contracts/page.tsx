@@ -34,7 +34,7 @@ function fmt$(n: number) {
   return `$${n.toLocaleString()}`;
 }
 function fmtVal(min: number | null, max: number | null) {
-  if (!min && !max) return "TBD";
+  if (!min && !max) return "Not Listed";
   if (min && max && min !== max) return `${fmt$(min)} – ${fmt$(max)}`;
   return fmt$(min || max || 0);
 }
@@ -47,7 +47,7 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 function fmtDeadline(d: string | null): { label: string; days: number | null } {
-  if (!d) return { label: "TBD", days: null };
+  if (!d) return { label: "Not Listed", days: null };
   const days = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
   if (days < 0) return { label: "Expired", days };
   if (days === 0) return { label: "Due today", days: 0 };
@@ -241,7 +241,7 @@ function ContractsPage() {
           <p className="dash-page-sub">
             {total > 0
               ? `${total.toLocaleString()} contracts matched your profile · Sorted by ${currentSortLabel.toLowerCase()}`
-              : "Matches will appear here once your profile is set up"}
+              : "Contracts are matched twice daily — set up your profile to start"}
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -347,7 +347,7 @@ function ContractsPage() {
         </div>
 
         {isColdStart ? (
-          <EmptyState icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />} title="Matching contracts to your profile now" message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page will update automatically — no refresh needed.`} />
+          <EmptyState icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />} title="Matching contracts to your profile now" message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page updates automatically — no refresh needed.`} />
         ) : loading ? (
           <SkeletonRows rows={6} columns={6} columnWidths="70px 1fr 80px 100px 110px 60px" />
         ) : error ? (
@@ -356,7 +356,7 @@ function ContractsPage() {
           <EmptyState
             icon={<FileText size={28} />}
             title={statusFilter !== "all" ? `No ${statusFilter} contracts` : total === 0 ? "No matches yet" : "No contracts match your search"}
-            message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts matching your criteria will appear here automatically." : "Try adjusting your search or lowering the score threshold."}
+            message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your search or lowering the score threshold."}
           />
         ) : (
           filteredContracts.map(c => (
@@ -441,7 +441,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
       </div>
 
       {/* Value */}
-      <div className="dash-mono" style={{ fontSize: "0.8125rem", fontWeight: 600, color: c.value === "TBD" ? "var(--app-muted)" : "var(--app-text)" }} aria-label={`Value: ${c.value}`}>
+      <div className="dash-mono" style={{ fontSize: "0.8125rem", fontWeight: 600, color: c.value === "Not Listed" ? "var(--app-muted)" : "var(--app-text)" }} aria-label={`Value: ${c.value}`}>
         {c.value}
       </div>
 

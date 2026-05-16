@@ -120,7 +120,7 @@ export default function SignupPage() {
 
     if (data.user) {
       const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
       
       // Save TOS acceptance and trial details immediately so it isn't lost during the email confirmation loop
       await supabase.from("profiles").update({ 

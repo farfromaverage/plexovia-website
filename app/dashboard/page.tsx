@@ -36,7 +36,7 @@ function fmt$(n: number) {
   return `$${n.toLocaleString()}`;
 }
 function fmtVal(min: number | null, max: number | null) {
-  if (!min && !max) return "Value TBD";
+  if (!min && !max) return "Not Listed";
   if (min && max && min !== max) return `${fmt$(min)} to ${fmt$(max)}`;
   return fmt$(min || max || 0);
 }
@@ -49,7 +49,7 @@ function fmtPosted(d: string | null) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 function fmtDeadline(d: string | null): { label: string; days: number | null } {
-  if (!d) return { label: "TBD", days: null };
+  if (!d) return { label: "Not Listed", days: null };
   const days = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
   if (days < 0)  return { label: "Expired", days };
   if (days === 0) return { label: "Due today", days: 0 };
@@ -296,7 +296,7 @@ export default function DashboardPage() {
 
       {/* ── 4 Stat Cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
-        <StatCard icon={<FileText size={14} aria-hidden="true" />} label="Contract Matches" value={matchesLoading ? "…" : isPolling ? "Analyzing…" : String(matchTotal)} sub={isPolling ? "Analyzing federal opportunities for you" : matchTotal > 0 ? `${matchTotal.toLocaleString()} contracts matched to your profile` : "Next check coming soon"} />
+        <StatCard icon={<FileText size={14} aria-hidden="true" />} label="Contract Matches" value={matchesLoading ? "…" : isPolling ? "Analyzing…" : String(matchTotal)} sub={isPolling ? "Analyzing federal opportunities for you" : matchTotal > 0 ? `${matchTotal.toLocaleString()} contracts matched to your profile` : "Checked twice daily"} />
         <StatCard icon={<TrendingUp size={14} aria-hidden="true" />} label="New This Week" value={matchesLoading ? "…" : String(recentCount)} sub="Last 7 days" />
         <StatCard icon={<MapPin size={14} aria-hidden="true" />} label="States Active" value={stateCount > 0 ? String(stateCount) : "N/A"} sub={stateCount > 0 ? `${stateCount} state${stateCount !== 1 ? "s" : ""} monitored` : "Not configured"} />
         <StatCard icon={<Zap size={14} aria-hidden="true" />} label="NAICS Codes" value={naicsCount > 0 ? String(naicsCount) : "N/A"} sub={naicsCount > 0 ? "Active NAICS codes" : "Not configured"} />
@@ -385,7 +385,7 @@ export default function DashboardPage() {
             </div>
             <p style={{ fontWeight: 600, color: "var(--app-text)", margin: "0 0 0.25rem" }}>No contracts matched yet</p>
             <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", maxWidth: 260, margin: "0 auto" }}>
-              {setupDone ? "We check for new contracts automatically. Matches will appear here as they're found." : "Add your NAICS codes and target states in your profile to start receiving contract matches."}
+              {setupDone ? "We check for new contracts twice daily. Your next batch is on the way." : "Add your NAICS codes and target states in your profile to start receiving contract matches."}
             </p>
           </div>
         )}

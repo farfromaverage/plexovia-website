@@ -280,16 +280,8 @@ export default function ProfilePage() {
       setIsDirty(false);
       setTimeout(() => setSaved(false), 3500);
 
-      // Trigger re-matching so profile changes take immediate effect.
-      // Without this, users who change NAICS codes, keywords, or states
-      // would see stale/incorrect matches until the next daily pipeline
-      // run (up to 24 hours). The rematch endpoint re-evaluates all
-      // active contracts against the updated profile and purges matches
-      // that no longer qualify (e.g., removed NAICS codes).
-      fetch("/api/profile/rematch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }).catch(e => console.error("Profile rematch trigger error:", e));
+      // Profile changes take effect on the next scheduled pipeline run
+      // (runs twice daily at 11:00 + 18:00 UTC). No on-demand rematch.
 
       // Trigger forecast cold start for any newly added NAICS codes
       const newCodes = naicsCodes.filter(c => !originalNaicsCodes.includes(c));
@@ -624,7 +616,7 @@ export default function ProfilePage() {
         </button>
         {saved && (
           <span style={{ color: "var(--success)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
-            <CheckCircle size={14} /> Profile updated. New matches will reflect your changes after tonight's update.
+            <CheckCircle size={14} /> Profile saved. Updated matches will appear on the next scheduled check.
           </span>
         )}
       </div>

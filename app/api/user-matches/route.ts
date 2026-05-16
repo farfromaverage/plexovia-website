@@ -80,6 +80,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // ── Diagnostic: detect orphan matches ──────────────────────────────
+    // If the contracts!inner join returns 0 rows but raw matches exist,
+    // it means match rows point to deleted/missing contract rows.
+    if ((!rows || rows.length === 0) && min_score === 0 && !search) {
+      const { count: rawCount } = await supabase
+        .from('matches')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+
+      if (rawCount && rawCount > 0) {
+        console.error(
+          `[user-matches] ORPHAN DETECTED: User ${session.user.id} has ${rawCount} match rows ` +
+          `but contracts!inner join returned 0. Broken contract_id foreign keys likely.`
+        )
+      }
+    }
+
     // ── Format response to match the shape the frontend expects ─────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const matches = (rows || []).map((row: any) => {

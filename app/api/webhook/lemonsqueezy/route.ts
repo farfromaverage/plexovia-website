@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         // Trigger welcome email
         await triggerEngineEmail('/api/internal/welcome-email', {
           user_email: customerEmail,
-          trial_ends_at: trialEndsAt || new Date(Date.now() + 7*24*60*60*1000).toISOString()
+          trial_ends_at: trialEndsAt || new Date(Date.now() + 14*24*60*60*1000).toISOString()
         });
         break;
       }

@@ -136,7 +136,7 @@ export default function AlertSettingsPage() {
           <SettingRow
             icon={<Mail size={15} aria-hidden="true" />}
             label="Contract Monitoring"
-            description="Your dashboard updates daily with matched contracts, ranked by AI score. No action needed."
+            description="Your dashboard updates twice daily with matched contracts, ranked by AI score. No action needed."
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "0.78rem", color: "var(--success)", fontWeight: 600 }}>Active</span>

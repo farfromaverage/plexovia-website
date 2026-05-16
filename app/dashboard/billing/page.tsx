@@ -11,13 +11,13 @@ const PLAN_DETAILS = {
     name: "Trial",
     price: "Free",
     color: "var(--accent)",
-    features: ["All federal sources", "Unlimited NAICS codes", "Daily contract monitoring", "AI Forecasting", "Match explanations", "90-day history"],
+    features: ["All federal sources", "Unlimited NAICS codes", "Twice-daily contract monitoring", "AI Forecasting", "Match explanations", "90-day history"],
   },
   active: {
     name: "Plexovia Intelligence",
     price: "$249/mo",
     color: "var(--success)",
-    features: ["All federal sources", "Unlimited NAICS codes", "Daily contract monitoring", "AI Forecasting", "Match explanations", "90-day history"],
+    features: ["All federal sources", "Unlimited NAICS codes", "Twice-daily contract monitoring", "AI Forecasting", "Match explanations", "90-day history"],
   },
   cancelled: {
     name: "Cancelled",
@@ -170,7 +170,7 @@ export default function BillingPage() {
                 {[
                   { feature: "All federal sources", trial: true, intel: true },
                   { feature: "Unlimited NAICS codes", trial: true, intel: true },
-                  { feature: "Daily contract monitoring", trial: true, intel: true },
+                  { feature: "Twice-daily contract monitoring", trial: true, intel: true },
                   { feature: "AI Forecasting", trial: true, intel: true },
                   { feature: "Match explanations", trial: true, intel: true },
                   { feature: "90-day history", trial: false, intel: true },
