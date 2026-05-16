@@ -79,8 +79,9 @@ export default function SignupPage() {
 
   function getPwStrength(p: string) {
     if (!p) return -1;
-    let score = 0;
-    if (p.length > 7) score += 1;
+    // Length is the baseline gate — short passwords can't score above 0
+    if (p.length < 8) return 0;
+    let score = 1; // Base: meets minimum length
     if (/[a-z]/.test(p) && /[A-Z]/.test(p)) score += 1;
     if (/\d/.test(p)) score += 1;
     if (/[^a-zA-Z0-9]/.test(p)) score += 1;
@@ -88,8 +89,8 @@ export default function SignupPage() {
   }
   const pwScore = getPwStrength(pw);
 
-  const PW_COLORS = ["var(--danger)", "var(--danger)", "var(--warning)", "var(--warning)", "var(--success)"];
-  const PW_LABELS = ["", "Weak", "Fair", "Good", "Strong"];
+  const PW_COLORS = ["var(--danger)", "var(--danger)", "var(--warning)", "var(--success)", "var(--success)"];
+  const PW_LABELS = ["Too short", "Weak", "Fair", "Good", "Strong"];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -252,7 +253,7 @@ export default function SignupPage() {
                       key={i} 
                       className="h-1 flex-1 rounded-full transition-all duration-300"
                       style={{
-                        backgroundColor: pwScore > i ? PW_COLORS[pwScore] : "var(--app-border)",
+                        backgroundColor: i === 0 ? PW_COLORS[pwScore] : pwScore > i ? PW_COLORS[pwScore] : "var(--app-border)",
                       }}
                     />
                   ))}
