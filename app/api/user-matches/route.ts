@@ -11,6 +11,11 @@
  * dependency for reads. The engine is only needed for WRITES (matching, fetching).
  *
  * Supported query params: page, per_page, min_score, search, sort
+ *
+ * Data window: only contracts posted within the last 30 days with open
+ * deadlines are returned. This matches the FAR standard response window.
+ * The 90-day backfill for first-login populates the DB, but this API
+ * filters display to the actionable 30-day window.
  */
 
 import { createServerClient } from '@supabase/ssr'
@@ -63,6 +68,17 @@ export async function GET(request: NextRequest) {
     // Exclude expired contracts — keep NULL deadlines (some SAM.gov listings lack one)
     const todayISO = new Date().toISOString().split('T')[0]
     query = query.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
+
+    // 30-day rolling window — only show contracts posted within the last 30 days.
+    // This aligns with the FAR standard response window (30 days minimum for
+    // solicitations above the simplified acquisition threshold). Contracts older
+    // than 30 days are statistically near or past their deadline, creating
+    // cognitive noise without actionable value. Keep NULL posted_date to avoid
+    // dropping contracts where SAM.gov didn't provide a date.
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const cutoffISO = thirtyDaysAgo.toISOString().split('T')[0]
+    query = query.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
 
     if (search) {
       query = query.ilike('contracts.title', `%${search}%`)
@@ -139,7 +155,8 @@ export async function GET(request: NextRequest) {
     })
 
     // ── Count query for pagination ────────────────────────────────────────
-    // Must mirror main query filters (including deadline) so pagination totals are consistent
+    // Must mirror main query filters (including deadline + 30-day posted window)
+    // so pagination totals are consistent
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let countQuery: any = supabase
       .from('matches')
@@ -147,6 +164,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', session.user.id)
       .gte('score', min_score)
       .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
+      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
 
     if (search) {
       countQuery = supabase
@@ -155,6 +173,7 @@ export async function GET(request: NextRequest) {
         .eq('user_id', session.user.id)
         .gte('score', min_score)
         .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
+        .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
         .ilike('contracts.title', `%${search}%`)
     }
 

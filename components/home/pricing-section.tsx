@@ -35,7 +35,7 @@ const PLANS = [
       "AI match score with a plain-English reason per contract. Know what to bid before you read it.",
       "Set-aside filtering for 8(a), WOSB, SDVOSB and HUBZone. Only contracts you qualify for.",
       "Predictive market intelligence. Know which agencies are about to spend before the RFP drops.",
-      "Weekly bid calendar, performance summary and 90-day history with unlimited CSV export.",
+      "Weekly bid calendar, performance summary and 30-day rolling window with CSV export up to 90 days.",
       "Priority support with an 8-hour response SLA. A real person, not a ticket queue.",
     ],
     highlighted:  true,

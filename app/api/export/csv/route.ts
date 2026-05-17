@@ -21,10 +21,10 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
-  // ── Parse days parameter (1–90, default 90) ──────────────────────────
+  // ── Parse days parameter (1–90, default 30) ──────────────────────────
   const { searchParams } = new URL(request.url)
-  const daysParam = parseInt(searchParams.get('days') || '90', 10)
-  const days = Math.min(90, Math.max(1, isNaN(daysParam) ? 90 : daysParam))
+  const daysParam = parseInt(searchParams.get('days') || '30', 10)
+  const days = Math.min(90, Math.max(1, isNaN(daysParam) ? 30 : daysParam))
 
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
