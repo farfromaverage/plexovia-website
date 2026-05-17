@@ -315,7 +315,7 @@ export default function AetherFlowHero() {
 
   const trustPoints = [
     "Takes 3 minutes to set up.",
-    "Credit card required. No charge until Day 8.",
+    "Credit card required. No charge until Day 15.",
     "Cancel anytime. No annual contract.",
   ];
 

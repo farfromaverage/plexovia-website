@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const selectClause =
       'id, score, match_reasons, created_at, ' +
       'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
-      'deadline, posted_date, value_min, value_max, set_aside)'
+      'deadline, posted_date, set_aside)'
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase
@@ -59,6 +59,10 @@ export async function GET(request: NextRequest) {
       .select(selectClause)
       .eq('user_id', session.user.id)
       .gte('score', min_score)
+
+    // Exclude expired contracts — keep NULL deadlines (some SAM.gov listings lack one)
+    const todayISO = new Date().toISOString().split('T')[0]
+    query = query.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
 
     if (search) {
       query = query.ilike('contracts.title', `%${search}%`)
@@ -127,8 +131,7 @@ export async function GET(request: NextRequest) {
           naics_code:  contract.naics_code ?? null,
           deadline:    contract.deadline ?? null,
           posted_date: contract.posted_date ?? null,
-          value_min:   contract.value_min ?? null,
-          value_max:   contract.value_max ?? null,
+
           set_aside:   contract.set_aside ?? null,
           psc_code:    contract.psc_code ?? null,
         },
@@ -136,19 +139,22 @@ export async function GET(request: NextRequest) {
     })
 
     // ── Count query for pagination ────────────────────────────────────────
+    // Must mirror main query filters (including deadline) so pagination totals are consistent
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let countQuery: any = supabase
       .from('matches')
-      .select('id', { count: 'exact', head: true })
+      .select('id, contracts!inner(id)', { count: 'exact', head: true })
       .eq('user_id', session.user.id)
       .gte('score', min_score)
+      .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
 
     if (search) {
       countQuery = supabase
         .from('matches')
-        .select('id, contracts!inner(title)', { count: 'exact', head: true })
+        .select('id, contracts!inner(id, title)', { count: 'exact', head: true })
         .eq('user_id', session.user.id)
         .gte('score', min_score)
+        .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
         .ilike('contracts.title', `%${search}%`)
     }
 

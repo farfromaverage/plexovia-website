@@ -38,7 +38,7 @@ const FAQS = [
   {
     id: "faq-4",
     q:  "What happens after my trial, and can I cancel at any time?",
-    a:  "You receive a reminder email on Day 6. On Day 8, your card is charged for your first billing cycle. If you cancel before Day 8, you pay nothing. After that, cancellation takes under 60 seconds from your billing page. No phone call, no support ticket, no lock-in. If you cancel mid-cycle, you keep access until your paid period ends.",
+    a:  "You receive a reminder email on Day 13. On Day 15, your card is charged for your first billing cycle. If you cancel before Day 15, you pay nothing. After that, cancellation takes under 60 seconds from your billing page. No phone call, no support ticket, no lock-in. If you cancel mid-cycle, you keep access until your paid period ends.",
   },
   {
     id: "faq-5",

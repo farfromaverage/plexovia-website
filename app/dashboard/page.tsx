@@ -22,24 +22,14 @@ interface Profile {
 }
 interface ContractDisplay {
   id: string; title: string; agency: string; naics: string;
-  state: string; value: string; posted: string; deadline: string;
+  state: string; posted: string; deadline: string;
   deadlineDays: number | null; score: number; type: string;
   matchedBy: "naics" | "keyword"; matchLabel: string; url: string | null;
   rawPosted: string | null; rawMatchedAt: string | null;
 }
 
 /* ─── Formatters ──────────────────────────────────────────────────── */
-function fmt$(n: number) {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)         return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
-function fmtVal(min: number | null, max: number | null) {
-  if (!min && !max) return "Not Listed";
-  if (min && max && min !== max) return `${fmt$(min)} to ${fmt$(max)}`;
-  return fmt$(min || max || 0);
-}
+
 function fmtPosted(d: string | null) {
   if (!d) return "Recently";
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -72,7 +62,7 @@ function mapMatch(m: any): ContractDisplay {
   return {
     id: m.match_id, title: c.title || "Untitled Contract",
     agency: c.agency || "Federal Agency", naics: c.naics_code || "",
-    state: c.state || "Federal", value: fmtVal(c.value_min, c.value_max),
+    state: c.state || "Nationwide",
     posted: fmtPosted(c.posted_date), deadline: dl.label, deadlineDays: dl.days,
     score: m.score, type: c.set_aside || "Full & Open",
     matchedBy, matchLabel, url: c.url || null,
@@ -104,7 +94,7 @@ function ContractRow({ c }: { c: ContractDisplay }) {
             <Shield size={10} aria-hidden="true" style={{ color: "var(--app-faint)" }} /> {c.agency}
           </span>
           <span style={{ fontSize: "0.75rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 3 }}>
-            <MapPin size={10} aria-hidden="true" style={{ color: "var(--app-faint)" }} /> {c.state}
+            <MapPin size={10} aria-hidden="true" style={{ color: "var(--app-faint)" }} /> {c.state || "Nationwide"}
           </span>
           <span style={{ fontSize: "0.75rem", color: "var(--app-muted)" }}>{c.posted}</span>
           <span style={{ fontSize: "0.75rem", color: deadlineColor, fontWeight: c.deadlineDays !== null && c.deadlineDays <= 7 ? 600 : 400 }}>
@@ -113,7 +103,7 @@ function ContractRow({ c }: { c: ContractDisplay }) {
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
-        <span className="dash-mono" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--app-text)" }}>{c.value}</span>
+        <span className="dash-mono" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--app-text)" }}>{c.posted}</span>
         {c.url ? (
           <a href={c.url} target="_blank" rel="noopener noreferrer" aria-label={`View on SAM.gov: ${c.title}`} className="dash-link-external">
             SAM.gov <ExternalLink size={10} aria-hidden="true" />

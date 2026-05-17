@@ -570,7 +570,7 @@ export default function MissedOpportunityCalc() {
                     marginTop:  "0.5rem",
                   }}
                 >
-                  7-day free trial. No charge until Day 8.
+                  14-day free trial. No charge until Day 15.
                 </p>
               </div>
             </div>

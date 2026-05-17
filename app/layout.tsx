@@ -103,7 +103,7 @@ export const metadata: Metadata = {
     template: "%s | Plexovia",
   },
   description:
-    "Every contract matching your NAICS codes. Scored and ranked in your dashboard every morning. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet nightly. 7-day free trial.",
+    "Every contract matching your NAICS codes. Scored and ranked in your dashboard every morning. Plexovia monitors SAM.gov, DLA DIBBS, and SBA SubNet nightly. 14-day free trial.",
   metadataBase: new URL("https://plexovia.com"),
   openGraph: {
     type: "website",

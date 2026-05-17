@@ -38,7 +38,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="3. Subscriptions and Billing">
-          <p>{COMPANY} offers paid subscription plans billed monthly or annually. All plans include a 7-day free trial. Your credit card is not charged until Day 8 of the trial period.</p>
+          <p>{COMPANY} offers paid subscription plans billed monthly or annually. All plans include a 14-day free trial. Your credit card is not charged until Day 15 of the trial period.</p>
           <p>Subscriptions automatically renew at the end of each billing period. You may cancel at any time from your account settings. Cancellation takes effect at the end of the current paid period.</p>
           <p>All prices are listed in United States Dollars. Applicable taxes may be added at checkout based on your location.</p>
         </Section>

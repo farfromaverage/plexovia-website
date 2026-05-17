@@ -100,7 +100,7 @@ function buildSampleDigestHTML(): string {
 
     <div style="text-align:center;padding:1.5rem 0;">
       <a href="https://plexovia.com/auth/signup" style="display:inline-block;padding:0.875rem 2rem;background:#C9A84C;color:#1C1917;font-weight:700;font-size:0.9375rem;border-radius:8px;text-decoration:none;">Start Your Contract Intelligence</a>
-      <p style="font-size:0.75rem;color:#8A8580;margin:0.75rem 0 0;">7-day free trial. No charge until Day 8.</p>
+      <p style="font-size:0.75rem;color:#8A8580;margin:0.75rem 0 0;">14-day free trial. No charge until Day 15.</p>
     </div>
 
     <p style="font-size:0.6875rem;color:#A8A29E;text-align:center;margin:1rem 0 0;border-top:1px solid #E2DDD6;padding-top:1rem;">

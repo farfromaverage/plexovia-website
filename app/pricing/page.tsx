@@ -7,13 +7,13 @@ import Footer from "@/components/home/footer";
 
 export const metadata: Metadata = {
   title: "Pricing | Plexovia",
-  description: "Simple, transparent pricing for government contractors. Compare plans and start your 7-day free trial today.",
+  description: "Simple, transparent pricing for government contractors. Compare plans and start your 14-day free trial today.",
   alternates: {
     canonical: "https://plexovia.com/pricing",
   },
   openGraph: {
     title: "Plexovia Pricing: Flat Monthly Rate",
-    description: "Simple, transparent pricing for government contractors. Cancel anytime. Start your 7-day free trial today.",
+    description: "Simple, transparent pricing for government contractors. Cancel anytime. Start your 14-day free trial today.",
     url: "https://plexovia.com/pricing",
     images: [{ url: "https://plexovia.com/og-pricing.jpg", width: 1200, height: 630 }],
   },
@@ -38,7 +38,7 @@ export default function PricingPage() {
     {
       id: "pfaq-0",
       q: "What happens when my trial ends?",
-      a: "You receive a reminder email on Day 6. On Day 8, your card is charged for your first billing cycle. If you cancel before Day 8, you pay nothing. After that, cancellation takes under 60 seconds from your billing page. No phone call, no support ticket.",
+      a: "You receive a reminder email on Day 13. On Day 15, your card is charged for your first billing cycle. If you cancel before Day 15, you pay nothing. After that, cancellation takes under 60 seconds from your billing page. No phone call, no support ticket.",
     },
     {
       id: "pfaq-1",

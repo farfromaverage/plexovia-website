@@ -63,7 +63,7 @@ export default function TermsPage() {
           <div className="p-4 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-xl text-sm text-[var(--app-muted)] h-40 overflow-y-auto mb-2 text-justify">
             <p className="mb-2">Plexovia monitors public government contract portals and delivers matched opportunities directly to you. Here&apos;s a summary of our terms.</p>
             <p className="mb-2">1. <strong>Use of Service:</strong> Your account is for your internal business use only. You may not resell or scrape our data.</p>
-            <p className="mb-2">2. <strong>Billing:</strong> If you proceed past the 7-day free trial, your payment method will be charged automatically on a recurring basis. You may cancel at any time via the billing portal.</p>
+            <p className="mb-2">2. <strong>Billing:</strong> If you proceed past the 14-day free trial, your payment method will be charged automatically on a recurring basis. You may cancel at any time via the billing portal.</p>
             <p>Please review our full agreements via the links below.</p>
           </div>
 

@@ -17,27 +17,16 @@ import { supabase } from "@/lib/supabase";
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface ContractRow {
   id: string; title: string; agency: string; naics: string; psc: string;
-  state: string; value: string; valueMin: number | null; valueMax: number | null;
-  posted: string; postedRaw: string | null; deadline: string;
+  state: string; posted: string; postedRaw: string | null; deadline: string;
   deadlineRaw: string | null; deadlineDays: number | null;
   score: number; setAside: string; matchedBy: "naics" | "keyword";
   matchLabel: string; url: string | null; matchedAt: string | null;
 }
-type SortKey = "score" | "deadline" | "value_min" | "posted_date";
+type SortKey = "score" | "deadline" | "posted_date";
 type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
-function fmt$(n: number) {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
-function fmtVal(min: number | null, max: number | null) {
-  if (!min && !max) return "Not Listed";
-  if (min && max && min !== max) return `${fmt$(min)} – ${fmt$(max)}`;
-  return fmt$(min || max || 0);
-}
+
 function fmtDate(d: string | null) {
   if (!d) return "N/A";
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -70,8 +59,6 @@ function mapRow(m: any): ContractRow {
     id: m.match_id, title: c.title || "Untitled",
     agency: c.agency || "Federal Agency", naics: c.naics_code || "",
     psc: c.psc_code || "", state: c.state || "",
-    value: fmtVal(c.value_min, c.value_max),
-    valueMin: c.value_min ?? null, valueMax: c.value_max ?? null,
     posted: fmtDate(c.posted_date), postedRaw: c.posted_date || null,
     deadline: dl.label, deadlineRaw: c.deadline || null, deadlineDays: dl.days,
     score: m.score, setAside: c.set_aside || "",
@@ -83,7 +70,6 @@ function mapRow(m: any): ContractRow {
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "score", label: "Best match" },
   { value: "deadline", label: "Soonest deadline" },
-  { value: "value_min", label: "Highest value" },
   { value: "posted_date", label: "Most recent" },
 ];
 const PER_PAGE = 15;
@@ -337,19 +323,19 @@ function ContractsPage() {
 
       {/* Table */}
       <div className="dash-card" style={{ marginBottom: "1rem" }}>
-        <div className="dash-table-head dash-hide-mobile" style={{ display: "grid", gridTemplateColumns: "70px 1fr 80px 100px 110px 60px" }}>
+        <div className="dash-table-head dash-hide-mobile" style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", gap: 0, alignItems: "center" }}>
           <span className="dash-th">Score</span>
           <span className="dash-th">Contract</span>
           <span className="dash-th">State</span>
-          <span className="dash-th">Value</span>
-          <span className="dash-th">Deadline</span>
+          <span className="dash-th">Posted</span>
+          <span className="dash-th" style={{ textAlign: "right" }}>Deadline</span>
           <span className="dash-th" style={{ textAlign: "center" }}>Actions</span>
         </div>
 
         {isColdStart ? (
           <EmptyState icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />} title="Matching contracts to your profile now" message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page updates automatically — no refresh needed.`} />
         ) : loading ? (
-          <SkeletonRows rows={6} columns={6} columnWidths="70px 1fr 80px 100px 110px 60px" />
+          <SkeletonRows rows={6} columns={6} columnWidths="54px 1fr 80px 100px 100px 62px" />
         ) : error ? (
           <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
         ) : filteredContracts.length === 0 ? (
@@ -416,7 +402,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
   return (
     <div
       className="dash-table-row"
-      style={{ display: "grid", gridTemplateColumns: "70px 1fr 80px 100px 110px 60px", alignItems: "center", gap: "0.75rem", padding: "1rem 1.5rem" }}
+      style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", alignItems: "center", padding: "1rem 1.5rem" }}
       onMouseEnter={onView}
     >
       {/* Score + viewed dot */}
@@ -437,12 +423,12 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
 
       {/* State */}
       <div className="dash-hide-mobile" style={{ fontSize: "0.78rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 4 }}>
-        <MapPin size={10} style={{ color: "var(--app-faint)" }} aria-hidden="true" /> {c.state || "—"}
+        <MapPin size={10} style={{ color: "var(--app-faint)" }} aria-hidden="true" /> {c.state || "Nationwide"}
       </div>
 
-      {/* Value */}
-      <div className="dash-mono" style={{ fontSize: "0.8125rem", fontWeight: 600, color: c.value === "Not Listed" ? "var(--app-muted)" : "var(--app-text)" }} aria-label={`Value: ${c.value}`}>
-        {c.value}
+      {/* Posted Date */}
+      <div style={{ fontSize: "0.78rem", color: "var(--app-muted)" }} aria-label={`Posted: ${c.posted}`}>
+        {c.posted}
       </div>
 
       {/* Deadline + SAM link */}

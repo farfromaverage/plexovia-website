@@ -30,15 +30,17 @@ export async function GET(request: NextRequest) {
   cutoffDate.setDate(cutoffDate.getDate() - days)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const todayISO = new Date().toISOString().split('T')[0]
   const { data, error } = await (supabase as any)
     .from('matches')
     .select(
       'score, match_reasons, created_at, ' +
-      'contracts!inner(title, state, naics_code, psc_code, value_min, value_max, ' +
+      'contracts!inner(title, state, naics_code, psc_code, ' +
       'set_aside, deadline, posted_date, url)'
     )
     .eq('user_id', session.user.id)
     .gte('created_at', cutoffDate.toISOString())
+    .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
     .order('score', { ascending: false })
 
   if (error) {
@@ -56,8 +58,6 @@ export async function GET(request: NextRequest) {
     'PSC Code',
     'State',
     'Set-Aside',
-    'Value Min',
-    'Value Max',
     'Posted Date',
     'Deadline',
     'Matched Date',
@@ -94,8 +94,6 @@ export async function GET(request: NextRequest) {
       escapeCsv(c.psc_code),
       escapeCsv(c.state),
       escapeCsv(c.set_aside),
-      c.value_min ?? '',
-      c.value_max ?? '',
       fmtDate(c.posted_date),
       fmtDate(c.deadline),
       fmtDate(m.created_at),

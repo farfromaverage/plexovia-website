@@ -33,7 +33,7 @@ export default function RefundPage() {
         </Section>
 
         <Section title="Free Trial">
-          <p>Every new {COMPANY} subscription starts with a 7-day free trial. Your payment method is not charged until Day 8. You can cancel at any time during the trial with no charge. No refund is needed for trial cancellations because you are never billed.</p>
+          <p>Every new {COMPANY} subscription starts with a 14-day free trial. Your payment method is not charged until Day 15. You can cancel at any time during the trial with no charge. No refund is needed for trial cancellations because you are never billed.</p>
         </Section>
 
         <Section title="Paid Subscription Refunds">

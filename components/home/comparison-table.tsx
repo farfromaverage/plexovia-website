@@ -76,7 +76,7 @@ const ROWS: Row[] = [
   },
   {
     feature:     "Free trial",
-    plexovia:    { type: "text", value: "7 days, fully featured" },
+    plexovia:    { type: "text", value: "14 days, fully featured" },
     alternative: { type: "text", value: "Demo call only" },
   },
 ];

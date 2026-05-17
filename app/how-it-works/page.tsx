@@ -98,7 +98,7 @@ const faqs = [
   {
     id: "hiw-faq-5",
     q: "Can I cancel before my trial ends and pay nothing?",
-    a: "Yes. If you cancel your 7 day free trial before your billing cycle begins, your card will never be charged. You have full control from your billing dashboard.",
+    a: "Yes. If you cancel your 14 day free trial before your billing cycle begins, your card will never be charged. You have full control from your billing dashboard.",
   },
 ];
 

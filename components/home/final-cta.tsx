@@ -99,7 +99,7 @@ export default function FinalCTA() {
             margin:     "0 auto 2.25rem",
           }}
         >
-          Setup takes three minutes. No charge until Day 8.
+          Setup takes three minutes. No charge until Day 15.
           Your personalized dashboard updates every morning.
         </motion.p>
 
@@ -145,7 +145,7 @@ export default function FinalCTA() {
               (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
             }}
           >
-            Start 7-Day Free Trial. No Charge Until Day 8
+            Start 14-Day Free Trial. No Charge Until Day 15
             <ArrowRight size={17} aria-hidden="true" />
           </Link>
 
