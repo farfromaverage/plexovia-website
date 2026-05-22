@@ -79,21 +79,20 @@ export async function GET(request: NextRequest) {
       const sa = c.set_aside || 'None'
       setAsideBreakdown[sa] = (setAsideBreakdown[sa] || 0) + 1
       
-      // Collect top matches (now includes deadline, url, naics_code for IntelligenceBriefing)
-      if (topMatches.length < 5) {
-        topMatches.push({
-          id: c.id || `m-${m.score}`,
-          title: c.title || 'Unknown Contract',
-          agency: c.agency || 'Unknown Agency',
-          score: m.score,
-          deadline: c.deadline || null,
-          url: c.url || null,
-          naics_code: c.naics_code || null,
-          matched_at: m.matched_at || null,
-        })
-      }
+      // Collect all matches, sort by score descending, take top 5
+      topMatches.push({
+        id: c.id || `m-${m.score}`,
+        title: c.title || 'Unknown Contract',
+        agency: c.agency || 'Unknown Agency',
+        score: m.score,
+        deadline: c.deadline || null,
+        url: c.url || null,
+        naics_code: c.naics_code || null,
+        matched_at: m.matched_at || null,
+      })
     })
     topMatches.sort((a, b) => b.score - a.score)
+    if (topMatches.length > 5) topMatches.length = 5
   }
 
   return NextResponse.json({
