@@ -12,10 +12,10 @@
  *
  * Supported query params: page, per_page, min_score, search, sort
  *
- * Data window: only contracts posted within the last 30 days with open
+ * Data window: only contracts posted within the last 90 days with open
  * deadlines are returned. This matches the FAR standard response window.
- * The 90-day backfill for first-login populates the DB, but this API
- * filters display to the actionable 30-day window.
+ * The 90-day backfill for first-login populates the DB. This API
+ * filters display to the actionable 90-day window.
  */
 
 import { createServerClient } from '@supabase/ssr'
@@ -69,15 +69,12 @@ export async function GET(request: NextRequest) {
     const todayISO = new Date().toISOString().split('T')[0]
     query = query.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
 
-    // 30-day rolling window — only show contracts posted within the last 30 days.
-    // This aligns with the FAR standard response window (30 days minimum for
-    // solicitations above the simplified acquisition threshold). Contracts older
-    // than 30 days are statistically near or past their deadline, creating
-    // cognitive noise without actionable value. Keep NULL posted_date to avoid
-    // dropping contracts where SAM.gov didn't provide a date.
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const cutoffISO = thirtyDaysAgo.toISOString().split('T')[0]
+    // 90-day rolling window — only show contracts posted within the last 90 days.
+    // This aligns with the FAR standard response window. Keep NULL posted_date
+    // to avoid dropping contracts where SAM.gov didn't provide a date.
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+    const cutoffISO = ninetyDaysAgo.toISOString().split('T')[0]
     query = query.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
 
     if (search) {
@@ -155,7 +152,7 @@ export async function GET(request: NextRequest) {
     })
 
     // ── Count query for pagination ────────────────────────────────────────
-    // Must mirror main query filters (including deadline + 30-day posted window)
+    // Must mirror main query filters (including deadline + 90-day posted window)
     // so pagination totals are consistent
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let countQuery: any = supabase
