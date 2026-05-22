@@ -131,8 +131,8 @@ function Step1({
 function Step2FederalOrgs({
   fedOrgs, setFedOrgs, availableAgencies, agencySearch, setAgencySearch
 }: {
-  fedOrgs: string[]; setFedOrgs: (v: string[]) => void;
-  availableAgencies: string[]; agencySearch: string; setAgencySearch: (v: string) => void;
+  fedOrgs: string[]; setFedOrgs: React.Dispatch<React.SetStateAction<string[]>>;
+  availableAgencies: string[]; agencySearch: string; setAgencySearch: React.Dispatch<React.SetStateAction<string>>;
 }) {
   return (
     <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
@@ -160,8 +160,8 @@ function Step2FederalOrgs({
                   ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
                   : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-text)] hover:border-[var(--app-muted)]"
               }`}
-              onClick={() => setFedOrgs(prev =>
-                prev.includes(agency) ? prev.filter(a => a !== agency) : [...prev, agency]
+              onClick={() => setFedOrgs((prev: string[]) =>
+                prev.includes(agency) ? prev.filter((a: string) => a !== agency) : [...prev, agency]
               )}
               aria-pressed={fedOrgs.includes(agency)}
             >
