@@ -1,10 +1,13 @@
 /**
- * Plexovia — POST /api/onboarding/first-login
+ * Plexovia — /api/onboarding/first-login
  *
- * Triggers the first-login pipeline on the Railway engine for a new user.
+ * POST: Triggers the first-login pipeline on the Railway engine for a new user.
  * This fetches contracts for the user's NAICS codes (if insufficient exist)
  * and runs the matching engine so the user sees matches on their first
  * dashboard visit.
+ *
+ * GET: Proxies /api/internal/fed-orgs from the Railway engine to provide
+ * the list of federal organizations for the onboarding Fed Orgs step.
  *
  * PRODUCTION FIX: Previously this was fire-and-forget (unawaited fetch with
  * .catch()). If Railway was slow/down, the user landed on an empty dashboard
@@ -18,6 +21,26 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET() {
+  try {
+    const engineUrl = process.env.RAILWAY_API_URL
+      || process.env.NEXT_PUBLIC_RAILWAY_API_URL
+      || 'https://plexovia-engine-production.up.railway.app'
+    const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY || ''
+
+    const engineRes = await fetch(`${engineUrl}/api/internal/fed-orgs`, {
+      headers: { 'x-internal-key': internalKey },
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (!engineRes.ok) throw new Error(`Engine returned ${engineRes.status}`)
+    return NextResponse.json(await engineRes.json())
+  } catch (error) {
+    console.error('[first-login] fed-orgs proxy failed:', error)
+    return NextResponse.json({ agencies: [] }, { status: 502 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
