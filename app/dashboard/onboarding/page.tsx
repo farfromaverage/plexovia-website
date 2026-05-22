@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2,
-  Search, Plus, Tag, MapPin, DollarSign, ShieldAlert, Zap
+  Search, Plus, Tag, MapPin, ShieldAlert, Zap
 } from "lucide-react";
 
 /* ─── Shared data and logic ───────────────────────────────────────── */
@@ -23,7 +23,7 @@ const REGIONS: Record<string, string[]> = {
 /* ─── Components ──────────────────────────────────────────────────── */
 
 function StepBar({ current, total }: { current: number; total: number }) {
-  const labels = ["Set-Asides & Value", "NAICS & PSC Codes", "Location & Keywords"];
+  const labels = ["Set-Asides", "Federal Organizations", "NAICS & PSC Codes", "Location & Keywords"];
   const estimatedMinutes = 4 - current; // decreasing as user progresses
   return (
     <div className="mb-7">
@@ -65,13 +65,11 @@ function StepBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-// Step 1: Set-Asides & Value
+// Step 1: Set-Asides
 function Step1({
-  selected, setSelected, minValue, setMinValue, maxValue, setMaxValue
+  selected, setSelected
 }: {
   selected: string[]; setSelected: (v: string[]) => void;
-  minValue: string; setMinValue: (v: string) => void;
-  maxValue: string; setMaxValue: (v: string) => void;
 }) {
   const options = [
     { code: "sba",    label: "Small Business" },
@@ -96,7 +94,7 @@ function Step1({
 
   return (
     <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
-      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Set-Asides & Value</h2>
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Set-Asides</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-6">
         Select the set-aside categories your business qualifies for. We&apos;ll prioritize contracts reserved for your designations.
       </p>
@@ -125,40 +123,62 @@ function Step1({
           })}
         </div>
       </div>
-
-      <div>
-        <label className="flex items-center justify-between text-sm font-medium text-[var(--app-muted)] mb-3 pl-0.5">
-          <span className="flex items-center gap-1.5"><DollarSign size={14} /> Preferred Contract Size (optional)</span>
-        </label>
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-faint)]">$</span>
-            <input
-              type="number"
-              value={minValue}
-              onChange={(e) => setMinValue(e.target.value)}
-              placeholder="e.g. $25,000"
-              className="w-full pl-7 pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-            />
-          </div>
-          <span className="text-[var(--app-muted)] font-medium">to</span>
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-faint)]">$</span>
-            <input
-              type="number"
-              value={maxValue}
-              onChange={(e) => setMaxValue(e.target.value)}
-              placeholder="e.g. $500,000"
-              className="w-full pl-7 pr-4 py-2.5 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] placeholder-[var(--app-faint)]"
-            />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
-// Step 2: NAICS & PSC
+// Step 2: Federal Organizations
+function Step2FederalOrgs({
+  fedOrgs, setFedOrgs, availableAgencies, agencySearch, setAgencySearch
+}: {
+  fedOrgs: string[]; setFedOrgs: (v: string[]) => void;
+  availableAgencies: string[]; agencySearch: string; setAgencySearch: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
+      <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Federal Organizations</h2>
+      <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-4">
+        Select federal agencies you want to prioritize. Contracts from these agencies receive a match score boost.
+      </p>
+      <input
+        type="search"
+        value={agencySearch}
+        onChange={e => setAgencySearch(e.target.value)}
+        placeholder="Search agencies..."
+        className="w-full max-w-[400px] px-3 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] mb-3"
+        aria-label="Search federal organizations"
+      />
+      <div className="flex flex-wrap gap-2 mb-4">
+        {availableAgencies
+          .filter(a => a.toLowerCase().includes(agencySearch.toLowerCase()))
+          .map(agency => (
+            <button
+              key={agency}
+              type="button"
+              className={`px-4 py-2.5 rounded-full border text-[14px] font-medium transition-all ${
+                fedOrgs.includes(agency)
+                  ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
+                  : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-text)] hover:border-[var(--app-muted)]"
+              }`}
+              onClick={() => setFedOrgs(prev =>
+                prev.includes(agency) ? prev.filter(a => a !== agency) : [...prev, agency]
+              )}
+              aria-pressed={fedOrgs.includes(agency)}
+            >
+              {agency}
+            </button>
+          ))}
+      </div>
+      <p className="text-[12px] text-[var(--app-faint)]">
+        {fedOrgs.length > 0
+          ? `${fedOrgs.length} organization${fedOrgs.length === 1 ? "" : "s"} selected`
+          : "Optional — leave empty to see all agencies equally"}
+      </p>
+    </div>
+  );
+}
+
+// Step 3: NAICS & PSC
 function Step2({ 
   naics, setNaics, pscCodes, setPscCodes, naicsList 
 }: { 
@@ -281,7 +301,7 @@ function Step2({
   );
 }
 
-// Step 3: Location & Keywords
+// Step 4: Location & Keywords
 function Step3({
   states, setStates, keywords, setKeywords, excludeKeywords, setExcludeKeywords
 }: {
@@ -410,8 +430,9 @@ export default function OnboardingPage() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [excludeKeywords, setExcludeKeywords] = useState<string[]>([]);
   const [setAsides, setSetAsides] = useState<string[]>(["sba"]);
-  const [minValue, setMinValue] = useState<string>("");
-  const [maxValue, setMaxValue] = useState<string>("");
+  const [fedOrgs, setFedOrgs] = useState<string[]>([]);
+  const [availableAgencies, setAvailableAgencies] = useState<string[]>([]);
+  const [agencySearch, setAgencySearch] = useState("");
   
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
@@ -419,12 +440,17 @@ export default function OnboardingPage() {
   useEffect(() => {
     fetch("/data/naics-2022.json").then(r => r.json()).then(setNaicsList).catch(() => {});
 
+    fetch("/api/onboarding/first-login")
+      .then(r => r.json())
+      .then(d => setAvailableAgencies(d.agencies || []))
+      .catch(() => setAvailableAgencies([]));
+
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("naics_codes, states, keywords, set_aside_preferences, psc_codes, exclude_keywords, min_value, max_value")
+        .select("naics_codes, states, keywords, set_aside_preferences, psc_codes, exclude_keywords, fed_org_prefs")
         .eq("id", user.id)
         .single();
       if (!data) return;
@@ -432,8 +458,7 @@ export default function OnboardingPage() {
       if (data.states?.length)       setStates(data.states);
       if (data.set_aside_preferences?.length) setSetAsides(data.set_aside_preferences);
       if (data.psc_codes?.length)    setPscCodes(data.psc_codes);
-      if (data.min_value !== null)   setMinValue(String(data.min_value));
-      if (data.max_value !== null)   setMaxValue(String(data.max_value));
+      if (data.fed_org_prefs?.length) setFedOrgs(data.fed_org_prefs);
       
       const parseList = (rawList: any) => {
         if (!rawList?.length) return [];
@@ -472,8 +497,7 @@ export default function OnboardingPage() {
       keywords:                keywords,
       exclude_keywords:        excludeKeywords,
       set_aside_preferences:   finalSetAsides,
-      min_value:               minValue ? parseInt(minValue, 10) : null,
-      max_value:               maxValue ? parseInt(maxValue, 10) : null,
+      fed_org_prefs:           fedOrgs,
       onboarding_complete:     true,
     }).eq("id", user.id);
 
@@ -524,7 +548,7 @@ export default function OnboardingPage() {
     window.location.href = "/dashboard";
   }
 
-  const canNext = step === 1 ? true : step === 2 ? (naics.length > 0 || pscCodes.length > 0) : true;
+  const canNext = step === 1 ? true : step === 2 ? true : step === 3 ? (naics.length > 0 || pscCodes.length > 0) : true;
 
   async function handleSkip() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -571,12 +595,13 @@ export default function OnboardingPage() {
           </div>
         ) : (
         <>
-        <StepBar current={step} total={3} />
+        <StepBar current={step} total={4} />
 
         <div className="flex-1 mb-8 overflow-hidden h-[340px]">
-          {step === 1 && <Step1 selected={setAsides} setSelected={setSetAsides} minValue={minValue} setMinValue={setMinValue} maxValue={maxValue} setMaxValue={setMaxValue} />}
-          {step === 2 && <Step2 naics={naics} setNaics={setNaics} pscCodes={pscCodes} setPscCodes={setPscCodes} naicsList={naicsList} />}
-          {step === 3 && <Step3 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} excludeKeywords={excludeKeywords} setExcludeKeywords={setExcludeKeywords} />}
+          {step === 1 && <Step1 selected={setAsides} setSelected={setSetAsides} />}
+          {step === 2 && <Step2FederalOrgs fedOrgs={fedOrgs} setFedOrgs={setFedOrgs} availableAgencies={availableAgencies} agencySearch={agencySearch} setAgencySearch={setAgencySearch} />}
+          {step === 3 && <Step2 naics={naics} setNaics={setNaics} pscCodes={pscCodes} setPscCodes={setPscCodes} naicsList={naicsList} />}
+          {step === 4 && <Step3 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} excludeKeywords={excludeKeywords} setExcludeKeywords={setExcludeKeywords} />}
         </div>
 
         {error && (
@@ -592,7 +617,7 @@ export default function OnboardingPage() {
             </button>
           )}
 
-          {step < 3 ? (
+          {step < 4 ? (
             <button type="button" onClick={() => setStep((s) => s + 1)} disabled={!canNext} className={`flex flex-1 items-center justify-center gap-1.5 px-5 py-3.5 font-bold text-white text-[15px] rounded-xl transition-all active:scale-[0.98] ${canNext ? "bg-[var(--accent)] hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/20" : "bg-[var(--accent)]/50 cursor-not-allowed"}`}>
               Next <ArrowRight size={17} strokeWidth={2.5}/>
             </button>
