@@ -42,7 +42,6 @@ const SET_ASIDES = [
 /* ─── Profile type ───────────────────────────────────────── */
 interface ProfileData {
   id: string;
-  company_name: string | null;
   naics_codes: string[] | null;
   psc_codes: string[] | null;
   states: string[] | null;
@@ -50,8 +49,7 @@ interface ProfileData {
   exclude_keywords: string[] | null;
   email_frequency: string | null;
   set_aside_preferences: string[] | null;
-  min_value: number | null;
-  max_value: number | null;
+  fed_org_prefs: string[] | null;
 }
 
 /* ─── NAICS validation ───────────────────────────────────── */
@@ -61,14 +59,13 @@ function isValidNaics(code: string): boolean {
 
 /* ─── Completeness score ─────────────────────────────────── */
 function getCompleteness(
-  company: string, naics: string[], states: string[], keywords: string[]
+  naics: string[], states: string[], keywords: string[]
 ): { score: number; label: string; missing: string[] } {
   const missing: string[] = [];
   let score = 0;
-  if (company.trim()) score += 25; else missing.push("Company name");
-  if (naics.length > 0) score += 35; else missing.push("At least one NAICS code");
-  if (states.length > 0) score += 25; else missing.push("At least one state");
-  if (keywords.length > 0) score += 15; else missing.push("Keywords (optional)");
+  if (naics.length > 0) score += 40; else missing.push("At least one NAICS code");
+  if (states.length > 0) score += 35; else missing.push("At least one state");
+  if (keywords.length > 0) score += 25; else missing.push("Keywords (optional)");
   const label = score === 100 ? "Complete" : score >= 60 ? "Good" : "Incomplete";
   return { score, label, missing };
 }
@@ -86,7 +83,6 @@ export default function ProfilePage() {
   const [isDirty,        setIsDirty]        = useState(false);
 
   /* Form state */
-  const [companyName,   setCompanyName]   = useState("");
   const [naicsCodes,    setNaicsCodes]    = useState<string[]>([]);
   const [naicsInput,    setNaicsInput]    = useState("");
   const [naicsError,    setNaicsError]    = useState<string | null>(null);
@@ -103,9 +99,10 @@ export default function ProfilePage() {
 
   const [frequency,     setFrequency]     = useState("daily");
   const [setAsides,     setSetAsides]     = useState<string[]>([]);
-  
-  const [minValue,      setMinValue]      = useState<string>("");
-  const [maxValue,      setMaxValue]      = useState<string>("");
+
+  const [fedOrgs,            setFedOrgs]            = useState<string[]>([]);
+  const [availableAgencies,  setAvailableAgencies]  = useState<string[]>([]);
+  const [agencySearch,       setAgencySearch]       = useState("");
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -115,7 +112,7 @@ export default function ProfilePage() {
 
     const { data, error: err } = await supabase
       .from("profiles")
-      .select("id,company_name,naics_codes,psc_codes,states,keywords,exclude_keywords,email_frequency,set_aside_preferences,min_value,max_value")
+      .select("id,naics_codes,psc_codes,states,keywords,exclude_keywords,email_frequency,set_aside_preferences,fed_org_prefs")
       .eq("id", user.id)
       .single();
 
@@ -123,7 +120,6 @@ export default function ProfilePage() {
       setError("Could not load your profile.");
     } else if (data) {
       const d = data as ProfileData;
-      setCompanyName(d.company_name ?? "");
       setNaicsCodes(d.naics_codes ?? []);
       setOriginalNaicsCodes(d.naics_codes ?? []);
       setPscCodes(d.psc_codes ?? []);
@@ -132,14 +128,21 @@ export default function ProfilePage() {
       setExcludeKeywords(d.exclude_keywords ?? []);
       setFrequency(d.email_frequency ?? "daily");
       setSetAsides(d.set_aside_preferences ?? []);
-      setMinValue(d.min_value !== null ? String(d.min_value) : "");
-      setMaxValue(d.max_value !== null ? String(d.max_value) : "");
+      setFedOrgs(d.fed_org_prefs ?? []);
     }
     setLoading(false);
     setIsDirty(false);
   }, [router]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch available agency list from backend
+  useEffect(() => {
+    fetch("/api/onboarding/first-login")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.agencies) setAvailableAgencies(d.agencies); })
+      .catch(() => {});
+  }, []);
 
   // Warn before leaving if dirty
   useEffect(() => {
@@ -259,7 +262,6 @@ export default function ProfilePage() {
     const { error: err } = await supabase
       .from("profiles")
       .update({
-        company_name:             companyName.trim() || null,
         naics_codes:              naicsCodes,
         psc_codes:                pscCodes,
         states:                   selectedStates,
@@ -267,8 +269,7 @@ export default function ProfilePage() {
         exclude_keywords:         excludeKeywords,
         email_frequency:          frequency,
         set_aside_preferences:    finalSetAsides,
-        min_value:                minValue ? parseInt(minValue, 10) : null,
-        max_value:                maxValue ? parseInt(maxValue, 10) : null,
+        fed_org_prefs:            fedOrgs,
         updated_at:               new Date().toISOString(),
       })
       .eq("id", userId);
@@ -298,7 +299,7 @@ export default function ProfilePage() {
     }
   }
 
-  const completeness = getCompleteness(companyName, naicsCodes, selectedStates, keywords);
+  const completeness = getCompleteness(naicsCodes, selectedStates, keywords);
   const completenessColor =
     completeness.score === 100 ? "var(--success)"
     : completeness.score >= 60  ? "var(--accent)"
@@ -359,21 +360,6 @@ export default function ProfilePage() {
           You have unsaved changes. Scroll down and click Save Changes.
         </div>
       )}
-
-      {/* Company name */}
-      <div className="dash-section">
-        <h2 className="dash-section-h">Company</h2>
-        <label htmlFor="company-name" className="dash-label">Company Name</label>
-        <input
-          id="company-name"
-          type="text"
-          value={companyName}
-          onChange={e => { setCompanyName(e.target.value); markDirty(); }}
-          placeholder="Acme Federal Solutions LLC"
-          className="dash-input-lg"
-          autoComplete="organization"
-        />
-      </div>
 
       {/* NAICS codes */}
       <div className="dash-section">
@@ -463,37 +449,50 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Target Value Range */}
+      {/* Federal Organizations */}
       <div className="dash-section">
-        <h2 className="dash-section-h">Target Contract Value</h2>
-        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Optional. Filter out contracts that are too small or too large. Leave blank for unrestricted.
-        </p>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div style={{ flex: 1, position: "relative" }}>
-            <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--app-faint)" }}>$</span>
-            <input
-              type="number"
-              value={minValue}
-              onChange={(e) => { setMinValue(e.target.value); markDirty(); }}
-              placeholder="Min value (e.g. 25000)"
-              className="dash-input-lg"
-              style={{ paddingLeft: "28px" }}
-            />
-          </div>
-          <span style={{ color: "var(--app-muted)", fontSize: "0.9rem" }}>to</span>
-          <div style={{ flex: 1, position: "relative" }}>
-            <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--app-faint)" }}>$</span>
-            <input
-              type="number"
-              value={maxValue}
-              onChange={(e) => { setMaxValue(e.target.value); markDirty(); }}
-              placeholder="Max value (e.g. 5000000)"
-              className="dash-input-lg"
-              style={{ paddingLeft: "28px" }}
-            />
-          </div>
+        <div className="dash-section-h">
+          <span>Federal Organizations</span>
+          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
+            {fedOrgs.length} selected
+          </span>
         </div>
+        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
+          Select federal agencies you want to prioritize. Contracts from these agencies receive a match score boost.
+        </p>
+        <div style={{ marginBottom: "0.75rem" }}>
+          <input
+            type="search"
+            value={agencySearch}
+            onChange={e => setAgencySearch(e.target.value)}
+            placeholder="Search agencies..."
+            className="dash-input-lg"
+            style={{ maxWidth: 400 }}
+            aria-label="Search federal organizations"
+          />
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
+          {availableAgencies
+            .filter(a => a.toLowerCase().includes(agencySearch.toLowerCase()))
+            .map(agency => (
+              <button
+                key={agency}
+                type="button"
+                className={`dash-pill${fedOrgs.includes(agency) ? "" : ""}`}
+                style={{
+                  background: fedOrgs.includes(agency) ? "var(--accent-subtle)" : undefined,
+                  borderColor: fedOrgs.includes(agency) ? "var(--accent-border)" : undefined,
+                  color: fedOrgs.includes(agency) ? "var(--accent)" : undefined,
+                  fontWeight: fedOrgs.includes(agency) ? 600 : undefined,
+                }}
+                onClick={() => { setFedOrgs(prev => prev.includes(agency) ? prev.filter(a => a !== agency) : [...prev, agency]); markDirty(); }}
+                aria-pressed={fedOrgs.includes(agency)}
+              >
+                {agency}
+              </button>
+            ))}
+        </div>
+        {fedOrgs.length === 0 && <p style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No agencies selected. All agencies will be treated equally.</p>}
       </div>
 
       {/* States */}

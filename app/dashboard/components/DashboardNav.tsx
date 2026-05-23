@@ -49,11 +49,10 @@ export default function DashboardNav() {
       setUserEmail(session.user.email ?? null);
       supabase
         .from("profiles")
-        .select("trial_ends_at, plan, company_name")
+        .select("trial_ends_at, plan")
         .eq("id", session.user.id)
         .single()
         .then(({ data }) => {
-          if (data?.company_name) setUserName(data.company_name);
           if (data?.trial_ends_at && data.plan === "trial") {
             const days = Math.max(0, Math.ceil(
               (new Date(data.trial_ends_at).getTime() - Date.now()) / 86400000

@@ -14,7 +14,7 @@ import { useLastVisit } from "@/hooks/useLastVisit";
 
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface Profile {
-  id: string; email: string | null; company_name: string | null;
+  id: string; email: string | null;
   plan: string | null; trial_ends_at: string | null;
   onboarding_complete: boolean | null;
   naics_codes: string[] | null; states: string[] | null;
@@ -171,7 +171,7 @@ export default function DashboardPage() {
     async function loadProfile(userId: string) {
       const { data } = await supabase
         .from("profiles")
-        .select("id,email,company_name,plan,trial_ends_at,onboarding_complete,naics_codes,states,keywords,set_aside_preferences")
+        .select("id,email,plan,trial_ends_at,onboarding_complete,naics_codes,states,keywords,set_aside_preferences")
         .eq("id", userId).single();
       setProfile(data);
       setLoading(false);
@@ -210,9 +210,6 @@ export default function DashboardPage() {
   }
 
   /* Derived values */
-  const emailSlug = profile?.email?.split("@")[0] ?? "";
-  const slugIsClean = emailSlug.length > 0 && !/\d{3,}/.test(emailSlug) && !/^\d/.test(emailSlug);
-  const displayName = profile?.company_name || (slugIsClean ? emailSlug : "there");
   const naicsCount = profile?.naics_codes?.length ?? 0;
   const stateCount = profile?.states?.length ?? 0;
   const setupDone = naicsCount > 0;
@@ -220,8 +217,6 @@ export default function DashboardPage() {
   const daysLeft = profile?.trial_ends_at
     ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
     : null;
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   /* 14-day mini chart data */
   const chartDays = 14;
@@ -247,7 +242,7 @@ export default function DashboardPage() {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-6)", flexWrap: "wrap", gap: "var(--space-4)" }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: "1.5rem", color: "var(--app-text)", margin: 0, letterSpacing: "-0.03em" }}>
-            {greeting}, {displayName}
+            Dashboard
           </h1>
           <p style={{ color: "var(--app-muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
             {newCount > 0 ? `${newCount} new contract${newCount !== 1 ? "s" : ""} matched since your last visit` : setupDone ? "All caught up. No new contracts since your last visit." : "Set up your profile to start receiving matched contracts"}
