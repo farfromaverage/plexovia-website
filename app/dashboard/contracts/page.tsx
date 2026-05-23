@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   FileText, MapPin, Shield, ExternalLink, Tag, Star,
-  ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
+  ChevronLeft, ChevronRight, ChevronDown, Filter, Search, RefreshCw,
   ArrowUpDown, Download, Calendar, X,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -416,6 +416,12 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {!isViewed && <span className="dash-viewed-dot" title="New — not yet viewed" />}
         <ScoreBadge score={c.score} winProbability={c.winProbability} />
+        {c.winFactors && (
+          <ChevronDown size={12} style={{
+            color: "var(--app-faint)", transition: "transform 0.2s ease",
+            transform: expanded ? "rotate(180deg)" : "rotate(0deg)"
+          }} />
+        )}
       </div>
 
       {/* Title + badges */}
