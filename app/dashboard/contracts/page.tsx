@@ -486,7 +486,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
               const labels: Record<string, string> = {
                 match_baseline: "Match quality", naics_density: "NAICS competition",
                 agency_density: "Agency activity", setaside: "Set-aside qualification",
-                recency: "Recency", size_band: "Contract size range",
+                recency: "Recency", psc_match: "PSC code match",
               }
               const pct = Math.round(value * 100)
               const isPositive = pct > 0
