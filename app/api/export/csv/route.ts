@@ -50,9 +50,25 @@ export async function GET(request: NextRequest) {
 
   const matches = data || []
 
+  // ── Fetch win probabilities for exported matches ─────────────────
+  const matchIds = matches.map((m: any) => m.id)
+  const winMap = new Map<string | number, number>()
+  if (matchIds.length > 0) {
+    const { data: winData } = await (supabase as any)
+      .from('win_probability')
+      .select('match_id, probability')
+      .in('match_id', matchIds)
+    if (winData) {
+      for (const w of winData) {
+        winMap.set(w.match_id, w.probability)
+      }
+    }
+  }
+
   // ── CSV column order (exactly as specified, no keywords) ─────────────
   const headers = [
     'Score',
+    'Win Probability',
     'Title',
     'NAICS Code',
     'PSC Code',
@@ -89,6 +105,7 @@ export async function GET(request: NextRequest) {
 
     return [
       m.score ?? '',
+      winMap.get(m.id) ?? '',
       escapeCsv(c.title),
       escapeCsv(c.naics_code),
       escapeCsv(c.psc_code),
