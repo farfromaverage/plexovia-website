@@ -29,14 +29,15 @@ const STATE_NAMES: Record<string, string> = {
 };
 
 const SET_ASIDES = [
-  { value: "none",   label: "Unrestricted" },
-  { value: "sba",    label: "Small Business" },
-  { value: "8a",     label: "8(a) Business Development" },
-  { value: "sdvosb", label: "Service-Disabled Veteran-Owned (SDVOSB)" },
-  { value: "wosb",   label: "Women-Owned Small Business (WOSB)" },
-  { value: "hubzone",label: "HUBZone" },
-  { value: "vosb",   label: "Veteran-Owned Small Business (VOSB)" },
-  { value: "sdb",    label: "Small Disadvantaged Business (SDB)" },
+  { value: "SB",       label: "Small Business" },
+  { value: "8A",       label: "8(a) Business Development" },
+  { value: "WOSB",     label: "Women-Owned Small Business (WOSB)" },
+  { value: "SDVOSB",   label: "Service-Disabled Veteran-Owned (SDVOSB)" },
+  { value: "HUBZONE",  label: "HUBZone" },
+  { value: "IEE",      label: "Indian Economic Enterprise" },
+  { value: "BICIV",    label: "Buy Indian Act" },
+  { value: "VETERAN",  label: "Veteran-Owned Small Business (VOSB)" },
+  { value: "LAS",      label: "Local Area Set-Aside" },
 ];
 
 /* ─── Profile type ───────────────────────────────────────── */
@@ -230,16 +231,9 @@ export default function ProfilePage() {
   }
 
   function toggleSetAside(val: string) {
-    if (val === "none") {
-      setSetAsides(["none"]);
-      markDirty();
-      return;
-    }
-    setSetAsides(prev => {
-      let next = prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val];
-      next = next.filter(v => v !== "none");
-      return next;
-    });
+    setSetAsides(prev =>
+      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    );
     markDirty();
   }
 
@@ -257,8 +251,6 @@ export default function ProfilePage() {
     setSaving(true);
     setError(null);
     
-    const finalSetAsides = setAsides.includes("none") ? [] : setAsides;
-
     const { error: err } = await supabase
       .from("profiles")
       .update({
@@ -268,7 +260,7 @@ export default function ProfilePage() {
         keywords:                 keywords,
         exclude_keywords:         excludeKeywords,
         email_frequency:          frequency,
-        set_aside_preferences:    finalSetAsides,
+        set_aside_preferences:    setAsides,
         fed_org_prefs:            fedOrgs,
         updated_at:               new Date().toISOString(),
       })
@@ -583,7 +575,7 @@ export default function ProfilePage() {
         <h2 className="dash-section-h">Set-Aside Preferences</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           {SET_ASIDES.map(({ value, label }) => {
-            const active = value === "none" ? (setAsides.length === 0 || setAsides.includes("none")) : setAsides.includes(value);
+            const active = setAsides.includes(value);
             return (
               <button
                 key={value}

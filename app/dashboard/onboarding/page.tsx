@@ -72,24 +72,21 @@ function Step1({
   selected: string[]; setSelected: (v: string[]) => void;
 }) {
   const options = [
-    { code: "sba",    label: "Small Business" },
-    { code: "8a",     label: "8(a)" },
-    { code: "wosb",   label: "WOSB" },
-    { code: "sdvosb", label: "SDVOSB" },
-    { code: "hubzone",label: "HUBZone" },
-    { code: "vosb",   label: "VOSB" },
-    { code: "none",   label: "Unrestricted" },
+    { code: "SB",       label: "Small Business" },
+    { code: "8A",       label: "8(a)" },
+    { code: "WOSB",     label: "Women-Owned (WOSB)" },
+    { code: "SDVOSB",   label: "Service-Disabled Veteran-Owned" },
+    { code: "HUBZONE",  label: "HUBZone" },
+    { code: "IEE",      label: "Indian Economic Enterprise" },
+    { code: "BICIV",    label: "Buy Indian Act" },
+    { code: "VETERAN",  label: "Veteran-Owned" },
+    { code: "LAS",      label: "Local Area Set-Aside" },
   ];
 
   function toggle(code: string) {
-    if (code === "none") {
-      setSelected(["none"]);
-      return;
-    }
-    
-    let next = selected.includes(code) ? selected.filter(s => s !== code) : [...selected, code];
-    next = next.filter(s => s !== "none");
-    setSelected(next);
+    setSelected(
+      selected.includes(code) ? selected.filter(s => s !== code) : [...selected, code]
+    );
   }
 
   return (
@@ -429,7 +426,7 @@ export default function OnboardingPage() {
   const [states,   setStates]   = useState<string[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [excludeKeywords, setExcludeKeywords] = useState<string[]>([]);
-  const [setAsides, setSetAsides] = useState<string[]>(["sba"]);
+  const [setAsides, setSetAsides] = useState<string[]>(["SB"]);
   const [fedOrgs, setFedOrgs] = useState<string[]>([]);
   const [availableAgencies, setAvailableAgencies] = useState<string[]>([]);
   const [agencySearch, setAgencySearch] = useState("");
@@ -486,8 +483,6 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = "/auth/login"; return; }
 
-    const finalSetAsides = setAsides.includes("none") ? [] : setAsides;
-
     // Phase 1: Save profile
     setBuildStatus("Saving your preferences…");
     const { error: err } = await supabase.from("profiles").update({
@@ -496,7 +491,7 @@ export default function OnboardingPage() {
       states:                  states,
       keywords:                keywords,
       exclude_keywords:        excludeKeywords,
-      set_aside_preferences:   finalSetAsides,
+      set_aside_preferences:   setAsides,
       fed_org_prefs:           fedOrgs,
       onboarding_complete:     true,
     }).eq("id", user.id);
