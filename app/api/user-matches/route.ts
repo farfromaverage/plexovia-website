@@ -114,6 +114,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ── Fetch win probabilities for these matches ─────────────────────
+    const matchIds = (rows || []).map((row: any) => row.id)
+    const winMap = new Map<string | number, { probability: number; factors: Record<string, number> }>()
+    if (matchIds.length > 0) {
+      const { data: winData } = await supabase
+        .from("win_probability")
+        .select("match_id, probability, factors")
+        .in("match_id", matchIds)
+      if (winData) {
+        for (const w of winData) {
+          winMap.set(w.match_id, { probability: w.probability, factors: w.factors })
+        }
+      }
+    }
+
     // ── Format response to match the shape the frontend expects ─────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const matches = (rows || []).map((row: any) => {
@@ -148,6 +163,8 @@ export async function GET(request: NextRequest) {
           set_aside:   contract.set_aside ?? null,
           psc_code:    contract.psc_code ?? null,
         },
+        win_probability: winMap.get(row.id)?.probability ?? null,
+        win_factors: winMap.get(row.id)?.factors ?? null,
       }
     })
 
