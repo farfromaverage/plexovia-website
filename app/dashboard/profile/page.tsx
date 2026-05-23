@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, ExternalLink } from "lucide-react";
+import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, ExternalLink, Search } from "lucide-react";
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -71,6 +71,77 @@ function getCompleteness(
   return { score, label, missing };
 }
 
+/* ─── Fed Org Dropdown (inline styles, profile page) ─────── */
+function FedOrgDropdown({
+  fedOrgs, setFedOrgs, fedOrgList, markDirty
+}: {
+  fedOrgs: string[]; setFedOrgs: React.Dispatch<React.SetStateAction<string[]>>;
+  fedOrgList: {code: string; name: string}[];
+  markDirty: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const LIMIT = 999;
+
+  const trimmed = query.trim();
+  const filtered = fedOrgList.filter(
+    o => o.code.toLowerCase().startsWith(trimmed.toLowerCase()) || o.name.toLowerCase().includes(trimmed.toLowerCase())
+  ).slice(0, 10);
+
+  function toggleOrg(code: string) {
+    if (fedOrgs.includes(code)) setFedOrgs(fedOrgs.filter(c => c !== code));
+    else if (fedOrgs.length < LIMIT) setFedOrgs([...fedOrgs, code]);
+    markDirty();
+  }
+
+  return (
+    <div>
+      {/* Search input */}
+      <div style={{ position: "relative", marginBottom: "0.75rem", maxWidth: 400 }}>
+        <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--app-faint)" }} />
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search by code or name (e.g. DOD or defense)"
+          className="dash-input-lg"
+          style={{ paddingLeft: 34 }}
+          aria-label="Search federal organizations"
+        />
+      </div>
+
+      {/* Dropdown results */}
+      {query && (
+        <div style={{ marginBottom: "1rem" }}>
+          {filtered.map(o => {
+            const isSelected = fedOrgs.includes(o.code);
+            return (
+              <button
+                key={o.code}
+                type="button"
+                onClick={() => toggleOrg(o.code)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  width: "100%", maxWidth: 480, padding: "8px 12px",
+                  background: isSelected ? "var(--accent-subtle)" : "var(--app-surface-2)",
+                  border: `1px solid ${isSelected ? "var(--accent-border)" : "var(--app-border)"}`,
+                  borderRadius: 8, cursor: "pointer", textAlign: "left",
+                  marginBottom: 4, gap: 8,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                  <span style={{ fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.8rem", fontWeight: isSelected ? 600 : 400, color: isSelected ? "var(--accent)" : "var(--app-text)", marginRight: 6 }}>{o.code}</span>
+                  <span style={{ fontSize: "0.75rem", color: isSelected ? "var(--accent)" : "var(--app-muted)", opacity: isSelected ? 0.8 : 1 }}>{o.name}</span>
+                </div>
+                {isSelected && <CheckCircle size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Page ───────────────────────────────────────────────── */
 export default function ProfilePage() {
   const router = useRouter();
@@ -102,8 +173,7 @@ export default function ProfilePage() {
   const [setAsides,     setSetAsides]     = useState<string[]>([]);
 
   const [fedOrgs,            setFedOrgs]            = useState<string[]>([]);
-  const [availableAgencies,  setAvailableAgencies]  = useState<string[]>([]);
-  const [agencySearch,       setAgencySearch]       = useState("");
+  const [fedOrgList,         setFedOrgList]         = useState<{code: string; name: string}[]>([]);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -137,11 +207,11 @@ export default function ProfilePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Fetch available agency list from backend
+  // Fetch available federal organization list from backend
   useEffect(() => {
     fetch("/api/onboarding/first-login")
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.agencies) setAvailableAgencies(d.agencies); })
+      .then(d => { if (d?.organizations) setFedOrgList(d.organizations); })
       .catch(() => {});
   }, []);
 
@@ -452,38 +522,28 @@ export default function ProfilePage() {
         <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
           Select federal agencies you want to prioritize. Contracts from these agencies receive a match score boost.
         </p>
-        <div style={{ marginBottom: "0.75rem" }}>
-          <input
-            type="search"
-            value={agencySearch}
-            onChange={e => setAgencySearch(e.target.value)}
-            placeholder="Search agencies..."
-            className="dash-input-lg"
-            style={{ maxWidth: 400 }}
-            aria-label="Search federal organizations"
-          />
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-          {availableAgencies
-            .filter(a => a.toLowerCase().includes(agencySearch.toLowerCase()))
-            .map(agency => (
-              <button
-                key={agency}
-                type="button"
-                className={`dash-pill${fedOrgs.includes(agency) ? "" : ""}`}
-                style={{
-                  background: fedOrgs.includes(agency) ? "var(--accent-subtle)" : undefined,
-                  borderColor: fedOrgs.includes(agency) ? "var(--accent-border)" : undefined,
-                  color: fedOrgs.includes(agency) ? "var(--accent)" : undefined,
-                  fontWeight: fedOrgs.includes(agency) ? 600 : undefined,
-                }}
-                onClick={() => { setFedOrgs(prev => prev.includes(agency) ? prev.filter(a => a !== agency) : [...prev, agency]); markDirty(); }}
-                aria-pressed={fedOrgs.includes(agency)}
-              >
-                {agency}
-              </button>
-            ))}
-        </div>
+
+        {/* Selected Orgs */}
+        {fedOrgs.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "0.75rem" }}>
+            {fedOrgs.map((code) => {
+              const org = fedOrgList.find(o => o.code === code);
+              return (
+                <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--accent-subtle)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
+                  {code}
+                  {org && <span style={{ fontSize: "0.7rem", color: "var(--accent)", opacity: 0.7, fontFamily: "var(--font-sans, sans-serif)" }}>{org.name.substring(0, 20)}{org.name.length > 20 ? "…" : ""}</span>}
+                  <button onClick={() => { setFedOrgs(prev => prev.filter(a => a !== code)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: 0, display: "flex", lineHeight: 1 }}>
+                    <X size={11} aria-hidden="true" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Search + Dropdown */}
+        <FedOrgDropdown fedOrgs={fedOrgs} setFedOrgs={setFedOrgs} fedOrgList={fedOrgList} markDirty={markDirty} />
+
         {fedOrgs.length === 0 && <p style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No agencies selected. All agencies will be treated equally.</p>}
       </div>
 

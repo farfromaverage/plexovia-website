@@ -126,46 +126,78 @@ function Step1({
 
 // Step 2: Federal Organizations
 function Step2FederalOrgs({
-  fedOrgs, setFedOrgs, availableAgencies, agencySearch, setAgencySearch
+  fedOrgs, setFedOrgs, fedOrgList
 }: {
   fedOrgs: string[]; setFedOrgs: React.Dispatch<React.SetStateAction<string[]>>;
-  availableAgencies: string[]; agencySearch: string; setAgencySearch: React.Dispatch<React.SetStateAction<string>>;
+  fedOrgList: {code: string; name: string}[];
 }) {
+  const [query, setQuery] = useState("");
+  const LIMIT = 999;
+
+  const trimmed = query.trim();
+  const filtered = fedOrgList.filter(
+    o => o.code.toLowerCase().startsWith(trimmed.toLowerCase()) || o.name.toLowerCase().includes(trimmed.toLowerCase())
+  ).slice(0, 10);
+
+  function toggleOrg(code: string) {
+    if (fedOrgs.includes(code)) setFedOrgs(fedOrgs.filter(c => c !== code));
+    else if (fedOrgs.length < LIMIT) setFedOrgs([...fedOrgs, code]);
+  }
+
   return (
     <div className="flex flex-col h-full fade-in pr-2 overflow-y-auto custom-scroll -mr-2">
       <h2 className="font-bold text-xl tracking-tight text-[var(--app-text)] mb-2">Federal Organizations</h2>
       <p className="text-[var(--app-muted)] text-[14px] leading-relaxed mb-4">
         Select federal agencies you want to prioritize. Contracts from these agencies receive a match score boost.
       </p>
-      <input
-        type="search"
-        value={agencySearch}
-        onChange={e => setAgencySearch(e.target.value)}
-        placeholder="Search agencies..."
-        className="w-full max-w-[400px] px-3 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)] mb-3"
-        aria-label="Search federal organizations"
-      />
-      <div className="flex flex-wrap gap-2 mb-4">
-        {availableAgencies
-          .filter(a => a.toLowerCase().includes(agencySearch.toLowerCase()))
-          .map(agency => (
-            <button
-              key={agency}
-              type="button"
-              className={`px-4 py-2.5 rounded-full border text-[14px] font-medium transition-all ${
-                fedOrgs.includes(agency)
-                  ? "bg-[var(--accent-bg-app)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
-                  : "bg-[var(--app-surface-2)] border-[var(--app-border)] text-[var(--app-text)] hover:border-[var(--app-muted)]"
-              }`}
-              onClick={() => setFedOrgs((prev: string[]) =>
-                prev.includes(agency) ? prev.filter((a: string) => a !== agency) : [...prev, agency]
-              )}
-              aria-pressed={fedOrgs.includes(agency)}
-            >
-              {agency}
-            </button>
-          ))}
+
+      {/* Selected Orgs */}
+      {fedOrgs.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {fedOrgs.map((code) => {
+            const org = fedOrgList.find(o => o.code === code);
+            return (
+              <span key={code} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-bg-app)] border border-[var(--accent)]/30 rounded-full text-[13px] text-[var(--accent)] font-mono">
+                {code}
+                {org && <span className="text-[11px] text-[var(--accent)]/70 font-sans tracking-tight">{org.name.substring(0, 20)}{org.name.length > 20 ? "…" : ""}</span>}
+                <button type="button" onClick={() => toggleOrg(code)} className="text-[var(--accent)] hover:text-white transition-colors">
+                  <X size={13} strokeWidth={2.5} />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative mb-3 flex-shrink-0">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--app-faint)]" />
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search by code or name (e.g. DOD or defense)"
+          className="w-full max-w-[400px] pl-[38px] pr-4 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)]"
+        />
       </div>
+
+      {query && (
+        <div className="flex-1 max-h-[200px] overflow-y-auto flex flex-col gap-1.5 pr-1 custom-scroll mb-4">
+          {filtered.map(o => {
+            const isSelected = fedOrgs.includes(o.code);
+            return (
+              <button key={o.code} type="button" onClick={() => toggleOrg(o.code)} className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all text-left gap-2 ${isSelected ? "bg-[var(--accent-bg-app)] border-[var(--accent)]/50" : "bg-[var(--app-surface-2)] border-[var(--app-border)]"}`}>
+                <div className="flex-1 min-w-0 pr-2">
+                  <span className={`font-mono text-[13px] mr-2 ${isSelected ? "text-[var(--accent)] font-semibold" : "text-[var(--app-text)]"}`}>{o.code}</span>
+                  <span className={`text-[12px] truncate ${isSelected ? "text-[var(--accent)]/80" : "text-[var(--app-muted)]"}`}>{o.name}</span>
+                </div>
+                {isSelected && <Check size={14} className="text-[var(--accent)] shrink-0" strokeWidth={2.5} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <p className="text-[12px] text-[var(--app-faint)]">
         {fedOrgs.length > 0
           ? `${fedOrgs.length} organization${fedOrgs.length === 1 ? "" : "s"} selected`
@@ -428,8 +460,7 @@ export default function OnboardingPage() {
   const [excludeKeywords, setExcludeKeywords] = useState<string[]>([]);
   const [setAsides, setSetAsides] = useState<string[]>(["SB"]);
   const [fedOrgs, setFedOrgs] = useState<string[]>([]);
-  const [availableAgencies, setAvailableAgencies] = useState<string[]>([]);
-  const [agencySearch, setAgencySearch] = useState("");
+  const [fedOrgList, setFedOrgList] = useState<{code: string; name: string}[]>([]);
   
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
@@ -439,8 +470,8 @@ export default function OnboardingPage() {
 
     fetch("/api/onboarding/first-login")
       .then(r => r.json())
-      .then(d => setAvailableAgencies(d.agencies || []))
-      .catch(() => setAvailableAgencies([]));
+      .then(d => setFedOrgList(d.organizations || []))
+      .catch(() => setFedOrgList([]));
 
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -594,7 +625,7 @@ export default function OnboardingPage() {
 
         <div className="flex-1 mb-8 overflow-hidden h-[340px]">
           {step === 1 && <Step1 selected={setAsides} setSelected={setSetAsides} />}
-          {step === 2 && <Step2FederalOrgs fedOrgs={fedOrgs} setFedOrgs={setFedOrgs} availableAgencies={availableAgencies} agencySearch={agencySearch} setAgencySearch={setAgencySearch} />}
+          {step === 2 && <Step2FederalOrgs fedOrgs={fedOrgs} setFedOrgs={setFedOrgs} fedOrgList={fedOrgList} />}
           {step === 3 && <Step2 naics={naics} setNaics={setNaics} pscCodes={pscCodes} setPscCodes={setPscCodes} naicsList={naicsList} />}
           {step === 4 && <Step3 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} excludeKeywords={excludeKeywords} setExcludeKeywords={setExcludeKeywords} />}
         </div>
