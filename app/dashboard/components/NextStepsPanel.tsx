@@ -31,10 +31,10 @@ export default function NextStepsPanel({ steps }: { steps: NextStep[] | null }) 
   if (!steps || steps.length === 0) return null;
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+    <div className="mt-4 pt-4 border-t border-[var(--app-border)] dark:border-white/10">
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--app-muted)] dark:text-[var(--app-faint)] mb-3">
         Next Steps
-      </p>
+      </h4>
       <div className="grid gap-2">
         {steps.map((step, i) => (
           <motion.div
@@ -42,17 +42,18 @@ export default function NextStepsPanel({ steps }: { steps: NextStep[] | null }) 
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.05 }}
-            className={`border-l-2 bg-slate-50 dark:bg-white/5 rounded-r-md p-3 pl-3 ${priorityBorder(step.priority)}`}
+            className={`border-l-2 bg-[var(--app-surface-2)] dark:bg-white/5 rounded-r-md p-3 pl-3 ${priorityBorder(step.priority)}`}
+            aria-label={`Priority ${step.priority >= 9 ? "high" : step.priority >= 6 ? "medium" : "standard"}: ${step.title}`}
           >
             <div className="flex items-start gap-2">
-              <span className="mt-0.5 text-slate-500 dark:text-slate-400 flex-shrink-0">
+              <span className="mt-0.5 text-[var(--app-muted)] dark:text-[var(--app-faint)] flex-shrink-0">
                 {TYPE_ICONS[step.step_type] || <ExternalLink className="w-4 h-4" />}
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                <p className="text-sm font-semibold text-[var(--app-text)] dark:text-white">
                   {step.title}
                 </p>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                <p className="text-xs text-[var(--app-muted)] dark:text-[var(--app-faint)] mt-0.5 leading-relaxed">
                   {step.description}
                 </p>
                 {step.action_url && (
@@ -60,7 +61,7 @@ export default function NextStepsPanel({ steps }: { steps: NextStep[] | null }) 
                     href={step.action_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-[var(--color-accent)] hover:underline"
+                    className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-[var(--accent)] hover:underline"
                   >
                     {step.action_label || "Take action"}
                     <ExternalLink className="w-3 h-3" />
