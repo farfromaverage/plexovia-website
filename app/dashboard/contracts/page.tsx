@@ -4,12 +4,10 @@ import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   FileText, MapPin, Shield, ExternalLink, Tag, Star,
-  ChevronLeft, ChevronRight, ChevronDown, Filter, Search, RefreshCw,
+  ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
   ArrowUpDown, Download, Calendar, X,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import ScoreBadge from "../components/ScoreBadge";
-import NextStepsPanel from "../components/NextStepsPanel";
 import SkeletonRows from "../components/SkeletonRows";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
@@ -23,17 +21,6 @@ interface ContractRow {
   deadlineRaw: string | null; deadlineDays: number | null;
   score: number; setAside: string; matchedBy: "naics" | "keyword";
   matchLabel: string; url: string | null; matchedAt: string | null;
-  winProbability: number | null;
-  winFactors: Record<string, number> | null;
-  nextSteps: NextStep[];
-}
-interface NextStep {
-  step_type: string;
-  title: string;
-  description: string;
-  priority: number;
-  action_url: string | null;
-  action_label: string | null;
 }
 type SortKey = "score" | "deadline" | "posted_date";
 type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
@@ -77,9 +64,7 @@ function mapRow(m: any): ContractRow {
     score: m.score, setAside: c.set_aside || "",
     matchedBy, matchLabel, url: c.url || null,
     matchedAt: m.matched_at || null,
-    winProbability: m.win_probability ?? null,
-    winFactors: m.win_factors ?? null,
-    nextSteps: m.next_steps || [],
+
   };
 }
 
@@ -410,7 +395,6 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
   c: ContractRow; isBookmarked: boolean; isViewed: boolean;
   onToggleBookmark: () => void; onDismiss: () => void; onView: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false)
   const deadlineColor =
     c.deadline === "Expired" ? "var(--danger)"
     : c.deadlineDays !== null && c.deadlineDays <= 7 ? "var(--warning)"
@@ -419,20 +403,13 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
   return (<>
     <div
       className="dash-table-row"
-      style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", alignItems: "center", padding: "1rem 1.5rem", cursor: (c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) ? "pointer" : "default" }}
+      style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", alignItems: "center", padding: "1rem 1.5rem" }}
       onMouseEnter={onView}
-      onClick={() => { if (c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) setExpanded(e => !e) }}
     >
       {/* Score + viewed dot */}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {!isViewed && <span className="dash-viewed-dot" title="New — not yet viewed" />}
-        <ScoreBadge score={c.score} winProbability={c.winProbability} />
-        {(c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) && (
-          <ChevronDown size={12} style={{
-            color: "var(--app-faint)", transition: "transform 0.2s ease",
-            transform: expanded ? "rotate(180deg)" : "rotate(0deg)"
-          }} />
-        )}
+        <ScoreBadge score={c.score} />
       </div>
 
       {/* Title + badges */}
@@ -477,55 +454,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
         </button>
       </div>
     </div>
-    {expanded && (c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) && (
-      <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: "auto", opacity: 1 }}
-        exit={{ height: 0, opacity: 0 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        style={{ overflow: "hidden", borderBottom: "1px solid var(--app-border)", background: "var(--app-surface-2)" }}
-      >
-        <div style={{ padding: "0.75rem 1.5rem 1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--app-text)" }}>Win Probability Breakdown</span>
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)", fontFamily: "var(--font-geist-mono, monospace)" }}>
-              {c.winProbability}%
-            </span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-            {Object.entries(c.winFactors || {}).map(([key, value]) => {
-              const labels: Record<string, string> = {
-                match_baseline: "Match quality", naics_density: "NAICS competition",
-                agency_density: "Agency activity", setaside: "Set-aside qualification",
-                recency: "Recency", psc_match: "PSC code match",
-              }
-              const pct = Math.round(value * 100)
-              const isPositive = pct > 0
-              return (
-                <div key={key} style={{
-                  padding: "0.375rem 0.5rem", background: "var(--app-surface)",
-                  borderRadius: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem"
-                }}>
-                  <span style={{
-                    fontSize: "0.68rem", fontWeight: 500,
-                    color: isPositive ? "var(--success)" : "var(--app-muted)",
-                    fontFamily: "var(--font-geist-mono, monospace)", minWidth: "2.5rem"
-                  }}>
-                    {isPositive ? "+" : ""}{pct}%
-                  </span>
-                  <span style={{ fontSize: "0.68rem", color: "var(--app-muted)" }}>
-                    {labels[key] || key}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-          {c.nextSteps && c.nextSteps.length > 0 && (
-            <NextStepsPanel steps={c.nextSteps} />
-          )}
-        </div>
-      </motion.div>
-    )}
+
   </>
   );
 }
