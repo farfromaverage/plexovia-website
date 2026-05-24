@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Building2, Clock, ExternalLink, FileText, MapPin, Shield, Star,
+  Clock, ExternalLink, FileText, MapPin, Shield, Star,
   ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
   ArrowUpDown, Download, Calendar, X,
 } from "lucide-react";
@@ -433,17 +433,10 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
           </div>
         </div>
 
-        {/* Agency + match label */}
+        {/* Agency */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
           <span style={{ fontSize: "0.78rem", color: "var(--app-muted)" }}>
             {c.agency}
-          </span>
-          <span style={{
-            fontSize: "0.65rem", color: "var(--app-faint)",
-            background: "var(--app-surface-2)", padding: "1px 8px",
-            borderRadius: 999, fontWeight: 500
-          }}>
-            {c.matchLabel}
           </span>
         </div>
 
@@ -461,7 +454,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
           )}
           {c.fedOrg && (
             <span className="dash-tag dash-tag-muted" title={`Federal Org: ${c.fedOrg}`}>
-              <Building2 size={9} aria-hidden="true" style={{ marginRight: 2 }} /> {c.fedOrg}
+              {c.fedOrg}
             </span>
           )}
           {c.setAside && c.setAside !== "Full & Open" && (
@@ -477,7 +470,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
             <MapPin size={10} style={{ verticalAlign: "middle", marginRight: 3, color: "var(--app-faint)" }} />
             {c.state || "Nationwide"}
           </span>
-          <span>{c.posted}</span>
+          <span>Posted {c.posted}</span>
           <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} days={c.deadlineDays} />
         </div>
       </div>
@@ -489,7 +482,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
           {c.state || "Nationwide"}
         </div>
         <div style={{ fontSize: "0.72rem", color: "var(--app-faint)" }}>
-          {c.posted}
+          Posted {c.posted}
         </div>
         {c.url && (
           <a href={c.url} target="_blank" rel="noopener noreferrer" className="dash-link-subtle" style={{ fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
