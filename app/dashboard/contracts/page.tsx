@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ScoreBadge from "../components/ScoreBadge";
+import NextStepsPanel from "../components/NextStepsPanel";
 import SkeletonRows from "../components/SkeletonRows";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
@@ -24,6 +25,15 @@ interface ContractRow {
   matchLabel: string; url: string | null; matchedAt: string | null;
   winProbability: number | null;
   winFactors: Record<string, number> | null;
+  nextSteps: NextStep[];
+}
+interface NextStep {
+  step_type: string;
+  title: string;
+  description: string;
+  priority: number;
+  action_url: string | null;
+  action_label: string | null;
 }
 type SortKey = "score" | "deadline" | "posted_date";
 type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
@@ -69,6 +79,7 @@ function mapRow(m: any): ContractRow {
     matchedAt: m.matched_at || null,
     winProbability: m.win_probability ?? null,
     winFactors: m.win_factors ?? null,
+    nextSteps: m.next_steps || [],
   };
 }
 
@@ -408,15 +419,15 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
   return (<>
     <div
       className="dash-table-row"
-      style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", alignItems: "center", padding: "1rem 1.5rem", cursor: c.winFactors ? "pointer" : "default" }}
+      style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", alignItems: "center", padding: "1rem 1.5rem", cursor: (c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) ? "pointer" : "default" }}
       onMouseEnter={onView}
-      onClick={() => { if (c.winFactors) setExpanded(e => !e) }}
+      onClick={() => { if (c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) setExpanded(e => !e) }}
     >
       {/* Score + viewed dot */}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {!isViewed && <span className="dash-viewed-dot" title="New — not yet viewed" />}
         <ScoreBadge score={c.score} winProbability={c.winProbability} />
-        {c.winFactors && (
+        {(c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) && (
           <ChevronDown size={12} style={{
             color: "var(--app-faint)", transition: "transform 0.2s ease",
             transform: expanded ? "rotate(180deg)" : "rotate(0deg)"
@@ -466,7 +477,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
         </button>
       </div>
     </div>
-    {expanded && c.winFactors && (
+    {expanded && (c.winFactors || (c.nextSteps && c.nextSteps.length > 0)) && (
       <motion.div
         initial={{ height: 0, opacity: 0 }}
         animate={{ height: "auto", opacity: 1 }}
@@ -509,6 +520,9 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
               )
             })}
           </div>
+          {c.nextSteps && c.nextSteps.length > 0 && (
+            <NextStepsPanel steps={c.nextSteps} />
+          )}
         </div>
       </motion.div>
     )}
