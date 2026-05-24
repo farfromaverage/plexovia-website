@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  FileText, MapPin, Shield, ExternalLink, Tag, Star,
+  Building2, Clock, ExternalLink, FileText, MapPin, Shield, Star,
   ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
   ArrowUpDown, Download, Calendar, X,
 } from "lucide-react";
@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 /* ─── Types ───────────────────────────────────────────────────────── */
 interface ContractRow {
   id: string; title: string; agency: string; naics: string; psc: string;
+  fedOrg: string;
   state: string; posted: string; postedRaw: string | null; deadline: string;
   deadlineRaw: string | null; deadlineDays: number | null;
   score: number; setAside: string; matchedBy: "naics" | "keyword";
@@ -58,7 +59,8 @@ function mapRow(m: any): ContractRow {
   return {
     id: m.match_id, title: c.title || "Untitled",
     agency: c.agency || "Federal Agency", naics: c.naics_code || "",
-    psc: c.psc_code || "", state: c.state || "",
+    psc: c.psc_code || "", fedOrg: c.fed_org_code || "",
+    state: c.state || "",
     posted: fmtDate(c.posted_date), postedRaw: c.posted_date || null,
     deadline: dl.label, deadlineRaw: c.deadline || null, deadlineDays: dl.days,
     score: m.score, setAside: c.set_aside || "",
@@ -322,21 +324,20 @@ function ContractsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="dash-card" style={{ marginBottom: "1rem" }}>
-        <div className="dash-table-head dash-hide-mobile" style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", gap: 0, alignItems: "center" }}>
-          <span className="dash-th">Score</span>
-          <span className="dash-th">Contract</span>
-          <span className="dash-th">State</span>
-          <span className="dash-th">Posted</span>
-          <span className="dash-th" style={{ textAlign: "right" }}>Deadline</span>
-          <span className="dash-th" style={{ textAlign: "center" }}>Actions</span>
-        </div>
+      {/* Contracts */}
+      <div style={{
+        background: "var(--app-surface)",
+        border: "1px solid var(--app-border)",
+        borderRadius: "var(--radius-md)",
+        boxShadow: "var(--shadow-sm)",
+        overflow: "hidden",
+        marginBottom: "1rem",
+      }}>
 
         {isColdStart ? (
           <EmptyState icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />} title="Matching contracts to your profile now" message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page updates automatically — no refresh needed.`} />
         ) : loading ? (
-          <SkeletonRows rows={6} columns={6} columnWidths="54px 1fr 80px 100px 100px 62px" />
+          <SkeletonRows rows={6} />
         ) : error ? (
           <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
         ) : filteredContracts.length === 0 ? (
@@ -395,66 +396,150 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
   c: ContractRow; isBookmarked: boolean; isViewed: boolean;
   onToggleBookmark: () => void; onDismiss: () => void; onView: () => void;
 }) {
-  const deadlineColor =
-    c.deadline === "Expired" ? "var(--danger)"
-    : c.deadlineDays !== null && c.deadlineDays <= 7 ? "var(--warning)"
-    : "var(--app-muted)";
+  const deadlineUrgency =
+    c.deadlineDays === null ? "none"
+    : c.deadlineDays <= 0 ? "expired"
+    : c.deadlineDays <= 3 ? "critical"
+    : c.deadlineDays <= 7 ? "warning"
+    : "normal";
 
-  return (<>
+  return (
     <div
-      className="dash-table-row"
-      style={{ display: "grid", gridTemplateColumns: "54px 1fr 80px 100px 100px 62px", alignItems: "center", padding: "1rem 1.5rem" }}
+      className="dash-contract-card"
+      style={{
+        opacity: 1,
+      }}
       onMouseEnter={onView}
     >
-      {/* Score + viewed dot */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        {!isViewed && <span className="dash-viewed-dot" title="New — not yet viewed" />}
+      {/* Score column */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        {!isViewed && <span className="dash-viewed-dot" title="New" />}
         <ScoreBadge score={c.score} />
       </div>
 
-      {/* Title + badges */}
-      <div style={{ minWidth: 0 }}>
-        <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: "0 0 4px", lineHeight: 1.3 }}>{c.title}</p>
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {c.naics && <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}><FileText size={9} aria-hidden="true" /> NAICS {c.naics}</span>}
-          {c.psc && <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}><Tag size={9} aria-hidden="true" /> PSC {c.psc}</span>}
-          {c.setAside && c.setAside !== "Full & Open" && <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}><Shield size={9} aria-hidden="true" /> {c.setAside}</span>}
+      {/* Content column */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+          <p style={{
+            fontWeight: 600, fontSize: "0.9rem", color: "var(--app-text)",
+            margin: 0, lineHeight: 1.35, overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap"
+          }}>
+            {c.title}
+          </p>
+          {/* Deadline badge — desktop */}
+          <div className="dash-hide-mobile" style={{ flexShrink: 0 }}>
+            <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} days={c.deadlineDays} />
+          </div>
+        </div>
+
+        {/* Agency + match label */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)" }}>
+            {c.agency}
+          </span>
+          <span style={{
+            fontSize: "0.65rem", color: "var(--app-faint)",
+            background: "var(--app-surface-2)", padding: "1px 8px",
+            borderRadius: 999, fontWeight: 500
+          }}>
+            {c.matchLabel}
+          </span>
+        </div>
+
+        {/* Tags: NAICS + PSC + Fed Org + Set-Aside */}
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+          {c.naics && (
+            <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}>
+              NAICS {c.naics}
+            </span>
+          )}
+          {c.psc && (
+            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>
+              PSC {c.psc}
+            </span>
+          )}
+          {c.fedOrg && (
+            <span className="dash-tag dash-tag-muted" title={`Federal Org: ${c.fedOrg}`}>
+              <Building2 size={9} aria-hidden="true" style={{ marginRight: 2 }} /> {c.fedOrg}
+            </span>
+          )}
+          {c.setAside && c.setAside !== "Full & Open" && (
+            <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}>
+              <Shield size={9} aria-hidden="true" style={{ marginRight: 2 }} /> {c.setAside}
+            </span>
+          )}
+        </div>
+
+        {/* Mobile-only: State + Posted + Deadline row */}
+        <div className="dash-show-mobile" style={{ marginTop: 8, display: "flex", gap: 12, fontSize: "0.72rem", color: "var(--app-muted)", flexWrap: "wrap" }}>
+          <span>
+            <MapPin size={10} style={{ verticalAlign: "middle", marginRight: 3, color: "var(--app-faint)" }} />
+            {c.state || "Nationwide"}
+          </span>
+          <span>{c.posted}</span>
+          <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} days={c.deadlineDays} />
         </div>
       </div>
 
-      {/* State */}
-      <div className="dash-hide-mobile" style={{ fontSize: "0.78rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 4 }}>
-        <MapPin size={10} style={{ color: "var(--app-faint)" }} aria-hidden="true" /> {c.state || "Nationwide"}
-      </div>
-
-      {/* Posted Date */}
-      <div style={{ fontSize: "0.78rem", color: "var(--app-muted)" }} aria-label={`Posted: ${c.posted}`}>
-        {c.posted}
-      </div>
-
-      {/* Deadline + SAM link */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-        <span style={{ fontSize: "0.72rem", color: deadlineColor, fontWeight: c.deadlineDays !== null && c.deadlineDays <= 7 ? 600 : 400 }} aria-label={`Deadline: ${c.deadline}`}>
-          {c.deadline}
-        </span>
+      {/* Desktop metadata column */}
+      <div className="dash-hide-mobile" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0, minWidth: 90 }}>
+        <div style={{ fontSize: "0.75rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+          <MapPin size={10} style={{ color: "var(--app-faint)" }} />
+          {c.state || "Nationwide"}
+        </div>
+        <div style={{ fontSize: "0.72rem", color: "var(--app-faint)" }}>
+          {c.posted}
+        </div>
         {c.url && (
-          <a href={c.url} target="_blank" rel="noopener noreferrer" aria-label={`View on SAM.gov: ${c.title}`} className="dash-link-subtle" style={{ fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
-            SAM.gov <ExternalLink size={9} aria-hidden="true" />
+          <a href={c.url} target="_blank" rel="noopener noreferrer" className="dash-link-subtle" style={{ fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
+            SAM.gov <ExternalLink size={9} />
           </a>
         )}
       </div>
 
-      {/* Actions: Bookmark + Dismiss */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-        <button className="dash-action-bookmark" data-active={isBookmarked ? "true" : undefined} onClick={onToggleBookmark} aria-label={isBookmarked ? "Remove bookmark" : "Bookmark contract"} title={isBookmarked ? "Saved" : "Save"}>
-          <Star size={14} fill={isBookmarked ? "currentColor" : "none"} aria-hidden="true" />
+      {/* Actions column */}
+      <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+        <button
+          className="dash-action-bookmark"
+          data-active={isBookmarked ? "true" : undefined}
+          onClick={onToggleBookmark}
+          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark contract"}
+          title={isBookmarked ? "Saved" : "Save"}
+        >
+          <Star size={15} fill={isBookmarked ? "currentColor" : "none"} />
         </button>
         <button className="dash-action-dismiss" onClick={onDismiss} aria-label="Dismiss contract" title="Dismiss">
-          <X size={14} aria-hidden="true" />
+          <X size={15} />
         </button>
       </div>
     </div>
+  );
+}
 
-  </>
+/* ─── Deadline Badge ───────────────────────────────────────────── */
+function DeadlineBadge({ label, urgency, days }: {
+  label: string; urgency: string; days: number | null;
+}) {
+  const bg = urgency === "expired" ? "var(--danger-subtle)"
+    : urgency === "critical" ? "rgba(194,59,59,0.12)"
+    : urgency === "warning" ? "var(--warning-subtle)"
+    : "var(--app-surface-2)";
+  const fg = urgency === "expired" ? "var(--danger)"
+    : urgency === "critical" ? "var(--danger)"
+    : urgency === "warning" ? "var(--warning)"
+    : "var(--app-muted)";
+
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      padding: "3px 10px", borderRadius: 999,
+      background: bg, color: fg,
+      fontSize: "0.72rem", fontWeight: 600,
+      whiteSpace: "nowrap", flexShrink: 0
+    }}>
+      <Clock size={10} />
+      {label}
+    </span>
   );
 }

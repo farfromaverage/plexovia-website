@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const selectClause =
       'id, score, match_reasons, created_at, ' +
       'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
-      'deadline, posted_date, set_aside)'
+      'fed_org_code, deadline, posted_date, set_aside)'
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase
@@ -153,6 +153,7 @@ export async function GET(request: NextRequest) {
 
           set_aside:   contract.set_aside ?? null,
           psc_code:    contract.psc_code ?? null,
+          fed_org_code: contract.fed_org_code ?? null,
         },
       }
     })

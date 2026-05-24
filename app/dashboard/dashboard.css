@@ -1071,6 +1071,32 @@
 .dash-gantt-bar { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--app-bg); font-weight: 600; overflow: hidden; white-space: nowrap; transition: opacity var(--duration-micro) ease; }
 .dash-gantt-bar:hover { opacity: 0.85; }
 
+/* ── Contract Card (V3 redesign) ─────────────────────────────── */
+.dash-contract-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--app-border);
+  transition: background var(--duration-micro) var(--ease-out-quart),
+              box-shadow var(--duration-state) var(--ease-out-quart),
+              transform var(--duration-state) var(--ease-out-quart);
+}
+.dash-contract-card:last-child { border-bottom: none; }
+.dash-contract-card:hover {
+  background: var(--app-surface-2);
+  box-shadow: 0 1px 4px rgba(15, 13, 26, 0.06);
+}
+
+@media (max-width: 768px) {
+  .dash-contract-card {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .dash-contract-card:hover { box-shadow: none; }
+}
+
 /* Reduced Motion ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
