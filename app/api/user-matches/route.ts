@@ -81,9 +81,15 @@ export async function GET(request: NextRequest) {
       query = query.ilike('contracts.title', `%${search}%`)
     }
 
-    if (sort === 'date') {
-      query = query.order('created_at', { ascending: false })
+    if (sort === 'posted_date') {
+      query = query.order('posted_date', { ascending: false, referencedTable: 'contracts' })
+    } else if (sort === 'deadline') {
+      query = query.order('deadline', { ascending: true, referencedTable: 'contracts' })
+    } else if (sort === 'score') {
+      query = query.order('score', { ascending: false })
     } else {
+      // Default: newest contracts first (matches must post date DESC, then score DESC)
+      query = query.order('posted_date', { ascending: false, referencedTable: 'contracts' })
       query = query.order('score', { ascending: false })
     }
 

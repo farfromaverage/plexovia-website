@@ -84,9 +84,9 @@ function mapRow(m: any): ContractRow {
 }
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "score", label: "Best match" },
-  { value: "deadline", label: "Soonest deadline" },
   { value: "posted_date", label: "Most recent" },
+  { value: "deadline", label: "Soonest deadline" },
+  { value: "score", label: "Best match" },
 ];
 const PER_PAGE = 15;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
@@ -112,7 +112,7 @@ function ContractsPage() {
   const [minScore, setMinScore] = useState(0);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("score");
+  const [sortBy, setSortBy] = useState<SortKey>("posted_date");
   const [sortOpen, setSortOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -198,7 +198,7 @@ function ContractsPage() {
   });
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
-  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Best match";
+  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Most recent";
 
   function handleSearchSubmit(e: React.FormEvent) { e.preventDefault(); setSearch(searchInput); setPage(1); }
   function handlePageChange(np: number) { setPage(Math.max(1, Math.min(totalPages, np))); }
