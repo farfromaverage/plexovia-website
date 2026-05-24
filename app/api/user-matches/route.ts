@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   try {
     // ── Build the main query ────────────────────────────────────────────
     const selectClause =
-      'id, score, match_reasons, created_at, ' +
+      'id, score, match_reasons, created_at, next_steps, ' +
       'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
       'deadline, posted_date, set_aside)'
 
@@ -165,6 +165,7 @@ export async function GET(request: NextRequest) {
         },
         win_probability: winMap.get(row.id)?.probability ?? null,
         win_factors: winMap.get(row.id)?.factors ?? null,
+        next_steps: row.next_steps || [],
       }
     })
 
