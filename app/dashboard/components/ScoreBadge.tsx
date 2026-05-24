@@ -1,9 +1,8 @@
 interface Props {
   score: number
-  winProbability?: number | null
 }
 
-export default function ScoreBadge({ score, winProbability }: Props) {
+export default function ScoreBadge({ score }: Props) {
   const color = score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444"
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
@@ -16,11 +15,6 @@ export default function ScoreBadge({ score, winProbability }: Props) {
       }}>
         {score}
       </span>
-      {winProbability != null && (
-        <span style={{ fontSize: "0.6rem", color: "var(--app-faint)", fontWeight: 500 }}>
-          {winProbability}%
-        </span>
-      )}
     </div>
   )
 }
