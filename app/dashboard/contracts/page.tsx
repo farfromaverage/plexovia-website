@@ -433,13 +433,6 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
           </div>
         </div>
 
-        {/* Agency */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)" }}>
-            {c.agency}
-          </span>
-        </div>
-
         {/* Tags: NAICS + PSC + Fed Org + Set-Aside */}
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
           {c.naics && (
