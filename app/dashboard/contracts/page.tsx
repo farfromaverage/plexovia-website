@@ -493,7 +493,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
             </span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-            {Object.entries(c.winFactors).map(([key, value]) => {
+            {Object.entries(c.winFactors || {}).map(([key, value]) => {
               const labels: Record<string, string> = {
                 match_baseline: "Match quality", naics_density: "NAICS competition",
                 agency_density: "Agency activity", setaside: "Set-aside qualification",
