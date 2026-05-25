@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User,
@@ -10,7 +10,6 @@ import {
   HelpCircle, ChevronRight,
 } from "lucide-react";
 import { SupportModal } from "./SupportModal";
-import CommandPalette, { recordPageVisit } from "./CommandPalette";
 
 /* ─── Navigation Items ─────────────────────────────────────────── */
 const NAV_ITEMS = [
@@ -39,7 +38,6 @@ export default function DashboardNav() {
   const [signingOut,     setSigningOut]     = useState(false);
   const [trialDaysLeft,  setTrialDaysLeft]  = useState<number | null>(null);
   const [showSupport,    setShowSupport]    = useState(false);
-  const [cmdOpen,        setCmdOpen]        = useState(false);
   const [newMatchCount,  setNewMatchCount]  = useState(0);
 
   /* ── Fetch user data ── */
@@ -86,36 +84,12 @@ export default function DashboardNav() {
     }
   }, []);
 
-  /* ── Record current page visit for CommandPalette recents ── */
-  useEffect(() => {
-    recordPageVisit(pathname);
-  }, [pathname]);
-
-  /* ── ⌘K / Ctrl+K global keyboard shortcut ── */
-  const handleGlobalKey = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-      e.preventDefault();
-      setCmdOpen(prev => !prev);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleGlobalKey);
-    return () => window.removeEventListener("keydown", handleGlobalKey);
-  }, [handleGlobalKey]);
-
   /* ── Sign out ── */
   async function handleSignOut() {
     if (signingOut) return;
     setSigningOut(true);
     await supabase.auth.signOut();
     router.push("/");
-  }
-
-  /* ── Command palette action handler ── */
-  function handleCmdAction(id: string) {
-    if (id === "support") setShowSupport(true);
-    if (id === "signout") handleSignOut();
   }
 
   /* ── Active state helper ── */
@@ -218,13 +192,6 @@ export default function DashboardNav() {
           );
         })}
       </nav>
-
-      {/* ──────────── Command Palette ──────────── */}
-      <CommandPalette
-        isOpen={cmdOpen}
-        onClose={() => setCmdOpen(false)}
-        onAction={handleCmdAction}
-      />
 
       {/* ──────────── Support Modal ──────────── */}
       {userEmail && (
