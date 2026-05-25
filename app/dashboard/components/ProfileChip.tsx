@@ -45,7 +45,7 @@ export default function ProfileChip({ label, onRemove, variant = "accent", monos
     >
       {label}
       {subLabel && (
-        <span style={{ fontSize: "0.7rem", opacity: 0.7, fontFamily: "var(--font-inter, sans-serif)" }}>
+        <span style={{ fontSize: "0.7rem", opacity: 0.7, fontFamily: "var(--font-inter, sans-serif)", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {subLabel}
         </span>
       )}

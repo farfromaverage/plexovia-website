@@ -1251,7 +1251,7 @@
   border-color: var(--app-border-strong);
   color: var(--app-text);
 }
-.dash-profile-state-btn[data-active="true"] {
+.dash-profile-state-btn[aria-pressed="true"] {
   background: var(--accent-subtle);
   border-color: var(--accent-border);
   color: var(--accent);

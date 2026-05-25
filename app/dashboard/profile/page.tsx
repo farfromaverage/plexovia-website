@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, User } from "lucide-react";
+import { Save, CheckCircle, AlertCircle, Plus, RefreshCw, User } from "lucide-react";
 import ProfileChip from "../components/ProfileChip";
-import FedOrgSelector from "../components/FedOrgSelector";
+import FedOrgSelector, { type FedOrg } from "../components/FedOrgSelector";
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -93,7 +93,7 @@ export default function ProfilePage() {
   const [setAsides,     setSetAsides]     = useState<string[]>([]);
 
   const [fedOrgs,            setFedOrgs]            = useState<string[]>([]);
-  const [fedOrgList,         setFedOrgList]         = useState<{code: string; name: string}[]>([]);
+  const [fedOrgList,         setFedOrgList]         = useState<FedOrg[]>([]);
 
   const [originalNaicsCodes, setOriginalNaicsCodes] = useState<string[]>([]);
 
@@ -134,7 +134,7 @@ export default function ProfilePage() {
     fetch("/api/onboarding/first-login")
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.organizations) setFedOrgList(d.organizations); })
-      .catch(() => {});
+      .catch(e => console.warn("Failed to load federal org list:", e));
   }, []);
 
   // Warn before leaving if dirty
@@ -232,51 +232,82 @@ export default function ProfilePage() {
   /* ─── Save ────────────────────────────────────────────────── */
   async function handleSave() {
     if (!userId) return;
-    if (naicsInput.trim()) addNaics();
-    if (pscInput.trim()) addPsc();
-    if (keywordInput.trim()) addKeyword();
-    if (excludeInput.trim()) addExcludeKeyword();
-    
+
+    // Resolve pending inputs into local copies BEFORE state updates
+    let resolvedNaics = [...naicsCodes];
+    let resolvedPsc = [...pscCodes];
+    let resolvedKw = [...keywords];
+    let resolvedEx = [...excludeKeywords];
+
+    const pendingNaics = naicsInput.trim().replace(/\D/g, "");
+    if (pendingNaics && isValidNaics(pendingNaics) && !resolvedNaics.includes(pendingNaics)) {
+      resolvedNaics = [...resolvedNaics, pendingNaics];
+    }
+
+    const pendingPsc = pscInput.trim().toUpperCase();
+    if (pendingPsc && !resolvedPsc.includes(pendingPsc)) {
+      resolvedPsc = [...resolvedPsc, pendingPsc];
+    }
+
+    const pendingKw = keywordInput.trim().toLowerCase();
+    if (pendingKw && pendingKw.length <= 80 && !resolvedKw.includes(pendingKw) && resolvedKw.length < MAX_KEYWORDS) {
+      resolvedKw = [...resolvedKw, pendingKw];
+    }
+
+    const pendingEx = excludeInput.trim().toLowerCase();
+    if (pendingEx && pendingEx.length <= 80 && !resolvedEx.includes(pendingEx) && resolvedEx.length < MAX_KEYWORDS) {
+      resolvedEx = [...resolvedEx, pendingEx];
+    }
+
+    // Sync state with resolved values
+    setNaicsCodes(resolvedNaics);
+    setNaicsInput("");
+    setNaicsError(null);
+    setPscCodes(resolvedPsc);
+    setPscInput("");
+    setKeywords(resolvedKw);
+    setKeywordInput("");
+    setExcludeKeywords(resolvedEx);
+    setExcludeInput("");
+
     setSaving(true);
     setError(null);
-    
+
     const { error: err } = await supabase
       .from("profiles")
       .update({
-        naics_codes:              naicsCodes,
-        psc_codes:                pscCodes,
-        states:                   selectedStates,
-        keywords:                 keywords,
-        exclude_keywords:         excludeKeywords,
-        email_frequency:          frequency,
-        set_aside_preferences:    setAsides,
-        fed_org_prefs:            fedOrgs,
-        updated_at:               new Date().toISOString(),
+        naics_codes: resolvedNaics,
+        psc_codes: resolvedPsc,
+        states: selectedStates,
+        keywords: resolvedKw,
+        exclude_keywords: resolvedEx,
+        email_frequency: frequency,
+        set_aside_preferences: setAsides,
+        fed_org_prefs: fedOrgs,
       })
       .eq("id", userId);
+
     setSaving(false);
+
     if (err) {
-      setError("Failed to save. " + (err.message || "Please try again."));
+      setError("Failed to save your profile. Please try again.");
     } else {
       setSaved(true);
       setIsDirty(false);
       setTimeout(() => setSaved(false), 3500);
 
-      // Profile changes take effect on the next scheduled pipeline run
-      // (runs twice daily at 11:00 + 18:00 UTC). No on-demand rematch.
-
       // Trigger forecast cold start for any newly added NAICS codes
-      const newCodes = naicsCodes.filter(c => !originalNaicsCodes.includes(c));
+      const newCodes = resolvedNaics.filter(c => !originalNaicsCodes.includes(c) && /^\d{2,6}$/.test(c));
       if (newCodes.length > 0) {
         fetch("/api/forecasts/trigger", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ naics_codes: newCodes }),
-        }).catch(e => console.error("Forecast trigger error:", e));
+        }).catch(e => console.warn("Forecast trigger failed:", e));
       }
 
       // Update the baseline so subsequent saves only trigger for truly new codes
-      setOriginalNaicsCodes([...naicsCodes]);
+      setOriginalNaicsCodes([...resolvedNaics]);
     }
   }
 
@@ -413,7 +444,7 @@ export default function ProfilePage() {
 
       {/* Error alert */}
       {error && (
-        <div className="dash-alert-error" role="alert" style={{ marginBottom: "1rem" }}>
+        <div className="dash-alert-error" role="alert" style={{ marginBottom: "var(--space-4)" }}>
           <AlertCircle size={14} aria-hidden="true" />
           {error}
         </div>
@@ -421,7 +452,7 @@ export default function ProfilePage() {
 
       {/* Unsaved changes warning */}
       {isDirty && (
-        <div className="dash-alert-warning" style={{ marginBottom: "1rem", fontSize: "0.8rem" }}>
+        <div className="dash-alert-warning" style={{ marginBottom: "var(--space-4)", fontSize: "0.8rem" }}>
           <AlertCircle size={13} aria-hidden="true" />
           You have unsaved changes. Scroll down and click Save Changes.
         </div>
@@ -436,7 +467,7 @@ export default function ProfilePage() {
       >
         <div className="dash-profile-section-header">
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <span className="dash-profile-section-title">NAICS Codes</span>
+            <h2 className="dash-profile-section-title">NAICS Codes</h2>
             <span style={{
               fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
               color: "var(--danger)", letterSpacing: "0.06em",
@@ -469,14 +500,14 @@ export default function ProfilePage() {
             {naicsError}
           </p>
         )}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="dash-profile-chip-list">
           <AnimatePresence>
             {naicsCodes.map(code => (
               <ProfileChip key={code} label={code} onRemove={() => removeNaics(code)} variant="accent" monospace />
             ))}
           </AnimatePresence>
           {naicsCodes.length === 0 && (
-            <span style={{ color: "var(--app-faint)", fontSize: "0.8125rem", padding: "var(--space-2) 0" }}>No NAICS codes added yet. Required for contract matching.</span>
+            <span className="dash-profile-empty-hint">No NAICS codes added yet. Required for contract matching.</span>
           )}
         </div>
       </motion.div>
@@ -490,7 +521,7 @@ export default function ProfilePage() {
       >
         <div className="dash-profile-section-header">
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <span className="dash-profile-section-title">Product &amp; Service Codes (PSC)</span>
+            <h2 className="dash-profile-section-title">Product &amp; Service Codes (PSC)</h2>
             <span style={{
               fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
               color: "var(--app-muted)", letterSpacing: "0.06em",
@@ -503,25 +534,27 @@ export default function ProfilePage() {
           4-character Product Service Codes for higher match precision. Optional but recommended.
         </p>
         <div className="dash-profile-input-row">
+          <label htmlFor="psc-input" className="sr-only">Add PSC code</label>
           <input
-            type="text" value={pscInput}
+            id="psc-input" type="text" value={pscInput}
             onChange={e => setPscInput(e.target.value.toUpperCase())}
             onKeyDown={e => e.key === "Enter" && addPsc()}
             placeholder="e.g. D302"
             className="dash-input-lg"
+            maxLength={4}
           />
           <button className="dash-btn dash-btn-primary" onClick={addPsc} style={{ minHeight: 42 }}>
             <Plus size={14} aria-hidden="true" /> Add
           </button>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="dash-profile-chip-list">
           <AnimatePresence>
             {pscCodes.map(code => (
               <ProfileChip key={code} label={code} onRemove={() => removePsc(code)} variant="accent" monospace />
             ))}
           </AnimatePresence>
           {pscCodes.length === 0 && (
-            <span style={{ color: "var(--app-faint)", fontSize: "0.8125rem", padding: "var(--space-2) 0" }}>No PSC codes added yet. Optional precision filter.</span>
+            <span className="dash-profile-empty-hint">No PSC codes added yet. Optional precision filter.</span>
           )}
         </div>
       </motion.div>
@@ -535,7 +568,7 @@ export default function ProfilePage() {
       >
         <div className="dash-profile-section-header">
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <span className="dash-profile-section-title">Federal Organizations</span>
+            <h2 className="dash-profile-section-title">Federal Organizations</h2>
             <span style={{
               fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
               color: "var(--app-muted)", letterSpacing: "0.06em",
@@ -548,14 +581,14 @@ export default function ProfilePage() {
           Prioritize contracts from specific agencies. Matched agencies receive a score bonus.
         </p>
         {fedOrgs.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-3)" }}>
+          <div className="dash-profile-chip-list" style={{ marginBottom: "var(--space-3)" }}>
             <AnimatePresence>
               {fedOrgs.map((code) => {
                 const org = fedOrgList.find(o => o.code === code);
                 return (
                   <ProfileChip
                     key={code} label={code}
-                    subLabel={org ? org.name.substring(0, 20) : undefined}
+                    subLabel={org?.name}
                     onRemove={() => { setFedOrgs(prev => prev.filter(a => a !== code)); markDirty(); }}
                     variant="accent" monospace
                   />
@@ -574,7 +607,7 @@ export default function ProfilePage() {
           orgList={fedOrgList}
         />
         {fedOrgs.length === 0 && (
-          <span style={{ color: "var(--app-faint)", fontSize: "0.8125rem", padding: "var(--space-2) 0" }}>No agencies selected. All agencies treated equally.</span>
+          <span className="dash-profile-empty-hint">No agencies selected. All agencies treated equally.</span>
         )}
       </motion.div>
 
@@ -587,7 +620,7 @@ export default function ProfilePage() {
       >
         <div className="dash-profile-section-header">
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <span className="dash-profile-section-title">States to Monitor</span>
+            <h2 className="dash-profile-section-title">States to Monitor</h2>
             <span style={{
               fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
               color: "var(--danger)", letterSpacing: "0.06em",
@@ -607,7 +640,8 @@ export default function ProfilePage() {
               <button
                 key={st}
                 className="dash-profile-state-btn"
-                data-active={active ? "true" : undefined}
+                aria-pressed={active}
+                aria-label={`Toggle ${st}`}
                 onClick={() => toggleState(st)}
                 title={st}
               >{st}</button>
@@ -624,23 +658,25 @@ export default function ProfilePage() {
         transition={{ delay: 0.34, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
       >
         <div className="dash-profile-section-header">
-          <span className="dash-profile-section-title">Positive Keywords</span>
+          <h2 className="dash-profile-section-title">Positive Keywords</h2>
           <span className="dash-profile-section-badge">{keywords.length} / {MAX_KEYWORDS}</span>
         </div>
         <div className="dash-profile-input-row">
+          <label htmlFor="keyword-input" className="sr-only">Add keyword</label>
           <input
-            type="text" value={keywordInput}
+            id="keyword-input" type="text" value={keywordInput}
             onChange={e => setKeywordInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && addKeyword()}
             placeholder="e.g. cybersecurity"
             className="dash-input-lg"
+            maxLength={80}
             disabled={keywords.length >= MAX_KEYWORDS}
           />
           <button className="dash-btn dash-btn-primary" onClick={addKeyword} disabled={keywords.length >= MAX_KEYWORDS} style={{ minHeight: 42 }}>
             <Plus size={14} /> Add
           </button>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="dash-profile-chip-list">
           <AnimatePresence>
             {keywords.map(kw => (
               <ProfileChip key={kw} label={kw} onRemove={() => { setKeywords(k => k.filter(x => x !== kw)); markDirty(); }} variant="neutral" />
@@ -657,26 +693,28 @@ export default function ProfilePage() {
         transition={{ delay: 0.40, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
       >
         <div className="dash-profile-section-header">
-          <span className="dash-profile-section-title" style={{ color: "var(--danger)" }}>Negative Keywords</span>
+          <h2 className="dash-profile-section-title" style={{ color: "var(--danger)" }}>Negative Keywords</h2>
           <span className="dash-profile-section-badge">{excludeKeywords.length} / {MAX_KEYWORDS}</span>
         </div>
         <p className="dash-profile-section-desc">
           Exclude contracts containing these words to eliminate false positives.
         </p>
         <div className="dash-profile-input-row">
+          <label htmlFor="exclude-input" className="sr-only">Add exclude keyword</label>
           <input
-            type="text" value={excludeInput}
+            id="exclude-input" type="text" value={excludeInput}
             onChange={e => setExcludeInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && addExcludeKeyword()}
             placeholder="e.g. cleaning"
             className="dash-input-lg"
+            maxLength={80}
             disabled={excludeKeywords.length >= MAX_KEYWORDS}
           />
           <button className="dash-btn" onClick={addExcludeKeyword} disabled={excludeKeywords.length >= MAX_KEYWORDS} style={{ minHeight: 42 }}>
             <Plus size={14} /> Add
           </button>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="dash-profile-chip-list">
           <AnimatePresence>
             {excludeKeywords.map(kw => (
               <ProfileChip key={kw} label={kw} onRemove={() => { setExcludeKeywords(k => k.filter(x => x !== kw)); markDirty(); }} variant="danger" />
@@ -694,7 +732,7 @@ export default function ProfilePage() {
       >
         <div className="dash-profile-section-header">
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <span className="dash-profile-section-title">Set-Aside Preferences</span>
+            <h2 className="dash-profile-section-title">Set-Aside Preferences</h2>
             <span style={{
               fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
               color: "var(--app-muted)", letterSpacing: "0.06em",

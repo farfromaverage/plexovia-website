@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, CheckCircle } from "lucide-react";
 
-interface FedOrg {
+export interface FedOrg {
   code: string;
   name: string;
 }
