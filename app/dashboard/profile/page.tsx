@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw } from "lucide-react";
+import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, User } from "lucide-react";
 import ProfileChip from "../components/ProfileChip";
 import FedOrgSelector from "../components/FedOrgSelector";
 
@@ -288,8 +288,22 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <RefreshCw size={20} className="dash-spin" style={{ color: "var(--app-muted)" }} aria-label="Loading profile…" />
+      <div className="dash-main" style={{ maxWidth: 800 }}>
+        <div className="dash-page-header">
+          <div>
+            <div className="dash-skeleton" style={{ width: 180, height: 24, marginBottom: 8 }} />
+            <div className="dash-skeleton" style={{ width: 300, height: 14 }} />
+          </div>
+        </div>
+        <div className="dash-skeleton" style={{ width: "100%", height: 56, borderRadius: "var(--radius-md)", marginBottom: "var(--space-5)" }} />
+        <div className="dash-skeleton" style={{ width: "100%", height: 32, borderRadius: "var(--radius-md)", marginBottom: "var(--space-5)" }} />
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="dash-profile-section" style={{ opacity: 0.6 }}>
+            <div className="dash-skeleton" style={{ width: 200, height: 16, marginBottom: 12 }} />
+            <div className="dash-skeleton" style={{ width: "100%", height: 42, marginBottom: 8 }} />
+            <div className="dash-skeleton" style={{ width: "60%", height: 12 }} />
+          </div>
+        ))}
       </div>
     );
   }
@@ -305,25 +319,97 @@ export default function ProfilePage() {
             Configure your NAICS codes, PSC codes, states, keywords, and alert preferences.
           </p>
         </div>
+      </div>
 
-        {/* Completeness indicator */}
-        <div style={{ minWidth: 160, textAlign: "right" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: "0.72rem", color: "var(--app-muted)" }}>Profile completeness</span>
-            <span style={{ fontSize: "0.72rem", color: completenessColor, fontWeight: 700 }}>
-              {completeness.score}% · {completeness.label}
-            </span>
+      {/* Identity card */}
+      {userId && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+          style={{
+            background: "var(--app-surface)",
+            border: "1px solid var(--app-border)",
+            borderRadius: "var(--radius-md)",
+            padding: "var(--space-4) var(--space-5)",
+            marginBottom: "var(--space-5)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-4)",
+            flexWrap: "wrap",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: "var(--accent-subtle)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <User size={18} style={{ color: "var(--accent)" }} />
           </div>
-          <div className="dash-progress-track">
-            <div className="dash-progress-fill" style={{ width: `${completeness.score}%`, background: completenessColor }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: 0 }}>
+              {userEmail || "Account"}
+            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: "2px 0 0" }}>
+              Your matching preferences control which federal contracts you see.
+            </p>
           </div>
+        </motion.div>
+      )}
+
+      {/* Completeness banner */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.35 }}
+        style={{
+          background: completeness.score === 100
+            ? "var(--success-subtle)"
+            : completeness.score >= 60
+              ? "var(--accent-subtle)"
+              : "var(--danger-subtle)",
+          border: `1px solid ${
+            completeness.score === 100
+              ? "rgba(26, 119, 66, 0.2)"
+              : completeness.score >= 60
+                ? "var(--accent-border)"
+                : "rgba(194, 59, 59, 0.2)"
+          }`,
+          borderRadius: "var(--radius-md)",
+          padding: "var(--space-3) var(--space-5)",
+          marginBottom: "var(--space-5)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-3)",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{
+          width: 32, height: 32, borderRadius: "50%",
+          background: completenessColor,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <span style={{ color: "#FFF", fontSize: "0.625rem", fontWeight: 800 }}>
+            {completeness.score}%
+          </span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--app-text)", margin: 0 }}>
+            Profile {completeness.score === 100 ? "Complete" : completeness.score >= 60 ? "Good — almost there" : "Needs setup"}
+          </p>
           {completeness.missing.length > 0 && (
-            <p style={{ fontSize: "0.68rem", color: "var(--app-faint)", marginTop: "3px", textAlign: "right" }}>
-              Missing: {completeness.missing.join(", ")}
+            <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: "2px 0 0" }}>
+              Add: {completeness.missing.join(" · ")}
             </p>
           )}
         </div>
-      </div>
+        <div className="dash-progress-track" style={{ width: 120, flexShrink: 0 }}>
+          <div className="dash-progress-fill" style={{ width: `${completeness.score}%`, background: completenessColor }} />
+        </div>
+      </motion.div>
 
       {/* Error alert */}
       {error && (
@@ -341,39 +427,45 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* NAICS codes */}
-      <div className="dash-section">
-        <div className="dash-section-h">
-          <span>NAICS Codes</span>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
-            {naicsCodes.length} added
-          </span>
-        </div>
-        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Enter 2 to 6 digit NAICS codes that describe your business. The engine matches contracts using these codes.
-        </p>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <label htmlFor="naics-input" className="sr-only">Add NAICS code</label>
-            <input
-              id="naics-input"
-              type="text"
-              inputMode="numeric"
-              value={naicsInput}
-              onChange={e => { setNaicsInput(e.target.value.replace(/\D/g, "").slice(0, 6)); setNaicsError(null); }}
-              onKeyDown={e => e.key === "Enter" && addNaics()}
-              placeholder="e.g. 541512"
-              className="dash-input-lg"
-              maxLength={6}
-              aria-describedby={naicsError ? "naics-error" : undefined}
-            />
+      {/* NAICS Codes */}
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.10, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span className="dash-profile-section-title">NAICS Codes</span>
+            <span style={{
+              fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
+              color: "var(--danger)", letterSpacing: "0.06em",
+              background: "var(--danger-subtle)", padding: "2px 6px", borderRadius: 4,
+            }}>Required</span>
           </div>
-          <button className="dash-btn dash-btn-primary" onClick={addNaics} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
-            <Plus size={13} aria-hidden="true" /> Add
+          <span className="dash-profile-section-badge">{naicsCodes.length} added</span>
+        </div>
+        <p className="dash-profile-section-desc">
+          Enter 2 to 6 digit NAICS codes that describe your business. These determine which contracts you see.
+        </p>
+        <div className="dash-profile-input-row">
+          <label htmlFor="naics-input" className="sr-only">Add NAICS code</label>
+          <input
+            id="naics-input" type="text" inputMode="numeric"
+            value={naicsInput}
+            onChange={e => { setNaicsInput(e.target.value.replace(/\D/g, "").slice(0, 6)); setNaicsError(null); }}
+            onKeyDown={e => e.key === "Enter" && addNaics()}
+            placeholder="e.g. 541512"
+            className="dash-input-lg"
+            maxLength={6}
+            aria-describedby={naicsError ? "naics-error" : undefined}
+          />
+          <button className="dash-btn dash-btn-primary" onClick={addNaics} style={{ minHeight: 42 }}>
+            <Plus size={14} aria-hidden="true" /> Add
           </button>
         </div>
         {naicsError && (
-          <p id="naics-error" role="alert" style={{ fontSize: "0.78rem", color: "var(--danger)", margin: "0 0 0.5rem" }}>
+          <p id="naics-error" role="alert" style={{ fontSize: "0.78rem", color: "var(--danger)", margin: "0 0 var(--space-2)" }}>
             {naicsError}
           </p>
         )}
@@ -383,34 +475,43 @@ export default function ProfilePage() {
               <ProfileChip key={code} label={code} onRemove={() => removeNaics(code)} variant="accent" monospace />
             ))}
           </AnimatePresence>
-          {naicsCodes.length === 0 && <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No NAICS codes added yet.</span>}
+          {naicsCodes.length === 0 && (
+            <span style={{ color: "var(--app-faint)", fontSize: "0.8125rem", padding: "var(--space-2) 0" }}>No NAICS codes added yet. Required for contract matching.</span>
+          )}
         </div>
-      </div>
+      </motion.div>
 
       {/* PSC Codes */}
-      <div className="dash-section">
-        <div className="dash-section-h">
-          <span>Product &amp; Service Codes (PSC)</span>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
-            {pscCodes.length} added
-          </span>
-        </div>
-        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Enter 4-character Product Service Codes (e.g. D302, 1005). Optional, but highly recommended for precision.
-        </p>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <input
-              type="text"
-              value={pscInput}
-              onChange={e => setPscInput(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === "Enter" && addPsc()}
-              placeholder="e.g. D302"
-              className="dash-input-lg uppercase"
-            />
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.16, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span className="dash-profile-section-title">Product &amp; Service Codes (PSC)</span>
+            <span style={{
+              fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
+              color: "var(--app-muted)", letterSpacing: "0.06em",
+              background: "var(--app-surface-2)", padding: "2px 6px", borderRadius: 4,
+            }}>Recommended</span>
           </div>
-          <button className="dash-btn dash-btn-primary" onClick={addPsc} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
-            <Plus size={13} aria-hidden="true" /> Add
+          <span className="dash-profile-section-badge">{pscCodes.length} added</span>
+        </div>
+        <p className="dash-profile-section-desc">
+          4-character Product Service Codes for higher match precision. Optional but recommended.
+        </p>
+        <div className="dash-profile-input-row">
+          <input
+            type="text" value={pscInput}
+            onChange={e => setPscInput(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === "Enter" && addPsc()}
+            placeholder="e.g. D302"
+            className="dash-input-lg"
+          />
+          <button className="dash-btn dash-btn-primary" onClick={addPsc} style={{ minHeight: 42 }}>
+            <Plus size={14} aria-hidden="true" /> Add
           </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -419,104 +520,124 @@ export default function ProfilePage() {
               <ProfileChip key={code} label={code} onRemove={() => removePsc(code)} variant="accent" monospace />
             ))}
           </AnimatePresence>
-          {pscCodes.length === 0 && <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No PSC codes added yet.</span>}
+          {pscCodes.length === 0 && (
+            <span style={{ color: "var(--app-faint)", fontSize: "0.8125rem", padding: "var(--space-2) 0" }}>No PSC codes added yet. Optional precision filter.</span>
+          )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Federal Organizations */}
-      <div className="dash-section">
-        <div className="dash-section-h">
-          <span>Federal Organizations</span>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
-            {fedOrgs.length} selected
-          </span>
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.22, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span className="dash-profile-section-title">Federal Organizations</span>
+            <span style={{
+              fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
+              color: "var(--app-muted)", letterSpacing: "0.06em",
+              background: "var(--app-surface-2)", padding: "2px 6px", borderRadius: 4,
+            }}>Recommended</span>
+          </div>
+          <span className="dash-profile-section-badge">{fedOrgs.length} selected</span>
         </div>
-        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Select federal agencies you want to prioritize. Contracts from these agencies receive a match score boost.
+        <p className="dash-profile-section-desc">
+          Prioritize contracts from specific agencies. Matched agencies receive a score bonus.
         </p>
-
-        {/* Selected Orgs */}
         {fedOrgs.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "0.75rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-3)" }}>
             <AnimatePresence>
               {fedOrgs.map((code) => {
                 const org = fedOrgList.find(o => o.code === code);
                 return (
                   <ProfileChip
-                    key={code}
-                    label={code}
+                    key={code} label={code}
                     subLabel={org ? org.name.substring(0, 20) : undefined}
                     onRemove={() => { setFedOrgs(prev => prev.filter(a => a !== code)); markDirty(); }}
-                    variant="accent"
-                    monospace
+                    variant="accent" monospace
                   />
                 );
               })}
             </AnimatePresence>
           </div>
         )}
-
-        {/* Search + Dropdown */}
         <FedOrgSelector
           selected={fedOrgs}
           onToggle={(code) => {
-            if (fedOrgs.includes(code)) {
-              setFedOrgs(prev => prev.filter(c => c !== code));
-            } else {
-              setFedOrgs(prev => [...prev, code]);
-            }
+            if (fedOrgs.includes(code)) setFedOrgs(prev => prev.filter(c => c !== code));
+            else setFedOrgs(prev => [...prev, code]);
             markDirty();
           }}
           orgList={fedOrgList}
         />
-
-        {fedOrgs.length === 0 && <p style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No agencies selected. All agencies will be treated equally.</p>}
-      </div>
+        {fedOrgs.length === 0 && (
+          <span style={{ color: "var(--app-faint)", fontSize: "0.8125rem", padding: "var(--space-2) 0" }}>No agencies selected. All agencies treated equally.</span>
+        )}
+      </motion.div>
 
       {/* States */}
-      <div className="dash-section">
-        <div className="dash-section-h">
-          <span>States to Monitor</span>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>
-              {selectedStates.length} / {US_STATES.length} selected
-            </span>
-            <button className="dash-pill" onClick={() => { setSelectedStates(US_STATES as unknown as string[]); markDirty(); }} style={{ fontSize: "0.68rem", padding: "2px 8px" }}>All</button>
-            <button className="dash-pill" onClick={() => { setSelectedStates([]); markDirty(); }} style={{ fontSize: "0.68rem", padding: "2px 8px" }}>Clear</button>
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span className="dash-profile-section-title">States to Monitor</span>
+            <span style={{
+              fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
+              color: "var(--danger)", letterSpacing: "0.06em",
+              background: "var(--danger-subtle)", padding: "2px 6px", borderRadius: 4,
+            }}>Required</span>
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <span className="dash-profile-section-badge">{selectedStates.length} / {US_STATES.length}</span>
+            <button className="dash-pill" onClick={() => { setSelectedStates([...US_STATES]); markDirty(); }} style={{ fontSize: "0.6875rem" }}>Select All</button>
+            <button className="dash-pill" onClick={() => { setSelectedStates([]); markDirty(); }} style={{ fontSize: "0.6875rem" }}>Clear</button>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(55px, 1fr))", gap: "0.375rem" }}>
+        <div className="dash-profile-state-grid">
           {US_STATES.map(st => {
             const active = selectedStates.includes(st);
             return (
               <button
                 key={st}
+                className="dash-profile-state-btn"
+                data-active={active ? "true" : undefined}
                 onClick={() => toggleState(st)}
-                style={{
-                  padding: "5px 4px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: active ? 700 : 400,
-                  cursor: "pointer", border: `1px solid ${active ? "var(--accent-border)" : "var(--app-border)"}`,
-                  background: active ? "var(--accent-subtle)" : "var(--app-surface-2)", color: active ? "var(--accent)" : "var(--app-muted)",
-                }}
-              >
-                {st}
-              </button>
+                title={st}
+              >{st}</button>
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {/* Positive Keywords */}
-      <div className="dash-section">
-        <div className="dash-section-h">
-          <span>Positive Keywords</span>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>{keywords.length} / {MAX_KEYWORDS}</span>
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.34, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <span className="dash-profile-section-title">Positive Keywords</span>
+          <span className="dash-profile-section-badge">{keywords.length} / {MAX_KEYWORDS}</span>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <input type="text" value={keywordInput} onChange={e => setKeywordInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addKeyword()} placeholder="e.g. cybersecurity" className="dash-input-lg" disabled={keywords.length >= MAX_KEYWORDS} />
-          </div>
-          <button className="dash-btn dash-btn-primary" onClick={addKeyword} disabled={keywords.length >= MAX_KEYWORDS} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
-            <Plus size={13} /> Add
+        <div className="dash-profile-input-row">
+          <input
+            type="text" value={keywordInput}
+            onChange={e => setKeywordInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && addKeyword()}
+            placeholder="e.g. cybersecurity"
+            className="dash-input-lg"
+            disabled={keywords.length >= MAX_KEYWORDS}
+          />
+          <button className="dash-btn dash-btn-primary" onClick={addKeyword} disabled={keywords.length >= MAX_KEYWORDS} style={{ minHeight: 42 }}>
+            <Plus size={14} /> Add
           </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -526,23 +647,33 @@ export default function ProfilePage() {
             ))}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
       {/* Negative Keywords */}
-      <div className="dash-section">
-        <div className="dash-section-h">
-          <span style={{ color: "var(--danger)" }}>Negative Keywords</span>
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", fontWeight: 400 }}>{excludeKeywords.length} / {MAX_KEYWORDS}</span>
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.40, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <span className="dash-profile-section-title" style={{ color: "var(--danger)" }}>Negative Keywords</span>
+          <span className="dash-profile-section-badge">{excludeKeywords.length} / {MAX_KEYWORDS}</span>
         </div>
-        <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Exclude contracts containing these words (e.g. "hardware"). Highly recommended to eliminate false positives.
+        <p className="dash-profile-section-desc">
+          Exclude contracts containing these words to eliminate false positives.
         </p>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <input type="text" value={excludeInput} onChange={e => setExcludeInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addExcludeKeyword()} placeholder="e.g. cleaning" className="dash-input-lg" disabled={excludeKeywords.length >= MAX_KEYWORDS} />
-          </div>
-          <button className="dash-btn" onClick={addExcludeKeyword} disabled={excludeKeywords.length >= MAX_KEYWORDS} style={{ padding: "0 1rem", minHeight: 42, gap: 4 }}>
-            <Plus size={13} /> Add
+        <div className="dash-profile-input-row">
+          <input
+            type="text" value={excludeInput}
+            onChange={e => setExcludeInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && addExcludeKeyword()}
+            placeholder="e.g. cleaning"
+            className="dash-input-lg"
+            disabled={excludeKeywords.length >= MAX_KEYWORDS}
+          />
+          <button className="dash-btn" onClick={addExcludeKeyword} disabled={excludeKeywords.length >= MAX_KEYWORDS} style={{ minHeight: 42 }}>
+            <Plus size={14} /> Add
           </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -552,12 +683,26 @@ export default function ProfilePage() {
             ))}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Set-aside preferences */}
-      <div className="dash-section">
-        <h2 className="dash-section-h">Set-Aside Preferences</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+      {/* Set-Aside Preferences */}
+      <motion.div
+        className="dash-profile-section"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.46, duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+      >
+        <div className="dash-profile-section-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span className="dash-profile-section-title">Set-Aside Preferences</span>
+            <span style={{
+              fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase",
+              color: "var(--app-muted)", letterSpacing: "0.06em",
+              background: "var(--app-surface-2)", padding: "2px 6px", borderRadius: 4,
+            }}>Recommended</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
           {SET_ASIDES.map(({ value, label }) => {
             const active = setAsides.includes(value);
             return (
@@ -565,33 +710,45 @@ export default function ProfilePage() {
                 key={value}
                 onClick={() => toggleSetAside(value)}
                 className="dash-pill"
-                style={{
-                  fontSize: "0.8rem", padding: "6px 12px",
-                  background: active ? "var(--accent-subtle)" : undefined,
-                  borderColor: active ? "var(--accent-border)" : undefined,
-                  color: active ? "var(--accent)" : undefined, fontWeight: active ? 600 : undefined,
-                }}
-              >
-                {label}
-              </button>
+                aria-pressed={active}
+                style={{ fontSize: "0.8rem", padding: "6px 14px" }}
+              >{label}</button>
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {/* Save */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", paddingBottom: "1.5rem" }}>
-        <button
-          className="dash-btn dash-btn-primary"
+      <div className="dash-profile-save-bar">
+        <motion.button
+          className="dash-profile-save-btn"
           onClick={handleSave}
-          disabled={saving || (!isDirty && !saved)}
-          style={{ padding: "0.75rem 2rem", minHeight: 44, fontSize: "0.9375rem", gap: 6 }}
+          disabled={saving}
+          whileTap={{ scale: 0.97 }}
         >
-          {saving ? <><RefreshCw size={14} className="dash-spin" /> Saving…</> : saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Changes</>}
-        </button>
-        {saved && (
-          <span style={{ color: "var(--success)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
-            <CheckCircle size={14} /> Profile saved. Updated matches will appear on the next scheduled check.
+          {saving ? (
+            <><RefreshCw size={16} className="dash-spin" /> Saving…</>
+          ) : saved ? (
+            <><CheckCircle size={16} /> Saved</>
+          ) : (
+            <><Save size={16} /> Save Changes</>
+          )}
+        </motion.button>
+        <AnimatePresence>
+          {saved && (
+            <motion.span
+              className="dash-profile-save-success"
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+            >
+              Profile saved. Changes take effect at the next scheduled pipeline run (daily at 11:00 + 18:00 UTC).
+            </motion.span>
+          )}
+        </AnimatePresence>
+        {isDirty && !saved && (
+          <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
+            You have unsaved changes.
           </span>
         )}
       </div>
