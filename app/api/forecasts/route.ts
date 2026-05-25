@@ -170,7 +170,7 @@ export async function GET() {
     }
 
     // 5. Query backtest accuracy for transparency (non-critical — catch gracefully if table doesn't exist yet)
-    let backtestLookup = new Map<string, { totalMape: number; count: number }>();
+    const backtestLookup = new Map<string, { totalMape: number; count: number }>();
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 90);
