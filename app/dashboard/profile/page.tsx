@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, Search } from "lucide-react";
+import ProfileChip from "../components/ProfileChip";
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -445,15 +447,12 @@ export default function ProfilePage() {
             {naicsError}
           </p>
         )}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list">
-          {naicsCodes.map(code => (
-            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--accent-subtle)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
-              {code}
-              <button onClick={() => removeNaics(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}>
-                <X size={11} aria-hidden="true" />
-              </button>
-            </span>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <AnimatePresence>
+            {naicsCodes.map(code => (
+              <ProfileChip key={code} label={code} onRemove={() => removeNaics(code)} variant="accent" monospace />
+            ))}
+          </AnimatePresence>
           {naicsCodes.length === 0 && <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No NAICS codes added yet.</span>}
         </div>
       </div>
@@ -484,15 +483,12 @@ export default function ProfilePage() {
             <Plus size={13} aria-hidden="true" /> Add
           </button>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} role="list">
-          {pscCodes.map(code => (
-            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--accent-subtle)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
-              {code}
-              <button onClick={() => removePsc(code)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-muted)", padding: 0, display: "flex", lineHeight: 1 }}>
-                <X size={11} aria-hidden="true" />
-              </button>
-            </span>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <AnimatePresence>
+            {pscCodes.map(code => (
+              <ProfileChip key={code} label={code} onRemove={() => removePsc(code)} variant="accent" monospace />
+            ))}
+          </AnimatePresence>
           {pscCodes.length === 0 && <span style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No PSC codes added yet.</span>}
         </div>
       </div>
@@ -512,18 +508,21 @@ export default function ProfilePage() {
         {/* Selected Orgs */}
         {fedOrgs.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "0.75rem" }}>
-            {fedOrgs.map((code) => {
-              const org = fedOrgList.find(o => o.code === code);
-              return (
-                <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--accent-subtle)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", color: "var(--accent)" }}>
-                  {code}
-                  {org && <span style={{ fontSize: "0.7rem", color: "var(--accent)", opacity: 0.7, fontFamily: "var(--font-sans, sans-serif)" }}>{org.name.substring(0, 20)}{org.name.length > 20 ? "…" : ""}</span>}
-                  <button onClick={() => { setFedOrgs(prev => prev.filter(a => a !== code)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: 0, display: "flex", lineHeight: 1 }}>
-                    <X size={11} aria-hidden="true" />
-                  </button>
-                </span>
-              );
-            })}
+            <AnimatePresence>
+              {fedOrgs.map((code) => {
+                const org = fedOrgList.find(o => o.code === code);
+                return (
+                  <ProfileChip
+                    key={code}
+                    label={code}
+                    subLabel={org ? org.name.substring(0, 20) : undefined}
+                    onRemove={() => { setFedOrgs(prev => prev.filter(a => a !== code)); markDirty(); }}
+                    variant="accent"
+                    monospace
+                  />
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
 
@@ -580,12 +579,11 @@ export default function ProfilePage() {
           </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {keywords.map(kw => (
-            <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", color: "var(--app-text)" }}>
-              {kw}
-              <button onClick={() => { setKeywords(k => k.filter(x => x !== kw)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--app-faint)" }}><X size={11} /></button>
-            </span>
-          ))}
+          <AnimatePresence>
+            {keywords.map(kw => (
+              <ProfileChip key={kw} label={kw} onRemove={() => { setKeywords(k => k.filter(x => x !== kw)); markDirty(); }} variant="neutral" />
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -607,12 +605,11 @@ export default function ProfilePage() {
           </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {excludeKeywords.map(kw => (
-            <span key={kw} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--danger-subtle)", border: "1px solid rgba(194,59,59,0.2)", borderRadius: 999, padding: "3px 10px", fontSize: "0.8rem", color: "var(--danger)" }}>
-              {kw}
-              <button onClick={() => { setExcludeKeywords(k => k.filter(x => x !== kw)); markDirty(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)" }}><X size={11} /></button>
-            </span>
-          ))}
+          <AnimatePresence>
+            {excludeKeywords.map(kw => (
+              <ProfileChip key={kw} label={kw} onRemove={() => { setExcludeKeywords(k => k.filter(x => x !== kw)); markDirty(); }} variant="danger" />
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
