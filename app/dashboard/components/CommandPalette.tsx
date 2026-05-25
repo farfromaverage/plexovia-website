@@ -96,6 +96,16 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   }, [items.length]);
 
   /* Keyboard handler */
+  const executeItem = useCallback((item: Item) => {
+    if (item.type === "page") {
+      recordPageVisit(item.href);
+      router.push(item.href);
+    } else {
+      onAction(item.id);
+    }
+    onClose();
+  }, [router, onAction, onClose]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -109,17 +119,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     } else if (e.key === "Escape") {
       onClose();
     }
-  }, [items, selected, onClose]);
-
-  function executeItem(item: Item) {
-    if (item.type === "page") {
-      recordPageVisit(item.href);
-      router.push(item.href);
-    } else {
-      onAction(item.id);
-    }
-    onClose();
-  }
+  }, [items, selected, onClose, executeItem]);
 
   if (!isOpen) return null;
 
