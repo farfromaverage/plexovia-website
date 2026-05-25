@@ -169,26 +169,30 @@ export async function GET() {
       }
     }
 
-    // 5. Query backtest accuracy for transparency
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 90);
-    const backtestDateStr = thirtyDaysAgo.toISOString().split("T")[0];
+    // 5. Query backtest accuracy for transparency (non-critical — catch gracefully if table doesn't exist yet)
+    let backtestLookup = new Map<string, { totalMape: number; count: number }>();
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 90);
+      const backtestDateStr = thirtyDaysAgo.toISOString().split("T")[0];
 
-    const { data: backtestRows } = await supabase
-      .from("backtest_history")
-      .select("naics_code, forecast_type, mape")
-      .in("naics_code", forecastNaics)
-      .gte("validation_date", backtestDateStr);
+      const { data: backtestRows } = await supabase
+        .from("backtest_history")
+        .select("naics_code, forecast_type, mape")
+        .in("naics_code", forecastNaics)
+        .gte("validation_date", backtestDateStr);
 
-    const backtestLookup = new Map<string, { totalMape: number; count: number }>();
-    if (backtestRows) {
-      for (const b of backtestRows) {
-        const key = `${b.naics_code}|${b.forecast_type}`;
-        const entry = backtestLookup.get(key) || { totalMape: 0, count: 0 };
-        entry.totalMape += Number(b.mape) || 0;
-        entry.count += 1;
-        backtestLookup.set(key, entry);
+      if (backtestRows) {
+        for (const b of backtestRows) {
+          const key = `${b.naics_code}|${b.forecast_type}`;
+          const entry = backtestLookup.get(key) || { totalMape: 0, count: 0 };
+          entry.totalMape += Number(b.mape) || 0;
+          entry.count += 1;
+          backtestLookup.set(key, entry);
+        }
       }
+    } catch (backtestErr) {
+      console.warn("Backtest query failed (table may not exist yet):", backtestErr);
     }
 
     // 6. Transform into ForecastCard shape
