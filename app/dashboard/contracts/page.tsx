@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, ExternalLink, FileText, MapPin, Shield, Star,
   ChevronLeft, ChevronRight, RefreshCw,
@@ -43,23 +44,37 @@ function fmtDeadline(d: string | null): { label: string; days: number | null } {
   return { label: `${days} days left`, days };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRow(m: any): ContractRow {
-  const c = m.contract || {};
-  const reasons = m.reasons || [];
-  const naicsR = reasons.find((r: string) => r.startsWith("naics:"));
+interface ContractPayload {
+  title?: string; agency?: string; naics_code?: string;
+  psc_code?: string; fed_org_code?: string; state?: string;
+  posted_date?: string; deadline?: string; set_aside?: string;
+  url?: string;
+}
+
+interface MatchRow {
+  match_id: string;
+  contract: ContractPayload | null;
+  reasons: string[];
+  score: number;
+  matched_at: string | null;
+}
+
+function mapRow(m: MatchRow): ContractRow {
+  const c = m.contract ?? {};
+  const reasons = m.reasons ?? [];
+  const naicsR = reasons.find((r) => r.startsWith("naics:"));
   const kwR = reasons.find((r: string) => r.startsWith("keyword:"));
   const matchedBy = naicsR ? "naics" : "keyword";
   const matchLabel = naicsR
     ? `NAICS ${naicsR.replace("naics:", "")}`
     : kwR ? `Keyword: ${kwR.replace("keyword:", "")}` : "Keyword match";
-  const dl = fmtDeadline(c.deadline);
+  const dl = fmtDeadline(c.deadline ?? null);
   return {
     id: m.match_id, title: c.title || "Untitled",
     agency: c.agency || "Federal Agency", naics: c.naics_code || "",
     psc: c.psc_code || "", fedOrg: c.fed_org_code || "",
     state: c.state || "",
-    posted: fmtDate(c.posted_date), postedRaw: c.posted_date || null,
+    posted: fmtDate(c.posted_date ?? null), postedRaw: c.posted_date || null,
     deadline: dl.label, deadlineRaw: c.deadline || null, deadlineDays: dl.days,
     score: m.score, setAside: c.set_aside || "",
     matchedBy, matchLabel, url: c.url || null,
@@ -74,7 +89,7 @@ const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 /* ─── Page ────────────────────────────────────────────────────────── */
 export default function ContractsPageWrapper() {
   return (
-    <Suspense fallback={<div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}><div style={{ width: 28, height: 28, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /></div>}>
+    <Suspense fallback={<div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}><div className="dash-spin" style={{ width: 28, height: 28, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%" }} /></div>}>
       <ContractsPage />
     </Suspense>
   );
@@ -148,7 +163,14 @@ function ContractsPage() {
     finally { if (!isColdStart) setLoading(false); }
   }, [page, isColdStart]);
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [page, load]);
+
+  // Cleanup undo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   /* ── Status-filtered contracts ── */
   const filteredContracts = contracts.filter(c => {
@@ -191,7 +213,7 @@ function ContractsPage() {
     finally { setExporting(false); }
   }
 
-  const allIds = contracts.map(c => c.id);
+  const allIds = useMemo(() => contracts.map(c => c.id), [contracts]);
 
   return (
     <div className="dash-main dash-fade-in">
@@ -205,11 +227,11 @@ function ContractsPage() {
               : "Contracts are matched twice daily — set up your profile to start"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
           {contracts.length > 0 && (
             <div ref={exportRef} style={{ position: "relative" }}>
               <button className="dash-btn" onClick={() => setExportOpen(v => !v)} disabled={exporting} aria-haspopup="listbox" aria-expanded={exportOpen} aria-label="Export contracts as CSV">
-                {exporting ? <RefreshCw size={13} className="spin" aria-hidden="true" /> : <Download size={13} aria-hidden="true" />}
+                {exporting ? <RefreshCw size={13} className="dash-spin" aria-hidden="true" /> : <Download size={13} aria-hidden="true" />}
                 {exporting ? "Exporting…" : "Export CSV"}
               </button>
               {exportOpen && (
@@ -224,13 +246,13 @@ function ContractsPage() {
             </div>
           )}
           <button className="dash-btn" onClick={load} aria-label="Refresh contract matches" disabled={loading}>
-            <RefreshCw size={13} aria-hidden="true" className={loading ? "spin" : ""} /> Refresh
+            <RefreshCw size={13} aria-hidden="true" className={loading ? "dash-spin" : ""} /> Refresh
           </button>
         </div>
       </div>
 
       {/* Status filter tabs */}
-      <div style={{ display: "flex", gap: "var(--space-4)", marginBottom: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ marginBottom: "var(--space-5)" }}>
         <div className="dash-status-tabs" role="tablist" aria-label="Contract status filter">
           {([
             { key: "all", label: "All" },
@@ -265,11 +287,19 @@ function ContractsPage() {
         borderRadius: "var(--radius-md)",
         boxShadow: "var(--shadow-sm)",
         overflow: "hidden",
-        marginBottom: "1rem",
+        marginBottom: "var(--space-5)",
       }}>
 
         {isColdStart ? (
-          <EmptyState icon={<RefreshCw size={28} className="spin" style={{ color: "var(--accent)" }} />} title="Matching contracts to your profile now" message={`Searching NAICS codes: ${naicsCodes.join(", ")}\nThis takes 2–5 minutes on first login.\nThis page updates automatically — no refresh needed.`} />
+          <EmptyState
+            icon={<RefreshCw size={28} className="dash-spin" style={{ color: "var(--accent)" }} />}
+            title="Matching contracts to your profile now"
+            message={
+              naicsCodes.length > 0
+                ? `Searching NAICS codes: ${naicsCodes.join(", ")}\n\nThis takes 2–5 minutes on first login.\nThis page updates automatically — no refresh needed.`
+                : "This takes 2–5 minutes on first login.\n\nThis page updates automatically — no refresh needed."
+            }
+          />
         ) : loading ? (
           <SkeletonRows rows={6} />
         ) : error ? (
@@ -281,41 +311,54 @@ function ContractsPage() {
             message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
           />
         ) : (
-          filteredContracts.map(c => (
-            <ContractRowUI
-              key={c.id} c={c}
-              isBookmarked={cs.isBookmarked(c.id)}
-              isViewed={cs.isViewed(c.id)}
-              onToggleBookmark={() => cs.toggleBookmark(c.id)}
-              onDismiss={() => handleDismiss(c)}
-              onView={() => cs.markViewed(c.id)}
-            />
-          ))
+          <AnimatePresence initial={false}>
+            {filteredContracts.map((c, i) => (
+              <ContractRowUI
+                key={c.id} c={c} index={i}
+                isBookmarked={cs.isBookmarked(c.id)}
+                isViewed={cs.isViewed(c.id)}
+                onToggleBookmark={() => cs.toggleBookmark(c.id)}
+                onDismiss={() => handleDismiss(c)}
+                onView={() => cs.markViewed(c.id)}
+              />
+            ))}
+          </AnimatePresence>
         )}
       </div>
 
       {/* Pagination */}
       {!loading && !isColdStart && totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-          <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>Page {page} of {totalPages} · {total.toLocaleString()} total matches</span>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
+          <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
+            Page {page} of {totalPages} · {total.toLocaleString()} total matches
+          </span>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <button className="dash-btn" onClick={() => handlePageChange(page - 1)} disabled={page === 1} aria-label="Previous page">
-              <ChevronLeft size={13} aria-hidden="true" /> Prev
+              <ChevronLeft size={14} aria-hidden="true" /> Prev
             </button>
             <button className="dash-btn" onClick={() => handlePageChange(page + 1)} disabled={page === totalPages} aria-label="Next page">
-              Next <ChevronRight size={13} aria-hidden="true" />
+              Next <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
         </div>
       )}
 
       {/* Undo toast */}
-      {undoId && (
-        <div className="dash-undo-toast" role="alert">
-          <span>Contract dismissed</span>
-          <button onClick={handleUndo}>Undo</button>
-        </div>
-      )}
+      <AnimatePresence>
+        {undoId && (
+          <motion.div
+            className="dash-undo-toast"
+            role="alert"
+            initial={{ opacity: 0, y: 12, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 12, x: "-50%" }}
+            transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
+          >
+            <span>Contract dismissed</span>
+            <button onClick={handleUndo}>Undo</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -326,9 +369,10 @@ function ContractsPage() {
 }
 
 /* ─── Row Component ───────────────────────────────────────────────── */
-function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss, onView }: {
+function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss, onView, index }: {
   c: ContractRow; isBookmarked: boolean; isViewed: boolean;
   onToggleBookmark: () => void; onDismiss: () => void; onView: () => void;
+  index: number;
 }) {
   const deadlineUrgency =
     c.deadlineDays === null ? "none"
@@ -338,108 +382,91 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
     : "normal";
 
   return (
-    <div
+    <motion.div
       className="dash-contract-card"
-      style={{
-        opacity: 1,
-      }}
       onMouseEnter={onView}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 50, transition: { duration: 0.2, ease: [0.25, 1, 0.5, 1] } }}
+      transition={{
+        duration: 0.35,
+        delay: index * 0.04,
+        ease: [0.25, 1, 0.5, 1],
+      }}
     >
       {/* Score column */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+      <div className="dash-contract-card-left">
         {!isViewed && <span className="dash-viewed-dot" title="New" />}
         <ScoreBadge score={c.score} />
       </div>
 
       {/* Content column */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-          <p style={{
-            fontWeight: 600, fontSize: "0.9rem", color: "var(--app-text)",
-            margin: 0, lineHeight: 1.35, overflow: "hidden",
-            textOverflow: "ellipsis", whiteSpace: "nowrap"
-          }}>
-            {c.title}
-          </p>
-          {/* Deadline badge — desktop */}
-          <div className="dash-hide-mobile" style={{ flexShrink: 0 }}>
-            <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} days={c.deadlineDays} />
-          </div>
-        </div>
+      <div className="dash-contract-card-center">
+        <p className="dash-contract-card-title">{c.title}</p>
 
-        {/* Tags: NAICS + PSC + Fed Org + Set-Aside */}
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="dash-contract-card-tags">
           {c.naics && (
-            <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}>
-              NAICS {c.naics}
-            </span>
+            <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}>NAICS {c.naics}</span>
           )}
           {c.psc && (
-            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>
-              PSC {c.psc}
-            </span>
+            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>PSC {c.psc}</span>
           )}
           {c.fedOrg && (
-            <span className="dash-tag dash-tag-muted" title={`Federal Org: ${c.fedOrg}`}>
-              {c.fedOrg}
-            </span>
+            <span className="dash-tag dash-tag-muted" title={`Federal Org: ${c.fedOrg}`}>{c.fedOrg}</span>
           )}
           {c.setAside && c.setAside !== "Full & Open" && (
             <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}>
-              <Shield size={9} aria-hidden="true" style={{ marginRight: 2 }} /> {c.setAside}
+              <Shield size={9} aria-hidden="true" style={{ marginRight: "var(--space-1)" }} /> {c.setAside}
             </span>
           )}
         </div>
 
-        {/* Mobile-only: State + Posted + Deadline row */}
-        <div className="dash-show-mobile" style={{ marginTop: 8, display: "flex", gap: 12, fontSize: "0.72rem", color: "var(--app-muted)", flexWrap: "wrap" }}>
-          <span>
-            <MapPin size={10} style={{ verticalAlign: "middle", marginRight: 3, color: "var(--app-faint)" }} />
-            {c.state || "Nationwide"}
+        <div className="dash-show-mobile dash-contract-card-mobile-meta">
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <MapPin size={11} />{c.state || "Nationwide"}
           </span>
           <span>Posted {c.posted}</span>
-          <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} days={c.deadlineDays} />
+          <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} />
         </div>
       </div>
 
       {/* Desktop metadata column */}
-      <div className="dash-hide-mobile" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0, minWidth: 90 }}>
-        <div style={{ fontSize: "0.75rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 3 }}>
-          <MapPin size={10} style={{ color: "var(--app-faint)" }} />
-          {c.state || "Nationwide"}
+      <div className="dash-hide-mobile dash-contract-card-right">
+        <div className="dash-contract-card-meta-item">
+          <MapPin size={11} />{c.state || "Nationwide"}
         </div>
-        <div style={{ fontSize: "0.72rem", color: "var(--app-faint)" }}>
-          Posted {c.posted}
-        </div>
-        {c.url && (
-          <a href={c.url} target="_blank" rel="noopener noreferrer" className="dash-link-subtle" style={{ fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
-            SAM.gov <ExternalLink size={9} />
+        <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} />
+        <div className="dash-contract-card-meta-faint">Posted {c.posted}</div>
+        {c.url && /^https?:\/\//i.test(c.url) && (
+          <a href={c.url} target="_blank" rel="noopener noreferrer" className="dash-contract-card-sam-link">
+            View on SAM.gov <ExternalLink size={10} />
           </a>
         )}
       </div>
 
       {/* Actions column */}
-      <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-        <button
+      <div className="dash-contract-card-actions">
+        <motion.button
           className="dash-action-bookmark"
           data-active={isBookmarked ? "true" : undefined}
           onClick={onToggleBookmark}
+          whileTap={{ scale: 0.85 }}
           aria-label={isBookmarked ? "Remove bookmark" : "Bookmark contract"}
           title={isBookmarked ? "Saved" : "Save"}
         >
-          <Star size={15} fill={isBookmarked ? "currentColor" : "none"} />
-        </button>
+          <Star size={16} fill={isBookmarked ? "currentColor" : "none"} />
+        </motion.button>
         <button className="dash-action-dismiss" onClick={onDismiss} aria-label="Dismiss contract" title="Dismiss">
-          <X size={15} />
+          <X size={16} />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 /* ─── Deadline Badge ───────────────────────────────────────────── */
-function DeadlineBadge({ label, urgency, days }: {
-  label: string; urgency: string; days: number | null;
+function DeadlineBadge({ label, urgency }: {
+  label: string; urgency: string;
 }) {
   const bg = urgency === "expired" ? "var(--danger-subtle)"
     : urgency === "critical" ? "rgba(194,59,59,0.12)"
@@ -451,14 +478,8 @@ function DeadlineBadge({ label, urgency, days }: {
     : "var(--app-muted)";
 
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 4,
-      padding: "3px 10px", borderRadius: 999,
-      background: bg, color: fg,
-      fontSize: "0.72rem", fontWeight: 600,
-      whiteSpace: "nowrap", flexShrink: 0
-    }}>
-      <Clock size={10} />
+    <span className="dash-deadline-badge" style={{ background: bg, color: fg }}>
+      <Clock size={11} />
       {label}
     </span>
   );
