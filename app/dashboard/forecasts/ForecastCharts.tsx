@@ -343,7 +343,7 @@ export function LowCompetitionRadarChart({ cards }: { cards: ForecastCard[] }) {
   );
 }
 
-/* ─── Chart Dispatcher ────────────────────────────────────── */
+/* ─── Chart Dispatcher — v2.4.0 (3-type system) ──────────── */
 export function renderForecastChart(type: string, cards: ForecastCard[]) {
   switch (type) {
     case "contract_activity": return <ContractActivityChart cards={cards} />;
