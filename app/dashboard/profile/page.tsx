@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, Search } from "lucide-react";
+import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw } from "lucide-react";
 import ProfileChip from "../components/ProfileChip";
+import FedOrgSelector from "../components/FedOrgSelector";
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -59,77 +60,6 @@ function getCompleteness(
   if (keywords.length > 0) score += 25; else missing.push("Keywords (optional)");
   const label = score === 100 ? "Complete" : score >= 60 ? "Good" : "Incomplete";
   return { score, label, missing };
-}
-
-/* ─── Fed Org Dropdown (inline styles, profile page) ─────── */
-function FedOrgDropdown({
-  fedOrgs, setFedOrgs, fedOrgList, markDirty
-}: {
-  fedOrgs: string[]; setFedOrgs: React.Dispatch<React.SetStateAction<string[]>>;
-  fedOrgList: {code: string; name: string}[];
-  markDirty: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const LIMIT = 999;
-
-  const trimmed = query.trim();
-  const filtered = fedOrgList.filter(
-    o => o.code.toLowerCase().startsWith(trimmed.toLowerCase()) || o.name.toLowerCase().includes(trimmed.toLowerCase())
-  ).slice(0, 10);
-
-  function toggleOrg(code: string) {
-    if (fedOrgs.includes(code)) setFedOrgs(fedOrgs.filter(c => c !== code));
-    else if (fedOrgs.length < LIMIT) setFedOrgs([...fedOrgs, code]);
-    markDirty();
-  }
-
-  return (
-    <div>
-      {/* Search input */}
-      <div style={{ position: "relative", marginBottom: "0.75rem", maxWidth: 400 }}>
-        <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--app-faint)" }} />
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search by code or name (e.g. DOD or defense)"
-          className="dash-input-lg"
-          style={{ paddingLeft: 34 }}
-          aria-label="Search federal organizations"
-        />
-      </div>
-
-      {/* Dropdown results */}
-      {query && (
-        <div style={{ marginBottom: "1rem" }}>
-          {filtered.map(o => {
-            const isSelected = fedOrgs.includes(o.code);
-            return (
-              <button
-                key={o.code}
-                type="button"
-                onClick={() => toggleOrg(o.code)}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  width: "100%", maxWidth: 480, padding: "8px 12px",
-                  background: isSelected ? "var(--accent-subtle)" : "var(--app-surface-2)",
-                  border: `1px solid ${isSelected ? "var(--accent-border)" : "var(--app-border)"}`,
-                  borderRadius: 8, cursor: "pointer", textAlign: "left",
-                  marginBottom: 4, gap: 8,
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                  <span style={{ fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.8rem", fontWeight: isSelected ? 600 : 400, color: isSelected ? "var(--accent)" : "var(--app-text)", marginRight: 6 }}>{o.code}</span>
-                  <span style={{ fontSize: "0.75rem", color: isSelected ? "var(--accent)" : "var(--app-muted)", opacity: isSelected ? 0.8 : 1 }}>{o.name}</span>
-                </div>
-                {isSelected && <CheckCircle size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ─── Page ───────────────────────────────────────────────── */
@@ -527,7 +457,18 @@ export default function ProfilePage() {
         )}
 
         {/* Search + Dropdown */}
-        <FedOrgDropdown fedOrgs={fedOrgs} setFedOrgs={setFedOrgs} fedOrgList={fedOrgList} markDirty={markDirty} />
+        <FedOrgSelector
+          selected={fedOrgs}
+          onToggle={(code) => {
+            if (fedOrgs.includes(code)) {
+              setFedOrgs(prev => prev.filter(c => c !== code));
+            } else {
+              setFedOrgs(prev => [...prev, code]);
+            }
+            markDirty();
+          }}
+          orgList={fedOrgList}
+        />
 
         {fedOrgs.length === 0 && <p style={{ color: "var(--app-faint)", fontSize: "0.85rem" }}>No agencies selected. All agencies will be treated equally.</p>}
       </div>
