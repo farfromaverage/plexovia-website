@@ -1,14 +1,53 @@
-/* Chart helpers — shared types, insight computation, color mapping */
+/* Chart helpers — shared types, insight computation, color mapping for 3 forecasts */
 
-export interface ChartPoint { period: string; historical?: number; projected?: number; }
-export interface ForecastCard {
-  id: string; naics_code: string; naics_label: string; agency_name: string;
-  forecast_type: string; prediction_type: "increase" | "decrease" | "stable";
-  confidence: "high" | "medium" | "low"; percent_change: number;
-  insight_text: string; data_points: ChartPoint[];
-  generated_at: string | null; run_date: string | null;
+export interface ChartPoint {
+  period: string;
+  historical?: number;
+  projected?: number;
+  p10?: number;
+  p50?: number;
+  p90?: number;
 }
 
+export interface ForecastCard {
+  id: string;
+  naics_code: string;
+  naics_label: string;
+  agency_name: string;
+  forecast_type: string;
+  forecast_type_label: string;
+  prediction_type: "increase" | "decrease" | "stable";
+  confidence: "high" | "medium" | "low";
+  percent_change: number;
+  insight_text: string;
+  data_points: ChartPoint[];
+  quantile_bands?: { p10: number[]; p50: number[]; p90: number[] };
+  data_quality: { data_points: number; data_quality: "rich" | "adequate" | "limited" };
+  backtest_accuracy: { mape: number; validations: number } | null;
+  explainability: Explainability | null;
+  run_date: string | null;
+}
+
+export interface Explainability {
+  headline: string;
+  pattern: string;
+  peak_month: string;
+  baseline_value: number;
+  peak_multiplier: number;
+  trend_pct: number;
+  volatility_pct: number;
+  data_points: number;
+  explanation: string;
+  direction?: string;
+  current_monthly_avg?: number;
+  predicted_burst?: number;
+  burst_month?: string;
+  competition_level?: string;
+  mean_single_bidder?: number;
+  total_historical_awards?: number;
+}
+
+/* ─── Confidence colors ──────────────────────────────────── */
 export function confColor(c: string) {
   if (c === "high") return "var(--success)";
   if (c === "medium") return "var(--accent)";
@@ -22,66 +61,66 @@ export function confBg(c: string) {
 }
 
 export function confLabel(c: string) {
-  if (c === "high") return "High";
-  if (c === "medium") return "Medium";
-  return "Low";
+  if (c === "high") return "High — 36+ months";
+  if (c === "medium") return "Medium — 18–35 months";
+  return "Limited — <18 months";
 }
 
-/** Compute a plain-English insight headline from forecast cards */
-export function computeInsight(cards: ForecastCard[], type: string): { headline: string; subtext: string } {
-  if (!cards.length) return { headline: "No data available", subtext: "Add more NAICS codes to improve predictions." };
+export function qualityLabel(q: "rich" | "adequate" | "limited") {
+  if (q === "rich") return "Rich data (36+ months)";
+  if (q === "adequate") return "Adequate data (18–35 months)";
+  return "Limited data (<18 months)";
+}
+
+/* ─── Insight headlines per forecast type ────────────────── */
+export function computeInsight(
+  cards: ForecastCard[],
+  type: string,
+): { headline: string; subtext: string } {
+  if (!cards.length) {
+    return { headline: "No data available", subtext: "Add more NAICS codes to your profile to generate forecasts." };
+  }
 
   const count = cards.length;
   const highConf = cards.filter(c => c.confidence === "high").length;
-  const increasing = cards.filter(c => c.prediction_type === "increase").length;
+  const naicsList = [...new Set(cards.map(c => c.naics_code))];
+  const naicsStr = naicsList.length <= 2 ? naicsList.join(" & ") : `${naicsList.length} NAICS codes`;
 
-  // Find the most common upcoming month
-  const months = cards.flatMap(c => c.data_points.filter(d => d.projected !== undefined).map(d => d.period));
+  const months = cards.flatMap(c =>
+    c.data_points.filter(d => d.projected !== undefined).map(d => d.period)
+  );
   const monthCounts = new Map<string, number>();
   months.forEach(m => monthCounts.set(m, (monthCounts.get(m) || 0) + 1));
   const peakMonth = [...monthCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "upcoming months";
 
-  const naicsList = [...new Set(cards.map(c => c.naics_code))];
-  const naicsStr = naicsList.length <= 2 ? naicsList.join(" & ") : `${naicsList.length} NAICS codes`;
-
   switch (type) {
-    case "renewal_radar":
+    case "contract_activity": {
+      const peaks = cards.filter(c => (c.explainability?.peak_multiplier ?? 0) >= 1.5).length;
       return {
-        headline: `${count} contract${count !== 1 ? "s" : ""} in your sector ${count !== 1 ? "are" : "is"} likely to renew soon.`,
-        subtext: `${highConf > 0 ? `${highConf} high-confidence` : "Based on historical"} renewal patterns across ${naicsStr}. Peak activity expected around ${peakMonth}.`,
+        headline: `${peaks > 0 ? `${peaks} activity peak${peaks !== 1 ? "s" : ""} detected` : `${count} forecasts available`} across ${naicsStr}.`,
+        subtext: `${highConf > 0 ? `${highConf} with rich historical data.` : ""} Shaded bands show the P10–P90 uncertainty range around each prediction.`,
       };
-    case "budget_heatmap":
+    }
+    case "setaside_opportunities": {
+      const behind = cards.filter(c => c.explainability?.direction === "falling_behind").length;
       return {
-        headline: `${increasing} of ${count} agencies show spending increases in ${naicsStr}.`,
-        subtext: `Budget flush patterns suggest agencies may accelerate procurement around ${peakMonth}. Higher intensity = larger change from baseline.`,
+        headline: behind > 0
+          ? `${behind} agenc${behind !== 1 ? "ies" : "y"} behind on set-aside goals — bursts predicted.`
+          : `Set-aside projections across ${count} agencies.`,
+        subtext: "Gray bars = current monthly average. Navy bars = predicted burst contracts. Agencies must meet statutory small business goals.",
       };
-    case "sub_trickle":
+    }
+    case "low_competition_radar": {
+      const lowComp = cards.filter(c =>
+        c.explainability?.competition_level === "very_low" || c.explainability?.competition_level === "low"
+      ).length;
       return {
-        headline: `${count} prime contractor${count !== 1 ? "s" : ""} may release sub-contract RFQs.`,
-        subtext: `Colored bars show the predicted window when subcontracting opportunities are most likely. Wider bars = longer opportunity window.`,
+        headline: lowComp > 0
+          ? `${lowComp} categor${lowComp !== 1 ? "ies" : "y"} with very low competition — potential openings.`
+          : `${count} categories analyzed — competition levels vary.`,
+        subtext: "Bubble size = total award volume. Further right = less competition. Red bubbles = your best opportunities.",
       };
-    case "incumbent_vulnerability":
-      const highRisk = cards.filter(c => Math.abs(c.percent_change) > 70).length;
-      return {
-        headline: `${highRisk > 0 ? `${highRisk} incumbent${highRisk !== 1 ? "s" : ""} score${highRisk === 1 ? "s" : ""} above 70% vulnerability` : `${count} incumbents analyzed`} — potential openings.`,
-        subtext: `Higher scores mean the current contract holder is more likely to lose the re-compete. Red = high opportunity, green = low.`,
-      };
-    case "setaside_depletion":
-      return {
-        headline: `Set-aside spending predicted to ${increasing > count / 2 ? "surge" : "shift"} across ${count} agencies.`,
-        subtext: `Gray bars = current activity. Purple bars = predicted burst. Agencies must spend set-aside budgets before fiscal year end.`,
-      };
-    case "zero_competition":
-      const top = [...cards].sort((a, b) => Math.abs(b.percent_change) - Math.abs(a.percent_change))[0];
-      return {
-        headline: `${count} upcoming contract${count !== 1 ? "s" : ""} ${count !== 1 ? "have" : "has"} zero predicted bidders.`,
-        subtext: top ? `Highest opportunity: ${top.agency_name || "Federal Government"} (${Math.min(100, Math.abs(top.percent_change))}% probability). These are your lowest-competition wins.` : "",
-      };
-    case "micro_purchase_surge":
-      return {
-        headline: `Micro-purchase activity peaks around ${peakMonth} for ${count} agencies.`,
-        subtext: `Darker cells = more predicted purchases. Micro-purchases (<$10K) don't require full bids — faster wins.`,
-      };
+    }
     default:
       return { headline: `${count} predictions available.`, subtext: "Review the data below." };
   }
