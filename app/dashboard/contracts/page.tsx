@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import {
   Clock, ExternalLink, FileText, MapPin, Shield, Star,
   ChevronLeft, ChevronRight, RefreshCw,
-  ArrowUpDown, Download, Calendar, X,
+  Download, Calendar, X,
 } from "lucide-react";
 import ScoreBadge from "../components/ScoreBadge";
 import SkeletonRows from "../components/SkeletonRows";
@@ -22,7 +22,7 @@ interface ContractRow {
   score: number; setAside: string; matchedBy: "naics" | "keyword";
   matchLabel: string; url: string | null; matchedAt: string | null;
 }
-type SortKey = "score" | "deadline" | "posted_date";
+type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
 
@@ -68,11 +68,6 @@ function mapRow(m: any): ContractRow {
   };
 }
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "posted_date", label: "Most recent" },
-  { value: "deadline", label: "Soonest deadline" },
-  { value: "score", label: "Best match" },
-];
 const PER_PAGE = 15;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
@@ -93,15 +88,13 @@ function ContractsPage() {
   const [error, setError] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<SortKey>("posted_date");
-  const [sortOpen, setSortOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
-  const sortRef = useRef<HTMLDivElement>(null);
 
   const cs = useContractStatus();
 
@@ -116,14 +109,13 @@ function ContractsPage() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const fetchMatches = async (p: number, sort: SortKey) => {
-    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort });
+  const fetchMatches = async (p: number) => {
+    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort: "posted_date" });
     const res = await fetch(`/api/user-matches?${params.toString()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -133,7 +125,7 @@ function ContractsPage() {
     if (!isColdStart) setLoading(true);
     setError(false);
     try {
-      const json = await fetchMatches(page, sortBy);
+      const json = await fetchMatches(page);
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
       setTotal(json.pagination?.total || 0);
@@ -141,7 +133,7 @@ function ContractsPage() {
         setIsColdStart(true);
         const interval = setInterval(async () => {
           try {
-            const refreshed = await fetchMatches(1, "score");
+            const refreshed = await fetchMatches(1);
             if (refreshed.matches?.length > 0) {
               setContracts(refreshed.matches.map(mapRow));
               setTotal(refreshed.pagination?.total || 0);
@@ -154,15 +146,19 @@ function ContractsPage() {
       } else { setIsColdStart(false); }
     } catch { setError(true); }
     finally { if (!isColdStart) setLoading(false); }
-  }, [page, sortBy, isColdStart]);
+  }, [page, isColdStart]);
 
-  useEffect(() => { load(); }, [page, sortBy]);
+  useEffect(() => { load(); }, [page]);
 
-  /* ── Show all except dismissed ── */
-  const visibleContracts = contracts.filter(c => !cs.isDismissed(c.id));
+  /* ── Status-filtered contracts ── */
+  const filteredContracts = contracts.filter(c => {
+    if (statusFilter === "bookmarked") return cs.isBookmarked(c.id);
+    if (statusFilter === "dismissed") return cs.isDismissed(c.id);
+    if (statusFilter === "new") return !cs.isViewed(c.id) && !cs.isDismissed(c.id);
+    return !cs.isDismissed(c.id);
+  });
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
-  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Most recent";
 
   function handlePageChange(np: number) { setPage(Math.max(1, Math.min(totalPages, np))); }
 
@@ -195,6 +191,8 @@ function ContractsPage() {
     finally { setExporting(false); }
   }
 
+  const allIds = contracts.map(c => c.id);
+
   return (
     <div className="dash-main dash-fade-in">
       {/* Page header */}
@@ -203,7 +201,7 @@ function ContractsPage() {
           <h1 className="dash-page-title">Contract Matches</h1>
           <p className="dash-page-sub">
             {total > 0
-              ? `${total.toLocaleString()} contracts matched your profile · Sorted by ${currentSortLabel.toLowerCase()}`
+              ? `${total.toLocaleString()} contracts matched your profile`
               : "Contracts are matched twice daily — set up your profile to start"}
           </p>
         </div>
@@ -231,21 +229,32 @@ function ContractsPage() {
         </div>
       </div>
 
-      {/* Sort */}
-      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
-        <div ref={sortRef} style={{ position: "relative" }}>
-          <button className="dash-btn" onClick={() => setSortOpen(v => !v)} aria-haspopup="listbox" aria-expanded={sortOpen} aria-label={`Sort by: ${currentSortLabel}`}>
-            <ArrowUpDown size={12} aria-hidden="true" /> {currentSortLabel}
-          </button>
-          {sortOpen && (
-            <div className="dash-dropdown-menu" role="listbox" aria-label="Sort options">
-              {SORT_OPTIONS.map(o => (
-                <button key={o.value} className="dash-dropdown-item" role="option" data-active={sortBy === o.value ? "true" : undefined} aria-selected={sortBy === o.value} onClick={() => { setSortBy(o.value); setSortOpen(false); setPage(1); }}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Status filter tabs */}
+      <div style={{ display: "flex", gap: "var(--space-4)", marginBottom: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
+        <div className="dash-status-tabs" role="tablist" aria-label="Contract status filter">
+          {([
+            { key: "all", label: "All" },
+            { key: "new", label: "New" },
+            { key: "bookmarked", label: "Saved" },
+            { key: "dismissed", label: "Dismissed" },
+          ] as { key: StatusFilter; label: string }[]).map(tab => (
+            <button
+              key={tab.key}
+              className="dash-status-tab"
+              data-active={statusFilter === tab.key ? "true" : undefined}
+              role="tab"
+              aria-selected={statusFilter === tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+            >
+              {tab.label}
+              {tab.key === "bookmarked" && cs.bookmarkedCount(allIds) > 0 && (
+                <span className="dash-tab-count">{cs.bookmarkedCount(allIds)}</span>
+              )}
+              {tab.key === "dismissed" && cs.dismissedCount(allIds) > 0 && (
+                <span className="dash-tab-count">{cs.dismissedCount(allIds)}</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -265,14 +274,14 @@ function ContractsPage() {
           <SkeletonRows rows={6} />
         ) : error ? (
           <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
-        ) : visibleContracts.length === 0 ? (
+        ) : filteredContracts.length === 0 ? (
           <EmptyState
             icon={<FileText size={28} />}
-            title={total === 0 ? "No matches yet" : "No contracts found"}
-            message={total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
+            title={statusFilter !== "all" ? `No ${statusFilter} contracts` : total === 0 ? "No matches yet" : "No contracts found"}
+            message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
           />
         ) : (
-          visibleContracts.map(c => (
+          filteredContracts.map(c => (
             <ContractRowUI
               key={c.id} c={c}
               isBookmarked={cs.isBookmarked(c.id)}
