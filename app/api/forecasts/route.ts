@@ -121,7 +121,7 @@ export async function GET() {
       });
     }
 
-    let forecastQuery = supabase
+    const forecastQuery = supabase
       .from("agency_forecasts")
       .select("id, naics_code, agency_name, forecast_type, predicted_array, quantile_array, confidence_score, insight_text, explainability, predicted_dates, run_date, updated_at")
       .in("forecast_type", ALLOWED_TYPES)
