@@ -112,15 +112,21 @@ export async function GET() {
     const userNaics: string[] = profile?.naics_codes ?? [];
 
     // 3. Query forecasts — filter to 3 allowed types + user NAICS
+    if (userNaics.length === 0) {
+      return NextResponse.json({
+        forecasts: [],
+        generated_at: null,
+        engine: "quantile",
+        status: "no_data",
+      });
+    }
+
     let forecastQuery = supabase
       .from("agency_forecasts")
       .select("id, naics_code, agency_name, forecast_type, predicted_array, quantile_array, confidence_score, insight_text, explainability, predicted_dates, run_date, updated_at")
       .in("forecast_type", ALLOWED_TYPES)
+      .in("naics_code", userNaics)
       .order("confidence_score", { ascending: false });
-
-    if (userNaics.length > 0) {
-      forecastQuery = forecastQuery.in("naics_code", userNaics);
-    }
 
     const { data: forecasts, error: fErr } = await forecastQuery.limit(500);
     if (fErr) throw fErr;
@@ -314,7 +320,9 @@ export async function GET() {
     });
   } catch (err: unknown) {
     console.error("Forecasts API Error:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "An internal error occurred. Please try again later." },
+      { status: 500 }
+    );
   }
 }

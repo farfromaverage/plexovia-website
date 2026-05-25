@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { BarChart2, AlertCircle, Info, RefreshCw, Clock, TrendingUp, PieChart, Zap } from "lucide-react";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
@@ -51,12 +51,26 @@ export default function ForecastsPage() {
   const [userNaicsCodes, setUserNaicsCodes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("contract_activity");
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data: p } = await supabase.from("profiles").select("naics_codes").single();
-      if (p?.naics_codes) setUserNaicsCodes(p.naics_codes);
+      try {
+        const { data: p, error: profileErr } = await supabase.from("profiles").select("naics_codes").single();
+        if (profileErr) throw profileErr;
+        setUserNaicsCodes(p?.naics_codes ?? []);
+      } catch {
+        setError("Failed to load profile data. Please refresh.");
+        setLoading(false);
+      }
     })();
+  }, []);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
   const load = useCallback(async () => {
@@ -69,16 +83,17 @@ export default function ForecastsPage() {
       if (json.status === "generating") {
         setIsColdStart(true);
         setData({ forecasts: [], generated_at: null, engine: "quantile", status: "generating" });
-        const interval = setInterval(async () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
           try {
             const pollRes = await fetch("/api/forecasts");
             if (pollRes.ok) {
               const pollData = await pollRes.json();
-              if (pollData.status !== "generating") { setData(pollData); setIsColdStart(false); clearInterval(interval); }
+              if (pollData.status !== "generating") { setData(pollData); setIsColdStart(false); if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }
             }
           } catch { /* polling — silent */ }
         }, 30_000);
-        setTimeout(() => clearInterval(interval), 1_800_000);
+        setTimeout(() => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }, 1_800_000);
         return;
       }
       setData(json);
@@ -90,7 +105,7 @@ export default function ForecastsPage() {
     }
   }, [isColdStart]);
 
-  useEffect(() => { if (userNaicsCodes.length > 0) load(); }, [userNaicsCodes]);
+  useEffect(() => { load(); }, [load]);
 
   const forecasts = data?.forecasts ?? [];
   const isLive = forecasts.length > 0;

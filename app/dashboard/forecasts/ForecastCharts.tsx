@@ -33,6 +33,24 @@ function ActionFooter({ naics, label }: { naics: string; label: string }) {
 
 const TOOLTIP_STYLE = { background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 11, boxShadow: "var(--shadow-md)" };
 
+function ScatterTooltip({ active, payload }: any) {
+  if (active && payload && payload.length > 0) {
+    const d = payload[0].payload;
+    return (
+      <div style={{ ...TOOLTIP_STYLE, padding: "10px 14px", maxWidth: 320 }}>
+        <div style={{ fontWeight: 700, fontSize: 12, color: "var(--app-text)", marginBottom: 4 }}>{d.name}</div>
+        <div style={{ fontSize: 10, color: "var(--app-faint)", marginBottom: 6 }}>NAICS {d.naics} · {d.label}</div>
+        <div style={{ fontSize: 10, color: "var(--app-muted)", lineHeight: 1.5 }}>
+          Competition: {d.competition}% ({d.level.replace("_", " ")})<br />
+          Avg single-bidder: {d.avgSingleBidder}/mo<br />
+          Total awards: {d.totalAwards}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
 function QualityBadge({ quality }: { quality: "rich" | "adequate" | "limited" }) {
   const config = {
     rich: { bg: "var(--success-subtle)", color: "var(--success)", label: "Rich data" },
@@ -55,7 +73,13 @@ export function ContractActivityChart({ cards }: { cards: ForecastCard[] }) {
     const peak = projPoints.reduce((best, d) => (!best || (d.projected || 0) > (best.projected || 0)) ? d : best, projPoints[0]);
     return { card, peak, firstProj: projPoints[0] };
   }).filter(x => x.firstProj);
-  withPeak.sort((a, b) => (a.firstProj?.period || "").localeCompare(b.firstProj?.period || ""));
+  const parsePeriod = (p: string): number => {
+    const months: Record<string, number> = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
+    const match = p.match(/(\w{3})\s+'(\d{2})/);
+    if (!match) return 0;
+    return (2000 + parseInt(match[2])) * 100 + (months[match[1].toLowerCase()] || 0);
+  };
+  withPeak.sort((a, b) => parsePeriod(a.firstProj?.period || "") - parsePeriod(b.firstProj?.period || ""));
   const topNaics = cards[0]?.naics_code || "";
 
   if (!withPeak.length) return null;
@@ -64,7 +88,7 @@ export function ContractActivityChart({ cards }: { cards: ForecastCard[] }) {
     <div className="dash-chart-panel">
       <InsightHeader icon={<TrendingUp size={18} />} iconClass="accent" headline={insight.headline} subtext={insight.subtext} />
       <div>
-        {withPeak.map(({ card, peak }) => {
+        {withPeak.map(({ card }) => {
           const explain = card.explainability;
           return (
             <div key={card.id} style={{ padding: "1rem var(--space-5)", borderBottom: "1px solid var(--app-border)" }}>
@@ -206,7 +230,7 @@ export function LowCompetitionRadarChart({ cards }: { cards: ForecastCard[] }) {
 
   const scatterData = cards.slice(0, 50).map(card => {
     const explain = card.explainability;
-    const competitionPct = explain?.mean_single_bidder
+    const competitionPct = explain?.mean_single_bidder != null
       ? Math.min(100, Math.round(explain.mean_single_bidder * 10))
       : Math.min(100, Math.abs(card.percent_change));
     const volume = Math.max(1, Math.abs(card.percent_change) * 10 || 10);
@@ -234,25 +258,6 @@ export function LowCompetitionRadarChart({ cards }: { cards: ForecastCard[] }) {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length > 0) {
-      const d = payload[0].payload;
-      return (
-        <div style={{ ...TOOLTIP_STYLE, padding: "10px 14px", maxWidth: 320 }}>
-          <div style={{ fontWeight: 700, fontSize: 12, color: "var(--app-text)", marginBottom: 4 }}>{d.name}</div>
-          <div style={{ fontSize: 10, color: "var(--app-faint)", marginBottom: 6 }}>NAICS {d.naics} · {d.label}</div>
-          <div style={{ fontSize: 10, color: "var(--app-muted)", lineHeight: 1.5 }}>
-            Competition: {d.competition}% ({d.level.replace("_", " ")})<br />
-            Avg single-bidder: {d.avgSingleBidder}/mo<br />
-            Total awards: {d.totalAwards}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="dash-chart-panel">
       <InsightHeader icon={<Zap size={18} />} iconClass="warning" headline={insight.headline} subtext={insight.subtext} />
@@ -273,7 +278,7 @@ export function LowCompetitionRadarChart({ cards }: { cards: ForecastCard[] }) {
                 label={{ value: "Volume index", angle: -90, position: "insideLeft", offset: 10, style: { fontSize: 10, fill: "var(--app-faint)" } }}
               />
               <ZAxis type="number" dataKey="volume" range={[40, 400]} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<ScatterTooltip />} />
               <ReferenceLine x={50} stroke="var(--app-border)" strokeDasharray="5 5" label={{ value: "Threshold", position: "top", fontSize: 9, fill: "var(--app-faint)" }} />
               <Scatter data={scatterData} animationDuration={800}>
                 {scatterData.map((d, idx) => (
