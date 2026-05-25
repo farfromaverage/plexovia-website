@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, ExternalLink, Search } from "lucide-react";
+import { Save, CheckCircle, AlertCircle, Plus, X, RefreshCw, Search } from "lucide-react";
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -15,18 +15,6 @@ const US_STATES = [
   "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
   "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC",
 ];
-const STATE_NAMES: Record<string, string> = {
-  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",
-  CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",
-  HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",
-  KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",
-  MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",
-  MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
-  NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",
-  OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
-  SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",
-  VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"Washington D.C.",
-};
 
 const SET_ASIDES = [
   { value: "SB",       label: "Small Business" },
@@ -175,6 +163,8 @@ export default function ProfilePage() {
   const [fedOrgs,            setFedOrgs]            = useState<string[]>([]);
   const [fedOrgList,         setFedOrgList]         = useState<{code: string; name: string}[]>([]);
 
+  const [originalNaicsCodes, setOriginalNaicsCodes] = useState<string[]>([]);
+
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
@@ -307,9 +297,6 @@ export default function ProfilePage() {
     markDirty();
   }
 
-  /* Track original NAICS codes loaded from DB */
-  const [originalNaicsCodes, setOriginalNaicsCodes] = useState<string[]>([]);
-
   /* ─── Save ────────────────────────────────────────────────── */
   async function handleSave() {
     if (!userId) return;
@@ -370,8 +357,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <RefreshCw size={20} style={{ color: "var(--app-muted)", animation: "spin 0.8s linear infinite" }} aria-label="Loading profile…" />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <RefreshCw size={20} className="dash-spin" style={{ color: "var(--app-muted)" }} aria-label="Loading profile…" />
       </div>
     );
   }
@@ -663,7 +649,7 @@ export default function ProfilePage() {
           disabled={saving || (!isDirty && !saved)}
           style={{ padding: "0.75rem 2rem", minHeight: 44, fontSize: "0.9375rem", gap: 6 }}
         >
-          {saving ? <><RefreshCw size={14} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Changes</>}
+          {saving ? <><RefreshCw size={14} className="dash-spin" /> Saving…</> : saved ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Changes</>}
         </button>
         {saved && (
           <span style={{ color: "var(--success)", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: 4 }}>
@@ -671,8 +657,6 @@ export default function ProfilePage() {
           </span>
         )}
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
