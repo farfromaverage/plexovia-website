@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   Clock, ExternalLink, FileText, MapPin, Shield, Star,
-  ChevronLeft, ChevronRight, Filter, Search, RefreshCw,
+  ChevronLeft, ChevronRight, RefreshCw,
   ArrowUpDown, Download, Calendar, X,
 } from "lucide-react";
 import ScoreBadge from "../components/ScoreBadge";
@@ -88,7 +87,6 @@ export default function ContractsPageWrapper() {
 }
 
 function ContractsPage() {
-  const searchParams = useSearchParams(); // Gap 2 fix
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isColdStart, setIsColdStart] = useState(false);
@@ -96,9 +94,6 @@ function ContractsPage() {
   const [error, setError] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [minScore, setMinScore] = useState(0);
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("posted_date");
   const [sortOpen, setSortOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -111,15 +106,6 @@ function ContractsPage() {
   const sortRef = useRef<HTMLDivElement>(null);
 
   const cs = useContractStatus();
-
-  // Gap 2: read ?search= from URL on mount
-  useEffect(() => {
-    const urlSearch = searchParams.get("search");
-    if (urlSearch) {
-      setSearch(urlSearch);
-      setSearchInput(urlSearch);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     (async () => {
@@ -138,9 +124,8 @@ function ContractsPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const fetchMatches = async (p: number, s: number, q: string, sort: SortKey) => {
-    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: String(s), sort });
-    if (q) params.set("search", q);
+  const fetchMatches = async (p: number, sort: SortKey) => {
+    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort });
     const res = await fetch(`/api/user-matches?${params.toString()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -150,15 +135,15 @@ function ContractsPage() {
     if (!isColdStart) setLoading(true);
     setError(false);
     try {
-      const json = await fetchMatches(page, minScore, search, sortBy);
+      const json = await fetchMatches(page, sortBy);
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
       setTotal(json.pagination?.total || 0);
-      if (rows.length === 0 && minScore === 0 && search === "" && page === 1) {
+      if (rows.length === 0 && page === 1) {
         setIsColdStart(true);
         const interval = setInterval(async () => {
           try {
-            const refreshed = await fetchMatches(1, 0, "", "score");
+            const refreshed = await fetchMatches(1, "score");
             if (refreshed.matches?.length > 0) {
               setContracts(refreshed.matches.map(mapRow));
               setTotal(refreshed.pagination?.total || 0);
@@ -171,9 +156,9 @@ function ContractsPage() {
       } else { setIsColdStart(false); }
     } catch { setError(true); }
     finally { if (!isColdStart) setLoading(false); }
-  }, [page, minScore, search, sortBy, isColdStart]);
+  }, [page, sortBy, isColdStart]);
 
-  useEffect(() => { load(); }, [page, minScore, search, sortBy]);
+  useEffect(() => { load(); }, [page, sortBy]);
 
   /* ── Status-filtered contracts ── */
   const filteredContracts = contracts.filter(c => {
@@ -187,7 +172,6 @@ function ContractsPage() {
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Most recent";
 
-  function handleSearchSubmit(e: React.FormEvent) { e.preventDefault(); setSearch(searchInput); setPage(1); }
   function handlePageChange(np: number) { setPage(Math.max(1, Math.min(totalPages, np))); }
 
   /* ── Dismiss with undo ── */
@@ -286,28 +270,8 @@ function ContractsPage() {
         </div>
       </div>
 
-      {/* Filters row */}
+      {/* Sort */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
-        <form onSubmit={handleSearchSubmit} style={{ position: "relative", flex: 1, minWidth: "220px" }} role="search">
-          <label htmlFor="contract-search" className="sr-only">Search contracts</label>
-          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--app-muted)", pointerEvents: "none" }} aria-hidden="true" />
-          <input
-            id="contract-search" type="search" value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") { setSearch(searchInput); setPage(1); } }}
-            placeholder="Search title, agency, NAICS, state…"
-            className="dash-input" style={{ paddingLeft: 30 }}
-          />
-        </form>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }} role="group" aria-label="Minimum match score filter">
-          <Filter size={12} style={{ color: "var(--app-muted)" }} aria-hidden="true" />
-          <span style={{ fontSize: "0.78rem", color: "var(--app-muted)", whiteSpace: "nowrap" }}>Min score:</span>
-          {[0, 50, 75, 90].map(s => (
-            <button key={s} className={`dash-pill${minScore === s ? " active" : ""}`} aria-pressed={minScore === s} onClick={() => { setMinScore(s); setPage(1); }}>
-              {s === 0 ? "All" : `${s}+`}
-            </button>
-          ))}
-        </div>
         <div ref={sortRef} style={{ position: "relative" }}>
           <button className="dash-btn" onClick={() => setSortOpen(v => !v)} aria-haspopup="listbox" aria-expanded={sortOpen} aria-label={`Sort by: ${currentSortLabel}`}>
             <ArrowUpDown size={12} aria-hidden="true" /> {currentSortLabel}
