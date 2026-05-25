@@ -32,7 +32,7 @@ const steps = [
       "Add unlimited NAICS codes to your tracking profile.",
       "Add custom keywords to catch contracts your NAICS codes miss.",
       "Set your place of performance preference so irrelevant states drop out.",
-      "AI Forecasting predicts agency spend patterns, budget surges, and recompete windows.",
+      "Market Intelligence analyzes historical federal award patterns to forecast agency spend, set-aside opportunities, and low-competition categories.",
       "Configure your notification preferences for optional email reports.",
     ],
   },
@@ -121,7 +121,7 @@ export default function HowItWorksPage() {
       },
       {
         "@type": "HowToStep",
-        "name": "Delivery of matches with AI Forecasting",
+        "name": "Delivery of matches with Market Intelligence",
         "text": "Ranked matches, scored from 0 to 100, delivered to your dashboard every morning. Includes AI Predictive Forecasting for incumbent expirations and Q4 budget surges."
       }
     ]

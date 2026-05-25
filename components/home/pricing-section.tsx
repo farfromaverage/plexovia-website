@@ -29,7 +29,7 @@ const PLANS = [
     tagline:      "Everything included. No hidden upgrades. Built for individuals and teams.",
     audience:     "Individuals and teams. Scale by adding more seats as your team grows.",
     features: [
-      "AI Forecasting with 7 Predictive Core Features. Predict budget curves and expose RFIs months in advance.",
+      "Market Intelligence — spend forecasting, set-aside tracking, and low-competition radar. 36-month forward visibility.",
       "SAM.gov, DLA DIBBS, and SBA SubNet — three federal procurement sources monitored overnight, delivered to your dashboard daily.",
       "Unlimited NAICS codes and keywords. No caps, no add-ons, no upgrades.",
       "AI match score with a plain-English reason per contract. Know what to bid before you read it.",

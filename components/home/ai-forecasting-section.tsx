@@ -27,7 +27,7 @@ const CORE_FEATURES = [
     icon:  BrainCircuit,
     tag:   "Predictive Intelligence",
     title: "Know 12 months before the RFP drops",
-    body:  "Our TimesFM engine models federal and state budget cycles. It surfaces upcoming solicitations before the incumbent even knows the contract is expiring.",
+    body:  "Our forecast engine analyzes 10+ years of federal award data to surface spending patterns, set-aside opportunities, and under-competed contract categories — 36 months forward.",
     metric: { value: "12mo", label: "average forward visibility" },
     accent: "rgba(201,168,76,0.12)",
     border: "rgba(201,168,76,0.25)",

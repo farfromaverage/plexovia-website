@@ -30,7 +30,7 @@ interface Row {
 
 const ROWS: Row[] = [
   {
-    feature:     "AI Forecasting with 7 Predictive Core Features",
+    feature:     "Market Intelligence — 3 forecast engines",
     plexovia:    { type: "text", value: "Predictive budget curves mapped to your NAICS", highlight: true },
     alternative: { type: "minus" },
   },
@@ -61,7 +61,7 @@ const ROWS: Row[] = [
   },
   {
     feature:     "Predictive market intelligence",
-    plexovia:    { type: "text", value: "7 AI models forecast agency spend before RFPs drop", highlight: true },
+    plexovia:    { type: "text", value: "3 calibrated engines forecast agency spend patterns, backed by 10+ years of federal data", highlight: true },
     alternative: { type: "minus" },
   },
   {
