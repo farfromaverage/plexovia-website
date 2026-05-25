@@ -49,19 +49,6 @@ function isValidNaics(code: string): boolean {
   return /^\d{2,6}$/.test(code);
 }
 
-/* ─── Completeness score ─────────────────────────────────── */
-function getCompleteness(
-  naics: string[], states: string[], keywords: string[]
-): { score: number; label: string; missing: string[] } {
-  const missing: string[] = [];
-  let score = 0;
-  if (naics.length > 0) score += 40; else missing.push("At least one NAICS code");
-  if (states.length > 0) score += 35; else missing.push("At least one state");
-  if (keywords.length > 0) score += 25; else missing.push("Keywords (optional)");
-  const label = score === 100 ? "Complete" : score >= 60 ? "Good" : "Incomplete";
-  return { score, label, missing };
-}
-
 /* ─── Page ───────────────────────────────────────────────── */
 export default function ProfilePage() {
   const router = useRouter();
@@ -311,12 +298,6 @@ export default function ProfilePage() {
     }
   }
 
-  const completeness = getCompleteness(naicsCodes, selectedStates, keywords);
-  const completenessColor =
-    completeness.score === 100 ? "var(--success)"
-    : completeness.score >= 60  ? "var(--accent)"
-    :                              "var(--danger)";
-
   if (loading) {
     return (
       <div className="dash-main" style={{ maxWidth: 800 }}>
@@ -390,58 +371,6 @@ export default function ProfilePage() {
         </motion.div>
       )}
 
-      {/* Completeness banner */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.15, duration: 0.35 }}
-        style={{
-          background: completeness.score === 100
-            ? "var(--success-subtle)"
-            : completeness.score >= 60
-              ? "var(--accent-subtle)"
-              : "var(--danger-subtle)",
-          border: `1px solid ${
-            completeness.score === 100
-              ? "rgba(26, 119, 66, 0.2)"
-              : completeness.score >= 60
-                ? "var(--accent-border)"
-                : "rgba(194, 59, 59, 0.2)"
-          }`,
-          borderRadius: "var(--radius-md)",
-          padding: "var(--space-3) var(--space-5)",
-          marginBottom: "var(--space-5)",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-3)",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{
-          width: 32, height: 32, borderRadius: "50%",
-          background: completenessColor,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-        }}>
-          <span style={{ color: "#FFF", fontSize: "0.625rem", fontWeight: 800 }}>
-            {completeness.score}%
-          </span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--app-text)", margin: 0 }}>
-            Profile {completeness.score === 100 ? "Complete" : completeness.score >= 60 ? "Good — almost there" : "Needs setup"}
-          </p>
-          {completeness.missing.length > 0 && (
-            <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: "2px 0 0" }}>
-              Add: {completeness.missing.join(" · ")}
-            </p>
-          )}
-        </div>
-        <div className="dash-progress-track" style={{ width: 120, flexShrink: 0 }}>
-          <div className="dash-progress-fill" style={{ width: `${completeness.score}%`, background: completenessColor }} />
-        </div>
-      </motion.div>
-
       {/* Error alert */}
       {error && (
         <div className="dash-alert-error" role="alert" style={{ marginBottom: "var(--space-4)" }}>
@@ -491,7 +420,7 @@ export default function ProfilePage() {
             maxLength={6}
             aria-describedby={naicsError ? "naics-error" : undefined}
           />
-          <button className="dash-btn dash-btn-primary" onClick={addNaics} style={{ minHeight: 42 }}>
+          <button className="dash-btn dash-btn-primary" onClick={addNaics}>
             <Plus size={14} aria-hidden="true" /> Add
           </button>
         </div>
@@ -543,7 +472,7 @@ export default function ProfilePage() {
             className="dash-input-lg"
             maxLength={4}
           />
-          <button className="dash-btn dash-btn-primary" onClick={addPsc} style={{ minHeight: 42 }}>
+          <button className="dash-btn dash-btn-primary" onClick={addPsc}>
             <Plus size={14} aria-hidden="true" /> Add
           </button>
         </div>
@@ -672,7 +601,7 @@ export default function ProfilePage() {
             maxLength={80}
             disabled={keywords.length >= MAX_KEYWORDS}
           />
-          <button className="dash-btn dash-btn-primary" onClick={addKeyword} disabled={keywords.length >= MAX_KEYWORDS} style={{ minHeight: 42 }}>
+          <button className="dash-btn dash-btn-primary" onClick={addKeyword} disabled={keywords.length >= MAX_KEYWORDS}>
             <Plus size={14} /> Add
           </button>
         </div>
@@ -710,7 +639,7 @@ export default function ProfilePage() {
             maxLength={80}
             disabled={excludeKeywords.length >= MAX_KEYWORDS}
           />
-          <button className="dash-btn" onClick={addExcludeKeyword} disabled={excludeKeywords.length >= MAX_KEYWORDS} style={{ minHeight: 42 }}>
+          <button className="dash-btn" onClick={addExcludeKeyword} disabled={excludeKeywords.length >= MAX_KEYWORDS}>
             <Plus size={14} /> Add
           </button>
         </div>
