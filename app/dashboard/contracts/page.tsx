@@ -23,7 +23,6 @@ interface ContractRow {
   matchLabel: string; url: string | null; matchedAt: string | null;
 }
 type SortKey = "score" | "deadline" | "posted_date";
-type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
 
@@ -98,7 +97,6 @@ function ContractsPage() {
   const [sortOpen, setSortOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,14 +158,8 @@ function ContractsPage() {
 
   useEffect(() => { load(); }, [page, sortBy]);
 
-  /* ── Status-filtered contracts ── */
-  const filteredContracts = contracts.filter(c => {
-    if (statusFilter === "bookmarked") return cs.isBookmarked(c.id);
-    if (statusFilter === "dismissed") return cs.isDismissed(c.id);
-    if (statusFilter === "new") return !cs.isViewed(c.id) && !cs.isDismissed(c.id);
-    // "all" — show everything except dismissed
-    return !cs.isDismissed(c.id);
-  });
+  /* ── Show all except dismissed ── */
+  const visibleContracts = contracts.filter(c => !cs.isDismissed(c.id));
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? "Most recent";
@@ -202,8 +194,6 @@ function ContractsPage() {
     } catch { alert("Failed to export CSV. Please try again."); }
     finally { setExporting(false); }
   }
-
-  const allIds = contracts.map(c => c.id);
 
   return (
     <div className="dash-main dash-fade-in">
@@ -241,35 +231,6 @@ function ContractsPage() {
         </div>
       </div>
 
-      {/* Status filter tabs */}
-      <div style={{ display: "flex", gap: "var(--space-4)", marginBottom: "var(--space-4)", flexWrap: "wrap", alignItems: "center" }}>
-        <div className="dash-status-tabs" role="tablist" aria-label="Contract status filter">
-          {([
-            { key: "all", label: "All" },
-            { key: "new", label: "New" },
-            { key: "bookmarked", label: "Saved" },
-            { key: "dismissed", label: "Dismissed" },
-          ] as { key: StatusFilter; label: string }[]).map(tab => (
-            <button
-              key={tab.key}
-              className="dash-status-tab"
-              data-active={statusFilter === tab.key ? "true" : undefined}
-              role="tab"
-              aria-selected={statusFilter === tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-            >
-              {tab.label}
-              {tab.key === "bookmarked" && cs.bookmarkedCount(allIds) > 0 && (
-                <span className="dash-tab-count">{cs.bookmarkedCount(allIds)}</span>
-              )}
-              {tab.key === "dismissed" && cs.dismissedCount(allIds) > 0 && (
-                <span className="dash-tab-count">{cs.dismissedCount(allIds)}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Sort */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
         <div ref={sortRef} style={{ position: "relative" }}>
@@ -304,14 +265,14 @@ function ContractsPage() {
           <SkeletonRows rows={6} />
         ) : error ? (
           <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
-        ) : filteredContracts.length === 0 ? (
+        ) : visibleContracts.length === 0 ? (
           <EmptyState
             icon={<FileText size={28} />}
-            title={statusFilter !== "all" ? `No ${statusFilter} contracts` : total === 0 ? "No matches yet" : "No contracts match your search"}
-            message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your search or lowering the score threshold."}
+            title={total === 0 ? "No matches yet" : "No contracts found"}
+            message={total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
           />
         ) : (
-          filteredContracts.map(c => (
+          visibleContracts.map(c => (
             <ContractRowUI
               key={c.id} c={c}
               isBookmarked={cs.isBookmarked(c.id)}
