@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User,
-  Brain, CreditCard, LogOut, Search,
+  Brain, CreditCard, LogOut,
   HelpCircle, ChevronRight,
 } from "lucide-react";
 import { SupportModal } from "./SupportModal";
@@ -173,31 +173,13 @@ export default function DashboardNav() {
           </ul>
         </nav>
 
-        {/* Footer: Actions + User + Sign out */}
+        {/* Footer: Actions + Sign out */}
         <div className="dash-nav-footer">
-          {/* Command Palette trigger */}
-          <button
-            className="dash-nav-btn"
-            onClick={() => setCmdOpen(true)}
-            aria-label="Open command palette"
-          >
-            <Search size={14} aria-hidden="true" />
-            Search
-            <kbd>⌘K</kbd>
-          </button>
-
           {/* Support */}
           <button className="dash-nav-btn" onClick={() => setShowSupport(true)}>
             <HelpCircle size={14} aria-hidden="true" />
             Contact Support
           </button>
-
-          {/* User email card */}
-          {userEmail && (
-            <div className="dash-user-card">
-              <p>{userEmail}</p>
-            </div>
-          )}
 
           {/* Sign out */}
           <button
