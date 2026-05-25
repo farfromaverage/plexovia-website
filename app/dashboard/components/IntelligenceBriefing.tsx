@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, TrendingUp, CheckCircle2, Brain, ExternalLink, ArrowUpRight } from "lucide-react";
+import { AlertTriangle, TrendingUp, CheckCircle2, ExternalLink, ArrowUpRight } from "lucide-react";
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 interface TopMatch {
@@ -218,9 +218,9 @@ export default function IntelligenceBriefing({ newCount }: { newCount: number })
           padding: "var(--space-5) var(--space-6)",
         }} className="dash-briefing-cell">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--space-3)" }}>
-            <Brain size={15} style={{ color: "var(--accent)" }} aria-hidden="true" />
+            <TrendingUp size={15} style={{ color: "var(--accent)" }} aria-hidden="true" />
             <span style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--app-faint)" }}>
-              Top Forecast Insight
+              Market Signal
             </span>
           </div>
           {topForecast ? (
@@ -251,7 +251,7 @@ export default function IntelligenceBriefing({ newCount }: { newCount: number })
                 className="dash-link-subtle"
                 style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: "var(--space-3)", fontSize: "0.8125rem" }}
               >
-                View forecasts <ArrowUpRight size={12} aria-hidden="true" />
+                View market signals <ArrowUpRight size={12} aria-hidden="true" />
               </Link>
             </>
           ) : (
@@ -260,7 +260,7 @@ export default function IntelligenceBriefing({ newCount }: { newCount: number })
                 Forecasts generating...
               </p>
               <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: 0 }}>
-                Set up NAICS codes to enable AI predictions.
+                Set up NAICS codes to enable market forecasts.
               </p>
               <Link
                 href="/dashboard/profile"
