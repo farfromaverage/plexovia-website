@@ -153,60 +153,6 @@ export default function BillingPage() {
             </div>
           )}
         </div>
-
-        {/* Plan comparison table (V6 Addition) */}
-        <div style={s.card}>
-          <div style={{ fontSize: "0.78rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16 }}>Compare Plans</div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "2px solid var(--app-border)", color: "var(--app-muted)", fontWeight: 500, fontSize: "0.8rem" }}>Feature</th>
-                  <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "2px solid var(--app-border)", color: "var(--accent)", fontWeight: 700, fontSize: "0.85rem" }}>Trial</th>
-                  <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "2px solid var(--app-border)", color: "var(--success)", fontWeight: 700, fontSize: "0.85rem" }}>Intelligence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { feature: "All federal sources", trial: true, intel: true },
-                  { feature: "Unlimited NAICS codes", trial: true, intel: true },
-                  { feature: "Twice-daily contract monitoring", trial: true, intel: true },
-                  { feature: "AI Forecasting", trial: true, intel: true },
-                  { feature: "Match explanations", trial: true, intel: true },
-                  { feature: "30-day rolling window", trial: false, intel: true },
-                  { feature: "Priority support", trial: false, intel: true },
-                  { feature: "Advanced filters", trial: false, intel: true },
-                ].map((row, i) => (
-                  <tr key={row.feature} style={{ background: i % 2 === 0 ? "transparent" : "var(--app-surface-2)" }}>
-                    <td style={{ padding: "10px 12px", color: "var(--app-text)", borderBottom: "1px solid var(--app-border)" }}>{row.feature}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1px solid var(--app-border)", color: row.trial ? "var(--success)" : "var(--app-faint)", fontSize: "1rem" }}>{row.trial ? "✓" : "—"}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1px solid var(--app-border)", color: row.intel ? "var(--success)" : "var(--app-faint)", fontSize: "1rem" }}>{row.intel ? "✓" : "—"}</td>
-                  </tr>
-                ))}
-                {/* Price row — highlighted */}
-                <tr>
-                  <td style={{ padding: "12px", fontWeight: 700, color: "var(--app-text)" }}>Price</td>
-                  <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "var(--accent)", fontSize: "1rem" }}>Free</td>
-                  <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, background: "var(--accent-subtle)", color: "var(--accent)", fontSize: "1rem", borderRadius: "0 0 var(--radius-sm) 0" }}>$249/mo</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Agency / Enterprise card */}
-        <div style={{ ...s.card, textAlign: "center" }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Need Agency or Enterprise access?</div>
-          <p style={{ color: "var(--app-muted)", fontSize: "0.85rem", margin: "0 0 1rem" }}>
-            Need a custom plan or volume pricing? Reach out and we&apos;ll tailor a solution for your business.
-          </p>
-          <a
-            href="mailto:support@plexovia.com?subject=Enterprise Inquiry"
-            style={{ ...s.actionBtn, background: "var(--app-surface-2)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}
-          >
-            Contact us: support@plexovia.com
-          </a>
-        </div>
       </div>
     </div>
   );
