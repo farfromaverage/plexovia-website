@@ -197,7 +197,7 @@ export async function POST(req: Request) {
 
     return new NextResponse('OK', { status: 200 });
   } catch (error: any) {
-    console.error('LemonSqueezy Webhook Error:', error.message);
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 500 });
+    console.error('LemonSqueezy Webhook Error:', error);
+    return new NextResponse('Internal server error', { status: 500 });
   }
 }

@@ -1,7 +1,29 @@
 import { NextResponse } from "next/server";
 
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
 export async function POST(request: Request) {
   try {
+    // Rate limit: 3 per IP per hour
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const now = Date.now();
+    const record = rateLimitMap.get(ip);
+    if (record) {
+      if (now < record.resetAt) {
+        if (record.count >= 3) {
+          return NextResponse.json(
+            { error: "Too many requests. Try again later." },
+            { status: 429 }
+          );
+        }
+        record.count += 1;
+      } else {
+        rateLimitMap.set(ip, { count: 1, resetAt: now + 3600 * 1000 });
+      }
+    } else {
+      rateLimitMap.set(ip, { count: 1, resetAt: now + 3600 * 1000 });
+    }
+
     const body = await request.json();
     const email = body?.email?.trim()?.toLowerCase();
 

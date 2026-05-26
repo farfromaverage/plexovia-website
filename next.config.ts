@@ -11,8 +11,14 @@ const securityHeaders = [
     value: "max-age=63072000; includeSubDomains; preload",
   },
   {
+    // CSP Directives:
+    // - 'unsafe-inline': Required by Tailwind CSS JIT and client-side style injection
+    // - 'unsafe-eval': Required by PostHog analytics (uses eval internally for session recording)
+    // - 'unsafe-inline' on script-src: Required by PostHog inline initialization
     key: "Content-Security-Policy",
     value: [
+      "base-uri 'self'",
+      "object-src 'none'",
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://app.posthog.com",
       "style-src 'self' 'unsafe-inline'",
