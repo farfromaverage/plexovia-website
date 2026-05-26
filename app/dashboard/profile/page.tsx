@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Save, CheckCircle, AlertCircle, Plus, RefreshCw, User } from "lucide-react";
 import ProfileChip from "../components/ProfileChip";
 import FedOrgSelector, { type FedOrg } from "../components/FedOrgSelector";
+import fedOrgData from "@/public/data/federal-organizations.json";
+
+interface CodeEntry { code: string; title: string; }
 
 /* ─── Constants ──────────────────────────────────────────── */
 const MAX_KEYWORDS = 30;
@@ -82,6 +85,28 @@ export default function ProfilePage() {
   const [fedOrgs,            setFedOrgs]            = useState<string[]>([]);
   const [fedOrgList,         setFedOrgList]         = useState<FedOrg[]>([]);
 
+  /* Code reference data for autocomplete */
+  const [naicsList,   setNaicsList]   = useState<CodeEntry[]>([]);
+  const [pscList,     setPscList]     = useState<CodeEntry[]>([]);
+  const [naicsDropdownOpen, setNaicsDropdownOpen] = useState(false);
+  const [pscDropdownOpen,   setPscDropdownOpen]   = useState(false);
+  const naicsInputRef = useRef<HTMLInputElement>(null);
+  const pscInputRef   = useRef<HTMLInputElement>(null);
+  const naicsDropdownRef = useRef<HTMLDivElement>(null);
+  const pscDropdownRef   = useRef<HTMLDivElement>(null);
+
+  /* Fetch code reference data on mount */
+  useEffect(() => {
+    fetch("/data/naics-2022.json")
+      .then(r => r.json())
+      .then((d: CodeEntry[]) => setNaicsList(d))
+      .catch(() => {});
+    fetch("/data/psc-codes.json")
+      .then(r => r.json())
+      .then((d: CodeEntry[]) => setPscList(d))
+      .catch(() => {});
+  }, []);
+
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
@@ -113,12 +138,8 @@ export default function ProfilePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Fetch available federal organization list from backend
   useEffect(() => {
-    fetch("/api/onboarding/first-login")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.organizations) setFedOrgList(d.organizations); })
-      .catch(e => console.warn("Failed to load federal org list:", e));
+    setFedOrgList(fedOrgData as FedOrg[]);
   }, []);
 
   // Warn before leaving if dirty
@@ -132,24 +153,59 @@ export default function ProfilePage() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (naicsDropdownRef.current && !naicsDropdownRef.current.contains(e.target as Node) && naicsInputRef.current && !naicsInputRef.current.contains(e.target as Node)) {
+        setNaicsDropdownOpen(false);
+      }
+      if (pscDropdownRef.current && !pscDropdownRef.current.contains(e.target as Node) && pscInputRef.current && !pscInputRef.current.contains(e.target as Node)) {
+        setPscDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  /* Filtered code suggestions */
+  interface CodeSuggestions {
+    matches: CodeEntry[];
+    isCustom: boolean;
+    query: string;
+  }
+  const naicsSuggestions: CodeSuggestions = (() => {
+    const q = naicsInput.trim().replace(/\D/g, "");
+    if (!q) return { matches: [], isCustom: false, query: "" };
+    const matches = naicsList.filter(n => n.code.startsWith(q) || n.title.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+    const isCustom = /^\d{2,6}$/.test(q) && !naicsList.some(n => n.code === q) && !naicsCodes.includes(q);
+    return { matches, isCustom, query: q };
+  })();
+
+  const pscSuggestions = (() => {
+    const q = pscInput.trim().toUpperCase();
+    if (!q) return [];
+    return pscList.filter(p => p.code.toUpperCase().startsWith(q) || p.title.toUpperCase().includes(q)).slice(0, 8);
+  })();
+
   /* ─── Helpers (mark dirty on any change) ─────────────────── */
   function markDirty() { setIsDirty(true); setSaved(false); }
 
-  function addNaics() {
-    const code = naicsInput.trim().replace(/\D/g, "");
-    if (!code) { setNaicsInput(""); return; }
-    if (!isValidNaics(code)) {
+  function addNaics(code?: string) {
+    const resolved = (code || naicsInput.trim().replace(/\D/g, ""));
+    if (!resolved) { setNaicsInput(""); return; }
+    if (!isValidNaics(resolved)) {
       setNaicsError("NAICS codes must be 2 to 6 digits.");
       return;
     }
-    if (naicsCodes.includes(code)) {
+    if (naicsCodes.includes(resolved)) {
       setNaicsError("Already added.");
       setNaicsInput("");
       return;
     }
-    setNaicsCodes(prev => [...prev, code]);
+    setNaicsCodes(prev => [...prev, resolved]);
     setNaicsInput("");
     setNaicsError(null);
+    setNaicsDropdownOpen(false);
     markDirty();
   }
 
@@ -158,15 +214,16 @@ export default function ProfilePage() {
     markDirty();
   }
 
-  function addPsc() {
-    const code = pscInput.trim().toUpperCase();
-    if (!code) { setPscInput(""); return; }
-    if (pscCodes.includes(code)) {
+  function addPsc(code?: string) {
+    const resolved = (code || pscInput.trim().toUpperCase());
+    if (!resolved) { setPscInput(""); return; }
+    if (pscCodes.includes(resolved)) {
       setPscInput("");
       return;
     }
-    setPscCodes(prev => [...prev, code]);
+    setPscCodes(prev => [...prev, resolved]);
     setPscInput("");
+    setPscDropdownOpen(false);
     markDirty();
   }
 
@@ -392,21 +449,51 @@ export default function ProfilePage() {
         <p className="dash-profile-section-desc">
           Enter 2 to 6 digit NAICS codes that describe your business. These determine which contracts you see.
         </p>
-        <div className="dash-profile-input-row">
+        <div className="dash-profile-input-row" style={{ position: "relative" }}>
           <label htmlFor="naics-input" className="sr-only">Add NAICS code</label>
           <input
+            ref={naicsInputRef}
             id="naics-input" type="text" inputMode="numeric"
             value={naicsInput}
-            onChange={e => { setNaicsInput(e.target.value.replace(/\D/g, "").slice(0, 6)); setNaicsError(null); }}
+            onChange={e => { setNaicsInput(e.target.value.replace(/\D/g, "").slice(0, 6)); setNaicsError(null); setNaicsDropdownOpen(true); }}
+            onFocus={() => { if (naicsInput.trim()) setNaicsDropdownOpen(true); }}
             onKeyDown={e => e.key === "Enter" && addNaics()}
             placeholder="e.g. 541512"
             className="dash-input-lg"
             maxLength={6}
             aria-describedby={naicsError ? "naics-error" : undefined}
+            autoComplete="off"
           />
-          <button className="dash-btn dash-btn-primary" onClick={addNaics}>
+          <button className="dash-btn dash-btn-primary" onClick={() => addNaics()}>
             <Plus size={14} aria-hidden="true" /> Add
           </button>
+          {naicsDropdownOpen && naicsInput.trim() && (
+            <div
+              ref={naicsDropdownRef}
+              className="dash-dropdown"
+              style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, marginTop: 4 }}
+            >
+              {naicsSuggestions.isCustom && (
+                <button type="button" className="dash-dropdown-item dash-dropdown-item-custom" onClick={() => addNaics(naicsSuggestions.query)}>
+                  <span className="dash-dropdown-code">{naicsSuggestions.query}</span>
+                  <span className="dash-dropdown-title" style={{ fontStyle: "italic" }}>Custom code (not in standard list)</span>
+                </button>
+              )}
+              {naicsSuggestions.matches.map((n: CodeEntry) => {
+                const alreadyAdded = naicsCodes.includes(n.code);
+                return (
+                  <button key={n.code} type="button" className={`dash-dropdown-item ${alreadyAdded ? "dash-dropdown-item-disabled" : ""}`} onClick={() => !alreadyAdded && addNaics(n.code)} disabled={alreadyAdded}>
+                    <span className="dash-dropdown-code">{n.code}</span>
+                    <span className="dash-dropdown-title">{n.title}</span>
+                    {alreadyAdded && <span style={{ fontSize: "0.65rem", color: "var(--app-faint)", flexShrink: 0 }}>Added</span>}
+                  </button>
+                );
+              })}
+              {!naicsSuggestions.isCustom && naicsSuggestions.matches.length === 0 && (
+                <div className="dash-dropdown-empty">No matching NAICS codes found</div>
+              )}
+            </div>
+          )}
         </div>
         {naicsError && (
           <p id="naics-error" role="alert" style={{ fontSize: "0.78rem", color: "var(--danger)", margin: "0 0 var(--space-2)" }}>
@@ -415,9 +502,12 @@ export default function ProfilePage() {
         )}
         <div className="dash-profile-chip-list">
           <AnimatePresence>
-            {naicsCodes.map(code => (
-              <ProfileChip key={code} label={code} onRemove={() => removeNaics(code)} variant="accent" monospace />
-            ))}
+            {naicsCodes.map(code => {
+              const match = naicsList.find(n => n.code === code);
+              return (
+                <ProfileChip key={code} label={code} subLabel={match?.title} onRemove={() => removeNaics(code)} variant="accent" monospace />
+              );
+            })}
           </AnimatePresence>
           {naicsCodes.length === 0 && (
             <span className="dash-profile-empty-hint">No NAICS codes added yet. Required for contract matching.</span>
@@ -446,25 +536,58 @@ export default function ProfilePage() {
         <p className="dash-profile-section-desc">
           4-character Product Service Codes for higher match precision. Optional but recommended.
         </p>
-        <div className="dash-profile-input-row">
+        <div className="dash-profile-input-row" style={{ position: "relative" }}>
           <label htmlFor="psc-input" className="sr-only">Add PSC code</label>
           <input
+            ref={pscInputRef}
             id="psc-input" type="text" value={pscInput}
-            onChange={e => setPscInput(e.target.value.toUpperCase())}
+            onChange={e => { setPscInput(e.target.value.toUpperCase()); setPscDropdownOpen(true); }}
+            onFocus={() => { if (pscInput.trim()) setPscDropdownOpen(true); }}
             onKeyDown={e => e.key === "Enter" && addPsc()}
             placeholder="e.g. D302"
             className="dash-input-lg"
             maxLength={4}
+            autoComplete="off"
           />
-          <button className="dash-btn dash-btn-primary" onClick={addPsc}>
+          <button className="dash-btn dash-btn-primary" onClick={() => addPsc()}>
             <Plus size={14} aria-hidden="true" /> Add
           </button>
+          {pscDropdownOpen && pscInput.trim() && (
+            <div
+              ref={pscDropdownRef}
+              className="dash-dropdown"
+              style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, marginTop: 4 }}
+            >
+              {pscSuggestions.map(p => {
+                const alreadyAdded = pscCodes.includes(p.code);
+                return (
+                  <button key={p.code} type="button" className={`dash-dropdown-item ${alreadyAdded ? "dash-dropdown-item-disabled" : ""}`} onClick={() => !alreadyAdded && addPsc(p.code)} disabled={alreadyAdded}>
+                    <span className="dash-dropdown-code">{p.code}</span>
+                    <span className="dash-dropdown-title">{p.title}</span>
+                    {alreadyAdded && <span style={{ fontSize: "0.65rem", color: "var(--app-faint)", flexShrink: 0 }}>Added</span>}
+                  </button>
+                );
+              })}
+              {pscSuggestions.length === 0 && /^[A-Z0-9]{1,4}$/.test(pscInput.trim()) && !pscCodes.includes(pscInput.trim()) && (
+                <button type="button" className="dash-dropdown-item dash-dropdown-item-custom" onClick={() => addPsc(pscInput.trim())}>
+                  <span className="dash-dropdown-code">{pscInput.trim()}</span>
+                  <span className="dash-dropdown-title" style={{ fontStyle: "italic" }}>Custom code (not in standard list)</span>
+                </button>
+              )}
+              {pscSuggestions.length === 0 && !(/^[A-Z0-9]{1,4}$/.test(pscInput.trim())) && (
+                <div className="dash-dropdown-empty">No matching PSC codes found</div>
+              )}
+            </div>
+          )}
         </div>
         <div className="dash-profile-chip-list">
           <AnimatePresence>
-            {pscCodes.map(code => (
-              <ProfileChip key={code} label={code} onRemove={() => removePsc(code)} variant="accent" monospace />
-            ))}
+            {pscCodes.map(code => {
+              const match = pscList.find(p => p.code === code);
+              return (
+                <ProfileChip key={code} label={code} subLabel={match?.title} onRemove={() => removePsc(code)} variant="accent" monospace />
+              );
+            })}
           </AnimatePresence>
           {pscCodes.length === 0 && (
             <span className="dash-profile-empty-hint">No PSC codes added yet. Optional precision filter.</span>

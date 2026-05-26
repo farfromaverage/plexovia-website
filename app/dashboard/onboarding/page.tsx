@@ -8,6 +8,7 @@ import {
   ArrowRight, ArrowLeft, Check, X, Loader2,
   Search, Plus, Tag, MapPin, ShieldAlert, Zap
 } from "lucide-react";
+import fedOrgData from "@/public/data/federal-organizations.json";
 
 /* ─── Shared data and logic ───────────────────────────────────────── */
 const REGIONS: Record<string, string[]> = {
@@ -209,14 +210,16 @@ function Step2FederalOrgs({
 
 // Step 3: NAICS & PSC
 function Step2({ 
-  naics, setNaics, pscCodes, setPscCodes, naicsList 
+  naics, setNaics, pscCodes, setPscCodes, naicsList, pscList 
 }: { 
   naics: string[]; setNaics: (v: string[]) => void; 
   pscCodes: string[]; setPscCodes: (v: string[]) => void;
   naicsList: {code: string; title: string}[] 
+  pscList: {code: string; title: string}[] 
 }) {
   const [query, setQuery] = useState("");
   const [pscInput, setPscInput] = useState("");
+  const [pscQuery, setPscQuery] = useState("");
   const LIMIT = 999;
 
   const trimmed = query.trim();
@@ -227,16 +230,21 @@ function Step2({
     (n) => n.code.startsWith(trimmed) || n.title.toLowerCase().includes(trimmed.toLowerCase())
   ).slice(0, 10);
 
+  const pscFiltered = pscList.filter(
+    (p) => p.code.toUpperCase().startsWith(pscQuery.toUpperCase()) || p.title.toUpperCase().includes(pscQuery.toUpperCase())
+  ).slice(0, 8);
+
   function toggleNaics(code: string) {
     if (naics.includes(code)) setNaics(naics.filter((c) => c !== code));
     else if (naics.length < LIMIT) setNaics([...naics, code]);
   }
 
-  function addPsc() {
-    const code = pscInput.trim().toUpperCase();
-    if (code && !pscCodes.includes(code) && pscCodes.length < LIMIT) {
-      setPscCodes([...pscCodes, code]);
+  function addPsc(code?: string) {
+    const resolved = (code || pscInput.trim().toUpperCase());
+    if (resolved && !pscCodes.includes(resolved) && pscCodes.length < LIMIT) {
+      setPscCodes([...pscCodes, resolved]);
       setPscInput("");
+      setPscQuery("");
     }
   }
 
@@ -314,16 +322,40 @@ function Step2({
             </span>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative">
           <input
             type="text"
             value={pscInput}
-            onChange={(e) => setPscInput(e.target.value)}
+            onChange={(e) => { setPscInput(e.target.value); setPscQuery(e.target.value); }}
             onKeyDown={(e) => { if (e.key === "Enter") addPsc(); }}
             placeholder="e.g. D302, R425"
             className="flex-1 px-3 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-lg text-[var(--app-text)] text-[13px] outline-none focus:border-[var(--accent)] uppercase"
+            autoComplete="off"
           />
-          <button type="button" onClick={addPsc} className="px-4 py-2 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-lg text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">Add</button>
+          <button type="button" onClick={() => addPsc()} className="px-4 py-2 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-lg text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">Add</button>
+          {pscQuery.trim() && (
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[var(--app-surface)] border border-[var(--app-border)] rounded-xl shadow-lg max-h-[200px] overflow-y-auto flex flex-col">
+              {pscFiltered.map((p) => {
+                const alreadyAdded = pscCodes.includes(p.code);
+                return (
+                  <button key={p.code} type="button" onClick={() => { if (!alreadyAdded) addPsc(p.code); }} className={`flex items-center gap-2 px-3 py-2 text-left border-b border-[var(--app-border)] last:border-b-0 transition-colors ${alreadyAdded ? "opacity-40 cursor-default" : "hover:bg-[var(--accent-bg-app)]"}`} disabled={alreadyAdded}>
+                    <span className="font-mono text-[12px] font-semibold text-[var(--accent)] min-w-[40px] shrink-0">{p.code}</span>
+                    <span className="text-[11px] text-[var(--app-muted)] truncate">{p.title}</span>
+                    {alreadyAdded && <span className="text-[10px] text-[var(--app-faint)] shrink-0 ml-auto">Added</span>}
+                  </button>
+                );
+              })}
+              {pscFiltered.length === 0 && /^[A-Z0-9]{1,4}$/.test(pscQuery) && !pscCodes.includes(pscQuery) && (
+                <button type="button" onClick={() => addPsc(pscQuery)} className="flex items-center gap-2 px-3 py-2 text-left border-b border-dashed border-[var(--app-border)] last:border-b-0 hover:bg-[var(--accent-bg-app)]">
+                  <span className="font-mono text-[12px] font-semibold text-[var(--accent)] min-w-[40px] shrink-0">{pscQuery}</span>
+                  <span className="text-[11px] text-[var(--app-muted)] italic">Custom code (not in standard list)</span>
+                </button>
+              )}
+              {pscFiltered.length === 0 && !(/^[A-Z0-9]{1,4}$/.test(pscQuery)) && (
+                <div className="px-3 py-2 text-[11px] text-[var(--app-faint)] text-center">No matching PSC codes found</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -452,6 +484,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step,     setStep]     = useState(1);
   const [naicsList, setNaicsList] = useState<{code: string; title: string}[]>([]);
+  const [pscList, setPscList] = useState<{code: string; title: string}[]>([]);
   
   const [naics,    setNaics]    = useState<string[]>([]);
   const [pscCodes, setPscCodes] = useState<string[]>([]);
@@ -468,10 +501,9 @@ export default function OnboardingPage() {
   useEffect(() => {
     fetch("/data/naics-2022.json").then(r => r.json()).then(setNaicsList).catch(() => {});
 
-    fetch("/api/onboarding/first-login")
-      .then(r => r.json())
-      .then(d => setFedOrgList(d.organizations || []))
-      .catch(() => setFedOrgList([]));
+    fetch("/data/psc-codes.json").then(r => r.json()).then(setPscList).catch(() => {});
+
+    setFedOrgList(fedOrgData);
 
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -618,7 +650,7 @@ export default function OnboardingPage() {
         <div className="flex-1 mb-8 overflow-hidden h-[340px]">
           {step === 1 && <Step1 selected={setAsides} setSelected={setSetAsides} />}
           {step === 2 && <Step2FederalOrgs fedOrgs={fedOrgs} setFedOrgs={setFedOrgs} fedOrgList={fedOrgList} />}
-          {step === 3 && <Step2 naics={naics} setNaics={setNaics} pscCodes={pscCodes} setPscCodes={setPscCodes} naicsList={naicsList} />}
+          {step === 3 && <Step2 naics={naics} setNaics={setNaics} pscCodes={pscCodes} setPscCodes={setPscCodes} naicsList={naicsList} pscList={pscList} />}
           {step === 4 && <Step3 states={states} setStates={setStates} keywords={keywords} setKeywords={setKeywords} excludeKeywords={excludeKeywords} setExcludeKeywords={setExcludeKeywords} />}
         </div>
 

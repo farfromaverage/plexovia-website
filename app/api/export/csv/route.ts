@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
-    return new NextResponse('Unauthorized', { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // ── Parse days parameter (1–90, default 30) ──────────────────────────
@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
 
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
+
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  const cutoffISO = ninetyDaysAgo.toISOString().split('T')[0]
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const todayISO = new Date().toISOString().split('T')[0]
@@ -40,12 +44,13 @@ export async function GET(request: NextRequest) {
     )
     .eq('user_id', session.user.id)
     .gte('created_at', cutoffDate.toISOString())
+    .gte('posted_date', cutoffISO, { referencedTable: 'contracts' })
     .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
     .order('score', { ascending: false })
 
   if (error) {
     console.error('[/api/export/csv] Supabase error:', error)
-    return new NextResponse('Database Error', { status: 500 })
+    return NextResponse.json({ error: 'Database Error' }, { status: 500 })
   }
 
   const matches = data || []

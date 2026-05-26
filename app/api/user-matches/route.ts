@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   try {
     // ── Build the main query ────────────────────────────────────────────
     const selectClause =
-      'id, score, match_reasons, created_at, ' +
+      'id, score, recency_window, match_reasons, created_at, ' +
       'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
       'fed_org_code, deadline, posted_date, set_aside)'
 
@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
     } else if (sort === 'score') {
       query = query.order('score', { ascending: false })
     } else {
-      // Default: newest contracts first (matches must post date DESC, then score DESC)
-      query = query.order('posted_date', { ascending: false, referencedTable: 'contracts' })
+      // Default: recency_window (ASC) then score (DESC) — 10-day recency buckets
+      query = query.order('recency_window', { ascending: true })
       query = query.order('score', { ascending: false })
     }
 

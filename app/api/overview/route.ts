@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
-    return new NextResponse('Unauthorized', { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Get period from query, default to 7
@@ -32,12 +32,19 @@ export async function GET(request: NextRequest) {
   const previousPeriodStart = new Date(periodStart)
   previousPeriodStart.setDate(periodStart.getDate() - period)
 
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  const cutoffISO = ninetyDaysAgo.toISOString().split('T')[0]
+  const todayISO = new Date().toISOString().split('T')[0]
+
   // Fetch current period matches
   const { data: matchesCurrent } = await supabase
     .from('matches')
-    .select('score, matched_at, contracts(value_min, value_max, set_aside, title, agency, id, deadline, url, naics_code)')
+    .select('score, created_at, contracts(value_min, value_max, set_aside, title, agency, id, deadline, url, naics_code)')
     .eq('user_id', session.user.id)
     .gte('created_at', periodStart.toISOString())
+    .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
+    .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
 
   // Fetch previous period matches for comparison
   const { data: matchesPrevious } = await supabase
@@ -88,7 +95,7 @@ export async function GET(request: NextRequest) {
         deadline: c.deadline || null,
         url: c.url || null,
         naics_code: c.naics_code || null,
-        matched_at: m.matched_at || null,
+        matched_at: m.created_at || null,
       })
     })
     topMatches.sort((a, b) => b.score - a.score)
