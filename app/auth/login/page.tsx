@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, Shield, BarChart3 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, AlertCircle, Shield } from "lucide-react";
 
 /* ─── Google button ───────────────────────────────────────────────── */
 function GoogleButton() {
@@ -62,8 +62,7 @@ function GoogleIcon() {
 
 /* ─── Trust indicators for left panel ─────────────────────────────── */
 const TRUST_POINTS = [
-  { icon: Shield,    label: "SAM.gov contracts matched daily" },
-  { icon: BarChart3, label: "AI scoring and forecasting built in" },
+  { icon: Shield, label: "SAM.gov contracts matched daily" },
 ];
 
 /* ─── Inner content (uses useSearchParams — must be wrapped) ─────── */

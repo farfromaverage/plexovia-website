@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User,
-  TrendingUp, CreditCard, LogOut,
+  CreditCard, LogOut,
   HelpCircle, ChevronRight,
 } from "lucide-react";
 import { SupportModal } from "./SupportModal";
@@ -16,7 +16,6 @@ const NAV_ITEMS = [
   { href: "/dashboard",             label: "Overview",     icon: LayoutDashboard },
   { href: "/dashboard/contracts",   label: "Contracts",    icon: FileText },
   { href: "/dashboard/profile",     label: "Profile",      icon: User },
-  { href: "/dashboard/forecasts",   label: "Market Intelligence", icon: TrendingUp },
   { href: "/dashboard/billing",     label: "Billing",      icon: CreditCard },
 ] as const;
 
@@ -24,7 +23,6 @@ const NAV_ITEMS = [
 const BOTTOM_TABS = [
   { href: "/dashboard",             label: "Overview",   icon: LayoutDashboard },
   { href: "/dashboard/contracts",   label: "Contracts",  icon: FileText },
-  { href: "/dashboard/forecasts",   label: "Intelligence",  icon: TrendingUp },
   { href: "/dashboard/profile",     label: "Profile",    icon: User },
 ] as const;
 

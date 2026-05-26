@@ -538,29 +538,21 @@ export default function OnboardingPage() {
     setBuildingDashboard(true);
     setBuildStatus("Starting contract matching engine…");
 
-    // Trigger both pipelines in parallel, but AWAIT the responses
-    // so we can report accurate status to the user.
-    const [matchResult, forecastResult] = await Promise.allSettled([
-      fetch("/api/onboarding/first-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ naics_codes: naics, states: states })
-      }).then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        return { ok: r.ok, status: data.status };
-      }),
-      fetch("/api/forecasts/trigger", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ naics_codes: naics })
-      }).then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        return { ok: r.ok, status: data.status };
-      })
-    ]);
+    // Trigger matching pipeline
+    setBuildingDashboard(true);
+    setBuildStatus("Starting contract matching engine…");
+
+    const matchResult = await fetch("/api/onboarding/first-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ naics_codes: naics, states: states })
+    }).then(async (r) => {
+      const data = await r.json().catch(() => ({}));
+      return { ok: r.ok, status: data.status };
+    }).catch(() => ({ ok: false, status: "error" }));
 
     // Check if matching succeeded — this determines user's first impression
-    const matchOk = matchResult.status === "fulfilled" && matchResult.value.ok;
+    const matchOk = matchResult.ok;
 
     if (matchOk) {
       setBuildStatus("Contracts matched! Redirecting to your dashboard…");

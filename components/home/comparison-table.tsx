@@ -30,11 +30,6 @@ interface Row {
 
 const ROWS: Row[] = [
   {
-    feature:     "Market Intelligence — 3 forecast engines",
-    plexovia:    { type: "text", value: "Predictive budget curves mapped to your NAICS", highlight: true },
-    alternative: { type: "minus" },
-  },
-  {
     feature:     "Time required per day",
     plexovia:    { type: "text", value: "Under 5 min (review your dashboard)", highlight: true },
     alternative: { type: "text", value: "2 to 4 hours of manual searching" },
@@ -57,11 +52,6 @@ const ROWS: Row[] = [
   {
     feature:     "Dashboard delivery. Updated daily.",
     plexovia:    { type: "text", value: "Scored matches in your dashboard daily, no manual searching", highlight: true },
-    alternative: { type: "minus" },
-  },
-  {
-    feature:     "Predictive market intelligence",
-    plexovia:    { type: "text", value: "3 calibrated engines forecast agency spend patterns, backed by 10+ years of federal data", highlight: true },
     alternative: { type: "minus" },
   },
   {

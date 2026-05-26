@@ -82,8 +82,6 @@ export default function ProfilePage() {
   const [fedOrgs,            setFedOrgs]            = useState<string[]>([]);
   const [fedOrgList,         setFedOrgList]         = useState<FedOrg[]>([]);
 
-  const [originalNaicsCodes, setOriginalNaicsCodes] = useState<string[]>([]);
-
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
@@ -101,7 +99,6 @@ export default function ProfilePage() {
     } else if (data) {
       const d = data as ProfileData;
       setNaicsCodes(d.naics_codes ?? []);
-      setOriginalNaicsCodes(d.naics_codes ?? []);
       setPscCodes(d.psc_codes ?? []);
       setSelectedStates(d.states ?? []);
       setKeywords(d.keywords ?? []);
@@ -282,19 +279,6 @@ export default function ProfilePage() {
       setSaved(true);
       setIsDirty(false);
       setTimeout(() => setSaved(false), 3500);
-
-      // Trigger forecast cold start for any newly added NAICS codes
-      const newCodes = resolvedNaics.filter(c => !originalNaicsCodes.includes(c) && /^\d{2,6}$/.test(c));
-      if (newCodes.length > 0) {
-        fetch("/api/forecasts/trigger", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ naics_codes: newCodes }),
-        }).catch(e => console.warn("Forecast trigger failed:", e));
-      }
-
-      // Update the baseline so subsequent saves only trigger for truly new codes
-      setOriginalNaicsCodes([...resolvedNaics]);
     }
   }
 

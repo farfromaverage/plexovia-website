@@ -32,7 +32,6 @@ const steps = [
       "Add unlimited NAICS codes to your tracking profile.",
       "Add custom keywords to catch contracts your NAICS codes miss.",
       "Set your place of performance preference so irrelevant states drop out.",
-      "Market Intelligence analyzes historical federal award patterns to forecast agency spend, set-aside opportunities, and low-competition categories.",
       "Configure your notification preferences for optional email reports.",
     ],
   },
@@ -60,8 +59,6 @@ const steps = [
       "Each match shows the agency, deadline, place of performance, set aside status, and your score.",
       "Click any contract to go directly to the solicitation. No platform login required.",
       "Weekly bid calendars and performance summaries delivered automatically.",
-      "AI Predictive Forecasting: Renewal Radar predicts when incumbent contracts drop.",
-      "Track agency 'use-it-or-lose-it' spending heatmaps and Q4 budget surges.",
     ],
   },
 ];
@@ -121,8 +118,8 @@ export default function HowItWorksPage() {
       },
       {
         "@type": "HowToStep",
-        "name": "Delivery of matches with Market Intelligence",
-        "text": "Ranked matches, scored from 0 to 100, delivered to your dashboard every morning. Includes AI Predictive Forecasting for incumbent expirations and Q4 budget surges."
+        "name": "Delivery of ranked contract matches",
+        "text": "Ranked matches, scored from 0 to 100, delivered to your dashboard every morning."
       }
     ]
   };

@@ -5,7 +5,6 @@ import ProblemSection from "@/components/home/problem-section";
 import DigestPreview from "@/components/home/digest-preview";
 import StatsBar from "@/components/home/stats-bar";
 import CoverageMap from "@/components/home/coverage-map";
-import AIForecastingSection from "@/components/home/ai-forecasting-section";
 import FAQSection from "@/components/home/faq-section";
 import FinalCTA from "@/components/home/final-cta";
 import Footer from "@/components/home/footer";
@@ -70,7 +69,6 @@ export default function LandingPage() {
       <DigestPreview />
       <StatsBar />
       <CoverageMap />
-      <AIForecastingSection />
       <FAQSection />
       <FinalCTA />
       <Footer />
