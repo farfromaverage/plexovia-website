@@ -8,7 +8,7 @@ import {
   FileText, TrendingUp, MapPin, Zap, ArrowUpRight,
   Shield, ExternalLink, Tag, AlertCircle, Settings, ChevronRight,
 } from "lucide-react";
-import ScoreBadge from "./components/ScoreBadge";
+import MatchScoreBadge from "@/components/ui/match-score-badge";
 import IntelligenceBriefing from "./components/IntelligenceBriefing";
 import { useLastVisit } from "@/hooks/useLastVisit";
 
@@ -80,7 +80,7 @@ function ContractRow({ c }: { c: ContractDisplay }) {
     <div className="dash-contract-row">
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5, flexWrap: "wrap" }}>
-          <ScoreBadge score={c.score} />
+          <MatchScoreBadge score={c.score} />
           <span className="dash-match-tag" data-type={c.matchedBy}>
             {c.matchedBy === "naics" ? <FileText size={10} aria-hidden="true" /> : <Tag size={10} aria-hidden="true" />}
             {c.matchLabel}
@@ -226,7 +226,7 @@ export default function DashboardPage() {
     return { date: d, count: 0 };
   });
   matches.forEach(m => {
-    const src = m.rawPosted || m.rawMatchedAt;
+    const src = m.rawMatchedAt;
     if (!src) return;
     const mDate = new Date(src); mDate.setHours(0, 0, 0, 0);
     const diff = Math.floor((today.getTime() - mDate.getTime()) / 86400000);

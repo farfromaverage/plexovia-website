@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw,
   Download, Calendar, X,
 } from "lucide-react";
-import ScoreBadge from "../components/ScoreBadge";
+import MatchScoreBadge from "@/components/ui/match-score-badge";
 import SkeletonRows from "../components/SkeletonRows";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
@@ -397,7 +397,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
       {/* Score column */}
       <div className="dash-contract-card-left">
         {!isViewed && <span className="dash-viewed-dot" title="New" />}
-        <ScoreBadge score={c.score} />
+        <MatchScoreBadge score={c.score} />
       </div>
 
       {/* Content column */}

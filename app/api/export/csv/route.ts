@@ -1,20 +1,8 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const cookieStore = await cookies()
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll()              { return cookieStore.getAll() },
-        setAll(cookiesToSet)  { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) },
-      },
-    }
-  )
+  const supabase = await createClient()
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
@@ -28,10 +16,7 @@ export async function GET(request: NextRequest) {
 
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
-
-  const ninetyDaysAgo = new Date()
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-  const cutoffISO = ninetyDaysAgo.toISOString().split('T')[0]
+  const cutoffISO = cutoffDate.toISOString().split('T')[0]
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const todayISO = new Date().toISOString().split('T')[0]
