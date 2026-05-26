@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   const per_page  = Math.min(100, Math.max(1, parseInt(searchParams.get('per_page') || '10', 10)))
   const min_score = Math.max(0, parseInt(searchParams.get('min_score') || '0', 10))
   const search    = searchParams.get('search') || ''
-  const sort      = searchParams.get('sort') || 'score'
+  const sort      = searchParams.get('sort') || 'recency'
 
   const offset = (page - 1) * per_page
 

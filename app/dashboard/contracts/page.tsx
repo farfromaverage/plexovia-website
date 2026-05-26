@@ -130,7 +130,7 @@ function ContractsPage() {
   }, []);
 
   const fetchMatches = async (p: number) => {
-    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort: "posted_date" });
+    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort: "recency" });
     const res = await fetch(`/api/user-matches?${params.toString()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
