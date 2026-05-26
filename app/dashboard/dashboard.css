@@ -934,42 +934,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Forecast Chart Panels ────────────────────────────────────── */
-.dash-chart-panel { background: var(--app-surface); border: 1px solid var(--app-border); border-radius: var(--radius-md); overflow: hidden; }
-.dash-chart-insight { padding: var(--space-5); border-bottom: 1px solid var(--app-border); }
-.dash-chart-insight-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.dash-chart-insight-icon.success { background: var(--success-subtle); color: var(--success); }
-.dash-chart-insight-icon.accent { background: var(--accent-subtle); color: var(--accent); }
-.dash-chart-insight-icon.warning { background: var(--warning-subtle); color: var(--warning); }
-.dash-chart-insight-icon.danger { background: var(--danger-subtle); color: var(--danger); }
-.dash-chart-insight-icon.info { background: var(--info-subtle); color: var(--info); }
-.dash-chart-headline { font-size: 0.9375rem; font-weight: 700; color: var(--app-text); margin: 0 0 2px; line-height: 1.35; }
-.dash-chart-subtext { font-size: 0.8125rem; color: var(--app-muted); margin: 0; line-height: 1.5; }
-.dash-chart-body { padding: var(--space-4) var(--space-5); }
-.dash-chart-footer { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--app-border); display: flex; justify-content: flex-end; }
-
-/* Recharts overrides */
-.dash-chart-body .recharts-cartesian-grid-horizontal line,
-.dash-chart-body .recharts-cartesian-grid-vertical line { stroke: var(--app-border); }
-.dash-chart-body .recharts-text { fill: var(--app-muted); font-size: 10px; }
-.dash-chart-body .recharts-legend-item-text { color: var(--app-muted) !important; font-size: 0.75rem !important; }
-
-/* Heatmap table */
-.dash-heatmap { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-.dash-heatmap th { text-align: center; padding: 6px 4px; color: var(--app-muted); font-weight: 500; border-bottom: 1px solid var(--app-border); }
-.dash-heatmap th:first-child { text-align: left; padding-left: var(--space-2); }
-.dash-heatmap td { padding: 3px; text-align: center; border-bottom: 1px solid var(--app-border); }
-.dash-heatmap td:first-child { text-align: left; padding: 5px var(--space-2); color: var(--app-text); font-size: 0.72rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash-heat-cell { width: 100%; min-width: 34px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; transition: opacity var(--duration-micro) ease; }
-.dash-heat-cell:hover { opacity: 0.8; }
-
-/* Gantt rows */
-.dash-gantt-row { display: flex; align-items: center; margin-bottom: 6px; min-height: 32px; }
-.dash-gantt-label { width: 180px; flex-shrink: 0; font-size: 0.72rem; color: var(--app-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash-gantt-track { flex: 1; position: relative; height: 26px; background: var(--app-surface-2); border-radius: 4px; }
-.dash-gantt-bar { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--app-bg); font-weight: 600; overflow: hidden; white-space: nowrap; transition: opacity var(--duration-micro) ease; }
-.dash-gantt-bar:hover { opacity: 0.85; }
-
 /* ── Contract Card (V3 redesign) ─────────────────────────────── */
 .dash-contract-card {
   display: flex;

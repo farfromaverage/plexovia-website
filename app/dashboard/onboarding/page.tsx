@@ -603,7 +603,7 @@ export default function OnboardingPage() {
             <div>
               <h2 className="font-bold text-xl text-[var(--app-text)] mb-2">Preparing Your Intelligence</h2>
               <p className="text-[var(--app-muted)] text-sm leading-relaxed max-w-[360px]">
-                Matching federal contracts to your profile and generating predictive intelligence. This usually takes 10–30 seconds.
+                Matching federal contracts to your profile. This usually takes 10–30 seconds.
               </p>
             </div>
             <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--app-surface-2)] border border-[var(--app-border)] rounded-full">
