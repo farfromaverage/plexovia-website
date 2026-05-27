@@ -98,7 +98,6 @@ export default function ContractsPageWrapper() {
 function ContractsPage() {
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isColdStart, setIsColdStart] = useState(false);
   const [naicsCodes, setNaicsCodes] = useState<string[]>([]);
   const [error, setError] = useState(false);
   const [total, setTotal] = useState(0);
@@ -137,31 +136,16 @@ function ContractsPage() {
   };
 
   const load = useCallback(async () => {
-    if (!isColdStart) setLoading(true);
+    setLoading(true);
     setError(false);
     try {
       const json = await fetchMatches(page);
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
       setTotal(json.pagination?.total || 0);
-      if (rows.length === 0 && page === 1) {
-        setIsColdStart(true);
-        const interval = setInterval(async () => {
-          try {
-            const refreshed = await fetchMatches(1);
-            if (refreshed.matches?.length > 0) {
-              setContracts(refreshed.matches.map(mapRow));
-              setTotal(refreshed.pagination?.total || 0);
-              setIsColdStart(false);
-              clearInterval(interval);
-            }
-          } catch { /* polling error — silent */ }
-        }, 30_000);
-        setTimeout(() => clearInterval(interval), 600_000);
-      } else { setIsColdStart(false); }
     } catch { setError(true); }
-    finally { if (!isColdStart) setLoading(false); }
-  }, [page, isColdStart]);
+    finally { setLoading(false); }
+  }, [page]);
 
   useEffect(() => { load(); }, [page, load]);
 
@@ -290,25 +274,17 @@ function ContractsPage() {
         marginBottom: "var(--space-5)",
       }}>
 
-        {isColdStart ? (
-          <EmptyState
-            icon={<RefreshCw size={28} className="dash-spin" style={{ color: "var(--accent)" }} />}
-            title="Matching contracts to your profile now"
-            message={
-              naicsCodes.length > 0
-                ? `Searching NAICS codes: ${naicsCodes.join(", ")}\n\nThis takes 2–5 minutes on first login.\nThis page updates automatically — no refresh needed.`
-                : "This takes 2–5 minutes on first login.\n\nThis page updates automatically — no refresh needed."
-            }
-          />
-        ) : loading ? (
+        {loading ? (
           <SkeletonRows rows={6} />
         ) : error ? (
           <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
         ) : filteredContracts.length === 0 ? (
           <EmptyState
             icon={<FileText size={28} />}
-            title={statusFilter !== "all" ? `No ${statusFilter} contracts` : total === 0 ? "No matches yet" : "No contracts found"}
-            message={statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
+            title={total === 0 && naicsCodes.length > 0 ? "No active matches found" : statusFilter !== "all" ? `No ${statusFilter} contracts` : "No matches yet"}
+            message={total === 0 && naicsCodes.length > 0
+              ? "Contracts are fetched from SAM.gov twice daily at 11:00 and 18:00 UTC. Check back after the next pipeline run."
+              : statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
           />
         ) : (
           <AnimatePresence initial={false}>
@@ -327,7 +303,7 @@ function ContractsPage() {
       </div>
 
       {/* Pagination */}
-      {!loading && !isColdStart && totalPages > 1 && (
+      {!loading && totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
           <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
             Page {page} of {totalPages} · {total.toLocaleString()} total matches
