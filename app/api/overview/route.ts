@@ -54,14 +54,15 @@ export async function GET(request: NextRequest) {
 
   let avgScore = 0
   let totalValue = 0
-  const topMatches: any[] = []
+  const topMatches: Array<{ id: string; title: string; agency: string; score: number; deadline: string | null; url: string | null; naics_code: string | null; matched_at: string | null }> = []
   const setAsideBreakdown: Record<string, number> = {}
 
   if (matchesCurrent && matchesCurrent.length > 0) {
     const scores = matchesCurrent.map(m => m.score)
     avgScore = scores.reduce((a, b) => a + b, 0) / scores.length
-    
+
     matchesCurrent.forEach(m => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const c: any = Array.isArray(m.contracts) ? (m.contracts[0] || {}) : (m.contracts || {})
       
       // Aggregate total value (use value_max as the representative contract value)

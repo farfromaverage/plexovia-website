@@ -109,12 +109,31 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Format response to match the shape the frontend expects ─────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const matches = (rows || []).map((row: any) => {
-      const contract = Array.isArray(row.contracts) ? (row.contracts[0] || {}) : (row.contracts || {})
+    interface MatchRow {
+      id: string
+      score: number
+      recency_window: number
+      match_reasons: string[]
+      created_at: string
+      contracts: Array<{
+        id: string | null
+        title: string | null
+        url: string | null
+        state: string | null
+        agency: string | null
+        naics_code: string | null
+        deadline: string | null
+        posted_date: string | null
+        set_aside: string | null
+        psc_code: string | null
+        fed_org_code: string | null
+      }>
+    }
+
+    const matches = (rows as unknown as MatchRow[]).map((row) => {
+      const contract = (row.contracts && row.contracts[0]) || {}
       const reasons = row.match_reasons || []
 
-      // Build explanation string from reasons
       const explanationParts = reasons.map((r: string) => {
         if (r.startsWith('naics:')) return `NAICS code ${r.replace('naics:', '')} matched`
         if (r.startsWith('keyword:')) return `Keyword "${r.replace('keyword:', '')}" found in title`
@@ -138,7 +157,6 @@ export async function GET(request: NextRequest) {
           naics_code:  contract.naics_code ?? null,
           deadline:    contract.deadline ?? null,
           posted_date: contract.posted_date ?? null,
-
           set_aside:   contract.set_aside ?? null,
           psc_code:    contract.psc_code ?? null,
           fed_org_code: contract.fed_org_code ?? null,

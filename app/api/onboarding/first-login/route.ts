@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
   const requestBody = JSON.stringify({
     user_id: session.user.id,
     naics_codes: payload.naics_codes || [],
-    states: payload.states || [],
   })
 
   // Retry with exponential backoff (3 attempts, 20s timeout each)
