@@ -118,6 +118,7 @@ function ContractsPage() {
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const knownTotalRef = useRef(0);
+  const knownOverviewRef = useRef(-1);
   const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retriedRef = useRef(false);
 
@@ -206,6 +207,8 @@ function ContractsPage() {
   }, []);
 
   // Staleness detection — lightweight overview poll every 60s
+  // Compares overview vs overview (same endpoint, same counting window) to avoid
+  // false positives from different query scopes between user-matches and overview.
   useEffect(() => {
     stalePollRef.current = setInterval(async () => {
       try {
@@ -213,7 +216,10 @@ function ContractsPage() {
         const res = await fetch('/api/overview?period=90', { signal: timeoutSignal });
         if (!res.ok) return;
         const json = await res.json();
-        if (json.matchesCount !== knownTotalRef.current && knownTotalRef.current > 0) {
+        const count: number = json.matchesCount ?? 0;
+        if (knownOverviewRef.current === -1) {
+          knownOverviewRef.current = count;
+        } else if (count !== knownOverviewRef.current) {
           setStaleData(true);
         }
       } catch {
@@ -412,6 +418,9 @@ function ContractsPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
           <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
             Page {page} of {totalPages} · {total.toLocaleString()} total matches
+            {statusFilter === "all" && cs.totalDismissedCount() > 0 && (
+              <> · <span style={{ color: "var(--app-faint)" }}>{cs.totalDismissedCount()} dismissed</span></>
+            )}
           </span>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <button className="dash-btn" onClick={() => handlePageChange(page - 1)} disabled={page === 1} aria-label="Previous page">

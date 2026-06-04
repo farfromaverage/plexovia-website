@@ -153,6 +153,7 @@ export default function DashboardPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const knownTotalRef = useRef(0);
+  const knownOverviewRef = useRef(-1);
   const loadedRef = useRef(false);
   const fetchMatches = useCallback(async (): Promise<number> => {
     abortRef.current?.abort();
@@ -218,17 +219,22 @@ export default function DashboardPage() {
     }, 800);
 
     // Start staleness detection — lightweight overview poll every 60s
+    // Compares overview vs overview (same endpoint, same counting window) to avoid
+    // false positives from different query scopes between user-matches and overview.
     stalePollRef.current = setInterval(async () => {
       try {
         const timeoutSignal = AbortSignal.timeout(10000);
         const res = await fetch('/api/overview?period=90', { signal: timeoutSignal });
         if (!res.ok) return;
         const json = await res.json();
-        if (json.matchesCount !== knownTotalRef.current && knownTotalRef.current > 0) {
+        const count: number = json.matchesCount ?? 0;
+        if (knownOverviewRef.current === -1) {
+          knownOverviewRef.current = count;
+        } else if (count !== knownOverviewRef.current) {
           setStaleData(true);
         }
       } catch {
-        // silent — staleness check is best-effort
+        // best-effort
       }
     }, 60000);
 

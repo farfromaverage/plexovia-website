@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-interface ExportQueryBuilder {
+interface ExportQueryBuilder extends PromiseLike<{ data: ExportMatchRow[] | null; error: { message: string } | null }> {
   eq(col: string, val: unknown): ExportQueryBuilder
   gte(col: string, val: unknown): ExportQueryBuilder
   or(filters: string, opts?: { referencedTable?: string }): ExportQueryBuilder
   order(col: string, opts?: { ascending?: boolean }): ExportQueryBuilder
-  limit(n: number): Promise<{ data: ExportMatchRow[] | null; error: { message: string } | null }>
+  limit(n: number): ExportQueryBuilder
 }
 
 interface ExportMatchRow {
