@@ -114,8 +114,12 @@ function ContractsPage() {
   const [exporting, setExporting] = useState(false);
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
+  const [staleData, setStaleData] = useState(false);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const knownTotalRef = useRef(0);
+  const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retriedRef = useRef(false);
 
   const cs = useContractStatus();
 
@@ -154,6 +158,15 @@ function ContractsPage() {
   };
 
   const abortRef = useRef<AbortController | null>(null);
+  const isTransient = (err: unknown): boolean => {
+    if (err instanceof DOMException && err.name === "AbortError") return false;
+    if (err instanceof TypeError) return true; // network error
+    if (err instanceof Error) {
+      const m = err.message;
+      return /^HTTP (500|502|503|504)$/.test(m);
+    }
+    return false;
+  };
   const load = useCallback(async () => {
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -167,9 +180,17 @@ function ContractsPage() {
       if (controller.signal.aborted) return;
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
-      setTotal(json.pagination?.total || 0);
+      const newTotal = json.pagination?.total || 0;
+      setTotal(newTotal);
+      knownTotalRef.current = newTotal;
+      retriedRef.current = false;
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
+      if (isTransient(err) && !retriedRef.current) {
+        retriedRef.current = true;
+        setTimeout(() => { if (abortRef.current === controller) load(); }, 3000);
+        return;
+      }
       setError(true);
     }
     finally { if (abortRef.current === controller) setLoading(false); }
@@ -182,6 +203,24 @@ function ContractsPage() {
     return () => {
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     };
+  }, []);
+
+  // Staleness detection — lightweight overview poll every 60s
+  useEffect(() => {
+    stalePollRef.current = setInterval(async () => {
+      try {
+        const timeoutSignal = AbortSignal.timeout(10000);
+        const res = await fetch('/api/overview?period=90', { signal: timeoutSignal });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.matchesCount !== knownTotalRef.current && knownTotalRef.current > 0) {
+          setStaleData(true);
+        }
+      } catch {
+        // best-effort
+      }
+    }, 60000);
+    return () => { if (stalePollRef.current) clearInterval(stalePollRef.current); };
   }, []);
 
   /* ── Status-filtered contracts ── */
@@ -310,6 +349,16 @@ function ContractsPage() {
         </div>
       </div>
 
+      {/* Stale data banner */}
+      {staleData && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", marginBottom: "var(--space-3)", background: "var(--warning-subtle)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: "0.8125rem", color: "var(--app-text)" }} role="alert">
+          <span style={{ flex: 1 }}>New contract matches are available.</span>
+          <button onClick={() => { setStaleData(false); load(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
+            Refresh
+          </button>
+        </div>
+      )}
+
       {/* Contracts */}
       <div style={{
         background: "var(--app-surface)",
@@ -327,10 +376,20 @@ function ContractsPage() {
         ) : filteredContracts.length === 0 ? (
           <EmptyState
             icon={<FileText size={28} />}
-            title={total === 0 && naicsCodes.length > 0 ? "No active matches found" : statusFilter !== "all" ? `No ${statusFilter} contracts` : "No matches yet"}
+            title={total === 0 && naicsCodes.length > 0 ? "No active matches found" : statusFilter === "new" && contracts.length > 0 ? "No new contracts" : statusFilter !== "all" ? `No ${statusFilter} contracts` : "No matches yet"}
             message={total === 0 && naicsCodes.length > 0
               ? "Contracts are fetched from SAM.gov twice daily at 11:00 and 18:00 UTC. Check back after the next pipeline run."
-              : statusFilter !== "all" && contracts.length > 0 ? `No ${statusFilter} contracts on this page. Try browsing other pages or check the All tab.` : statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
+              : statusFilter === "new" && contracts.length > 0
+                ? "You've seen all new contracts on this page. Check back after the next pipeline run (11:00 / 18:00 UTC)."
+                : statusFilter === "all" && contracts.length > 0 && total > 0
+                  ? "All contracts on this page have been dismissed. Try browsing other pages or switch to the Dismissed tab."
+                  : statusFilter !== "all" && contracts.length > 0
+                    ? `No ${statusFilter} contracts on this page. Try browsing other pages or check the All tab.`
+                    : statusFilter !== "all"
+                      ? "Try switching to the 'All' tab."
+                      : total === 0
+                        ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily."
+                        : "Try adjusting your filters."}
           />
         ) : (
           <AnimatePresence initial={false}>

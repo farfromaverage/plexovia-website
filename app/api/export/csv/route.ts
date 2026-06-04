@@ -1,6 +1,30 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+interface ExportQueryBuilder {
+  eq(col: string, val: unknown): ExportQueryBuilder
+  gte(col: string, val: unknown): ExportQueryBuilder
+  or(filters: string, opts?: { referencedTable?: string }): ExportQueryBuilder
+  order(col: string, opts?: { ascending?: boolean }): ExportQueryBuilder
+  limit(n: number): Promise<{ data: ExportMatchRow[] | null; error: { message: string } | null }>
+}
+
+interface ExportMatchRow {
+  score: number
+  match_reasons: string[]
+  created_at: string
+  contracts: Array<{
+    title: string | null
+    state: string | null
+    naics_code: string | null
+    psc_code: string | null
+    set_aside: string | null
+    deadline: string | null
+    posted_date: string | null
+    url: string | null
+  }>
+}
+
 const EXPORT_LIMIT = 5000
 
 export async function GET(request: NextRequest) {
@@ -22,16 +46,16 @@ export async function GET(request: NextRequest) {
     const cutoffISO = cutoffDate.toISOString().split('T')[0]
 
     const todayISO = new Date().toISOString().split('T')[0]
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (supabase
       .from('matches')
       .select(
         'score, match_reasons, created_at, ' +
         'contracts!inner(title, state, naics_code, psc_code, ' +
         'set_aside, deadline, posted_date, url)'
-      )
+      ) as unknown as ExportQueryBuilder)
       .eq('user_id', session.user.id)
       .gte('created_at', cutoffDate.toISOString())
-      .filter('posted_date', 'gte', cutoffISO, { referencedTable: 'contracts' })
+      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
       .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
       .order('score', { ascending: false })
       .limit(EXPORT_LIMIT)
@@ -74,8 +98,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = matches.map((m: any) => {
+    const rows = matches.map((m: ExportMatchRow) => {
       const c = Array.isArray(m.contracts)
         ? (m.contracts[0] || {})
         : (m.contracts || {})
