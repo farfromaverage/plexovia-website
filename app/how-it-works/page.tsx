@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle, Mail, ExternalLink } from "lucide-react";
+import { EngineStatsProvider } from "@/components/home/engine-stats-provider";
 import Footer from "@/components/home/footer";
 import FAQSection from "@/components/home/faq-section";
 
@@ -125,6 +126,7 @@ export default function HowItWorksPage() {
   };
 
   return (
+    <EngineStatsProvider>
     <div style={{ backgroundColor: "var(--pub-bg)" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
@@ -851,5 +853,6 @@ export default function HowItWorksPage() {
       <Footer />
 
     </div>
+    </EngineStatsProvider>
   );
 }

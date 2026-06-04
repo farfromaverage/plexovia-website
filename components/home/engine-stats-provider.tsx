@@ -59,6 +59,6 @@ export function EngineStatsProvider({ children }: { children: React.ReactNode })
 
 export function useEngineStats() {
   const ctx = useContext(EngineStatsContext);
-  if (!ctx) throw new Error("useEngineStats must be used within EngineStatsProvider");
+  if (!ctx) return FALLBACK;
   return ctx;
 }

@@ -84,6 +84,7 @@ function mapRow(m: MatchRow): ContractRow {
 }
 
 const PER_PAGE = 15;
+const FILTER_BATCH = 200;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
 /* ─── Page ────────────────────────────────────────────────────────── */
@@ -129,8 +130,8 @@ function ContractsPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const fetchMatches = async (p: number, signal?: AbortSignal) => {
-    const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort: "recency" });
+  const fetchMatches = async (p: number, pp: number = PER_PAGE, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ page: String(p), per_page: String(pp), min_score: "0", sort: "recency" });
     const res = await fetch(`/api/user-matches?${params.toString()}`, { signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -144,7 +145,9 @@ function ContractsPage() {
     setLoading(true);
     setError(false);
     try {
-      const json = await fetchMatches(page, controller.signal);
+      const needsBatch = statusFilter === "bookmarked" || statusFilter === "dismissed";
+      const pp = needsBatch ? FILTER_BATCH : PER_PAGE;
+      const json = await fetchMatches(page, pp, controller.signal);
       if (controller.signal.aborted) return;
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
@@ -154,7 +157,7 @@ function ContractsPage() {
       setError(true);
     }
     finally { if (abortRef.current === controller) setLoading(false); }
-  }, [page]);
+  }, [page, statusFilter]);
 
   useEffect(() => { load(); }, [page, load]);
 
@@ -217,7 +220,9 @@ function ContractsPage() {
           <h1 className="dash-page-title">Contract Matches</h1>
           <p className="dash-page-sub">
             {total > 0
-              ? `${total.toLocaleString()} contracts matched your profile`
+              ? (statusFilter !== "all"
+                ? `${filteredContracts.length} of ${total.toLocaleString()} contracts`
+                : `${total.toLocaleString()} contracts matched your profile`)
               : "Contracts are matched twice daily — set up your profile to start"}
           </p>
         </div>
@@ -261,7 +266,7 @@ function ContractsPage() {
               data-active={statusFilter === tab.key ? "true" : undefined}
               role="tab"
               aria-selected={statusFilter === tab.key}
-              onClick={() => setStatusFilter(tab.key)}
+              onClick={() => { setStatusFilter(tab.key); setPage(1); }}
             >
               {tab.label}
               {tab.key === "bookmarked" && cs.totalBookmarkedCount() > 0 && (

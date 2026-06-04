@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 export type ContractAction = "bookmarked" | "dismissed" | "viewed";
@@ -10,12 +10,14 @@ interface ContractStatusMap {
     bookmarked?: boolean;
     dismissed?: boolean;
     viewed?: boolean;
-    dismissedAt?: number; // unix ms for undo window
+    dismissedAt?: number;
   };
 }
 
-const STORAGE_KEY = "plexovia-contract-status";
-const UNDO_WINDOW_MS = 8000; // 8 second undo window
+const UNDO_WINDOW_MS = 8000;
+const MAX_ENTRIES = 500;
+
+let STORAGE_KEY = "plexovia-contract-status";
 
 /* ─── Storage helpers ──────────────────────────────────────────────── */
 function loadMap(): ContractStatusMap {
@@ -27,21 +29,62 @@ function loadMap(): ContractStatusMap {
   }
 }
 
-function saveMap(map: ContractStatusMap) {
+function saveMap(map: ContractStatusMap): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+    return true;
   } catch {
-    /* Storage full or unavailable — silent degrade */
+    console.warn("useContractStatus: localStorage write failed (quota exceeded?)");
+    return false;
   }
+}
+
+function evictOverflow(map: ContractStatusMap): ContractStatusMap {
+  const entries = Object.entries(map);
+  if (entries.length <= MAX_ENTRIES) return map;
+
+  const excess = entries.length - MAX_ENTRIES;
+  let removed = 0;
+  const result: ContractStatusMap = {};
+
+  for (const [id, data] of entries) {
+    if (removed < excess && !data.bookmarked) {
+      removed++;
+      continue;
+    }
+    result[id] = data;
+  }
+
+  return result;
 }
 
 /* ─── Hook ─────────────────────────────────────────────────────────── */
 export function useContractStatus() {
   const [statusMap, setStatusMap] = useState<ContractStatusMap>(loadMap);
+  const keyRef = useRef(STORAGE_KEY);
 
-  const persist = useCallback((next: ContractStatusMap) => {
-    setStatusMap(next);
-    saveMap(next);
+  /* Cross-tab sync: re-read when another tab writes */
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === keyRef.current) {
+        setStatusMap(loadMap());
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  /** Switch to a user-scoped storage key (call before other operations) */
+  const init = useCallback((userId: string) => {
+    STORAGE_KEY = `plexovia-contract-status-${userId}`;
+    keyRef.current = STORAGE_KEY;
+    setStatusMap(loadMap());
+  }, []);
+
+  const persist = useCallback((next: ContractStatusMap): boolean => {
+    const trimmed = evictOverflow(next);
+    setStatusMap(trimmed);
+    return saveMap(trimmed);
   }, []);
 
   /** Toggle bookmark on a contract */
@@ -127,6 +170,7 @@ export function useContractStatus() {
   }, [statusMap]);
 
   return {
+    init,
     toggleBookmark,
     dismiss,
     undoDismiss,

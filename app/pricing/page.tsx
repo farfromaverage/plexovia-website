@@ -3,6 +3,7 @@ import PricingSection from "@/components/home/pricing-section";
 import ComparisonTable from "@/components/home/comparison-table";
 import FAQSection from "@/components/home/faq-section";
 import MissedOpportunityCalc from "@/components/home/missed-opportunity-calc";
+import { EngineStatsProvider } from "@/components/home/engine-stats-provider";
 import Footer from "@/components/home/footer";
 
 export const metadata: Metadata = {
@@ -63,6 +64,7 @@ export default function PricingPage() {
   ];
 
   return (
+    <EngineStatsProvider>
     <div style={{ backgroundColor: "var(--pub-bg)", paddingTop: "4rem" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <PricingSection />
@@ -74,6 +76,7 @@ export default function PricingPage() {
       />
       <Footer />
     </div>
+    </EngineStatsProvider>
   );
 }
 
