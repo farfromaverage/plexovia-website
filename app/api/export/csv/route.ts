@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+const EXPORT_LIMIT = 5000
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -19,9 +21,7 @@ export async function GET(request: NextRequest) {
     cutoffDate.setDate(cutoffDate.getDate() - days)
     const cutoffISO = cutoffDate.toISOString().split('T')[0]
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const todayISO = new Date().toISOString().split('T')[0]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('matches')
       .select(
@@ -31,9 +31,10 @@ export async function GET(request: NextRequest) {
       )
       .eq('user_id', session.user.id)
       .gte('created_at', cutoffDate.toISOString())
-      .gte('posted_date', cutoffISO, { referencedTable: 'contracts' })
+      .filter('posted_date', 'gte', cutoffISO, { referencedTable: 'contracts' })
       .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
       .order('score', { ascending: false })
+      .limit(EXPORT_LIMIT)
 
     if (error) {
       console.error('[/api/export/csv] Supabase error:', error)
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
       ].join(',')
     })
 
-    const csvContent = [headers.join(','), ...rows].join('\n')
+    const csvContent = '\ufeff' + [headers.join(','), ...rows].join('\n')
 
     const today = new Date().toISOString().split('T')[0]
 
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="plexovia-matches-${days}d-${today}.csv"`,
+        'Cache-Control': 'no-store',
       },
     })
   } catch (err) {

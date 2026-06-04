@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, Suspense, memo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, ExternalLink, FileText, MapPin, Shield, Star,
@@ -84,7 +85,7 @@ function mapRow(m: MatchRow): ContractRow {
 }
 
 const PER_PAGE = 15;
-const FILTER_BATCH = 200;
+const FILTER_BATCH = 100;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
 /* ─── Page ────────────────────────────────────────────────────────── */
@@ -97,22 +98,35 @@ export default function ContractsPageWrapper() {
 }
 
 function ContractsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlFilter = (searchParams.get('filter') as StatusFilter) || 'all';
+
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [naicsCodes, setNaicsCodes] = useState<string[]>([]);
   const [error, setError] = useState(false);
   const [exportError, setExportError] = useState(false);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const cs = useContractStatus();
+
+  const [page, setPage] = useState(urlPage);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(urlFilter);
+
+  // Sync URL → state on mount and popstate
+  useEffect(() => {
+    setPage(urlPage);
+    setStatusFilter(urlFilter);
+  }, [urlPage, urlFilter]);
 
   useEffect(() => {
     (async () => {
@@ -132,7 +146,9 @@ function ContractsPage() {
 
   const fetchMatches = async (p: number, pp: number = PER_PAGE, signal?: AbortSignal) => {
     const params = new URLSearchParams({ page: String(p), per_page: String(pp), min_score: "0", sort: "recency" });
-    const res = await fetch(`/api/user-matches?${params.toString()}`, { signal });
+    const timeoutSignal = AbortSignal.timeout(15000);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+    const res = await fetch(`/api/user-matches?${params.toString()}`, { signal: combinedSignal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   };
@@ -145,7 +161,7 @@ function ContractsPage() {
     setLoading(true);
     setError(false);
     try {
-      const needsBatch = statusFilter === "bookmarked" || statusFilter === "dismissed";
+      const needsBatch = statusFilter === "bookmarked" || statusFilter === "dismissed" || statusFilter === "new";
       const pp = needsBatch ? FILTER_BATCH : PER_PAGE;
       const json = await fetchMatches(page, pp, controller.signal);
       if (controller.signal.aborted) return;
@@ -176,9 +192,23 @@ function ContractsPage() {
     return !cs.isDismissed(c.id);
   });
 
-  const totalPages = Math.max(1, Math.ceil(total / (statusFilter === "bookmarked" || statusFilter === "dismissed" ? FILTER_BATCH : PER_PAGE)));
+  const isFilterTab = statusFilter === "bookmarked" || statusFilter === "dismissed" || statusFilter === "new";
+  const pageDenom = isFilterTab ? FILTER_BATCH : PER_PAGE;
+  const totalPages = Math.max(1, Math.ceil(total / pageDenom));
 
-  function handlePageChange(np: number) { setPage(Math.max(1, Math.min(totalPages, np))); }
+  function updateUrl(p: number, f: StatusFilter) {
+    const params = new URLSearchParams();
+    if (p > 1) params.set('page', String(p));
+    if (f !== 'all') params.set('filter', f);
+    const qs = params.toString();
+    router.replace(`/dashboard/contracts${qs ? '?' + qs : ''}`, { scroll: false });
+  }
+
+  function handlePageChange(np: number) {
+    const clamped = Math.max(1, Math.min(totalPages, np));
+    setPage(clamped);
+    updateUrl(clamped, statusFilter);
+  }
 
   /* ── Dismiss with undo ── */
   function handleDismiss(c: ContractRow) {
@@ -266,7 +296,7 @@ function ContractsPage() {
               data-active={statusFilter === tab.key ? "true" : undefined}
               role="tab"
               aria-selected={statusFilter === tab.key}
-              onClick={() => { setStatusFilter(tab.key); setPage(1); }}
+              onClick={() => { setStatusFilter(tab.key); setPage(1); updateUrl(1, tab.key); }}
             >
               {tab.label}
               {tab.key === "bookmarked" && cs.totalBookmarkedCount() > 0 && (

@@ -144,11 +144,15 @@ export default function DashboardPage() {
   const [matchTotal, setMatchTotal] = useState(0);
   const [matchError, setMatchError] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
+  const [staleData, setStaleData] = useState(false);
 
   const { newCount } = useLastVisit(matches.map(m => m.rawMatchedAt));
 
   const abortRef = useRef<AbortController | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const knownTotalRef = useRef(0);
   const loadedRef = useRef(false);
   const fetchMatches = useCallback(async (): Promise<number> => {
     abortRef.current?.abort();
@@ -157,7 +161,9 @@ export default function DashboardPage() {
     setMatchesLoading(true);
     setMatchError(false);
     try {
-      const res = await fetch("/api/user-matches?per_page=10&sort=score", { signal: controller.signal });
+      const timeoutSignal = AbortSignal.timeout(15000);
+      const combinedSignal = AbortSignal.any([controller.signal, timeoutSignal]);
+      const res = await fetch("/api/user-matches?per_page=10&sort=score", { signal: combinedSignal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (controller.signal.aborted) return -1;
@@ -171,6 +177,9 @@ export default function DashboardPage() {
       setMatchError(true);
       return -1;
     } finally {
+      if (!abortRef.current?.signal.aborted) {
+        setLastRefreshed(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+      }
       setMatchesLoading(false);
     }
   }, []);
@@ -195,6 +204,8 @@ export default function DashboardPage() {
           if (result > 0 || elapsed >= 60000) { clearInterval(pollRef.current!); setIsPolling(false); }
         }, 5000);
       }
+      // Track known total for staleness detection
+      knownTotalRef.current = total;
     }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) { router.replace("/auth/login"); return; }
@@ -205,7 +216,28 @@ export default function DashboardPage() {
       if (!session) router.replace("/auth/login");
       else if (loading) loadProfile(session.user.id);
     }, 800);
-    return () => { subscription.unsubscribe(); clearTimeout(fallback); if (pollRef.current) clearInterval(pollRef.current); };
+
+    // Start staleness detection — lightweight overview poll every 60s
+    stalePollRef.current = setInterval(async () => {
+      try {
+        const timeoutSignal = AbortSignal.timeout(10000);
+        const res = await fetch('/api/overview?period=90', { signal: timeoutSignal });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.matchesCount !== knownTotalRef.current && knownTotalRef.current > 0) {
+          setStaleData(true);
+        }
+      } catch {
+        // silent — staleness check is best-effort
+      }
+    }, 60000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallback);
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (stalePollRef.current) clearInterval(stalePollRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -255,6 +287,9 @@ export default function DashboardPage() {
           <p style={{ color: "var(--app-muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
             {newCount > 0 ? `${newCount} new contract${newCount !== 1 ? "s" : ""} matched since your last visit` : setupDone ? "All caught up. No new contracts since your last visit." : "Set up your profile to start receiving matched contracts"}
           </p>
+          <p style={{ color: "var(--app-faint)", fontSize: "0.72rem", margin: "2px 0 0" }}>
+            {lastRefreshed ? `Last updated ${lastRefreshed}` : ""}
+          </p>
         </div>
         {isTrial && daysLeft !== null && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--app-surface)", border: "1px solid var(--accent-border)", borderRadius: 10 }}>
@@ -286,6 +321,17 @@ export default function DashboardPage() {
 
       {/* ── Intelligence Briefing ── */}
       {setupDone && <IntelligenceBriefing newCount={newCount} />}
+
+      {/* ── Stale data banner ── */}
+      {staleData && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", marginBottom: "var(--space-5)", background: "var(--warning-subtle)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: "0.8125rem", color: "var(--app-text)" }} role="alert">
+          <span style={{ fontSize: "1.1rem" }} aria-hidden="true">&#9830;</span>
+          <span style={{ flex: 1 }}>New contract matches are available.</span>
+          <button onClick={() => { setStaleData(false); fetchMatches(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
+            Refresh
+          </button>
+        </div>
+      )}
 
       {/* ── 4 Stat Cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>

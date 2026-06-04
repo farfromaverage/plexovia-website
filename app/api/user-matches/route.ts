@@ -21,6 +21,44 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+interface MatchQueryBuilder {
+  eq(col: string, val: unknown): MatchQueryBuilder
+  gte(col: string, val: unknown): MatchQueryBuilder
+  or(filters: string, opts?: { referencedTable?: string }): MatchQueryBuilder
+  ilike(col: string, pattern: string): MatchQueryBuilder
+  order(col: string, opts?: { ascending?: boolean; referencedTable?: string }): MatchQueryBuilder
+  range(from: number, to: number): Promise<{ data: MatchRowRaw[] | null; error: { message: string } | null }>
+}
+
+interface CountQueryBuilder {
+  eq(col: string, val: unknown): CountQueryBuilder
+  gte(col: string, val: unknown): CountQueryBuilder
+  or(filters: string, opts?: { referencedTable?: string }): CountQueryBuilder
+  ilike(col: string, pattern: string): CountQueryBuilder
+  execute(): Promise<{ count: number | null }>
+}
+
+interface MatchRowRaw {
+  id: string
+  score: number
+  recency_window: number
+  match_reasons: string[]
+  created_at: string
+  contracts: Array<{
+    id: string | null
+    title: string | null
+    url: string | null
+    state: string | null
+    agency: string | null
+    naics_code: string | null
+    psc_code: string | null
+    fed_org_code: string | null
+    deadline: string | null
+    posted_date: string | null
+    set_aside: string | null
+  }>
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
@@ -46,12 +84,11 @@ export async function GET(request: NextRequest) {
       'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
       'fed_org_code, deadline, posted_date, set_aside)'
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query: any = supabase
+    let query: MatchQueryBuilder = supabase
       .from('matches')
-      .select(selectClause)
-      .eq('user_id', session.user.id)
-      .gte('score', min_score)
+      .select(selectClause) as unknown as MatchQueryBuilder
+    query = query.eq('user_id', session.user.id)
+    query = query.gte('score', min_score)
 
     // Exclude expired contracts — keep NULL deadlines (some SAM.gov listings lack one)
     const todayISO = new Date().toISOString().split('T')[0]
@@ -167,27 +204,26 @@ export async function GET(request: NextRequest) {
     // ── Count query for pagination ────────────────────────────────────────
     // Must mirror main query filters (including deadline + 90-day posted window)
     // so pagination totals are consistent
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let countQuery: any = supabase
+    let countQuery: CountQueryBuilder = supabase
       .from('matches')
-      .select('id, contracts!inner(id)', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-      .gte('score', min_score)
-      .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
-      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
+      .select('id, contracts!inner(id)', { count: 'exact', head: true }) as unknown as CountQueryBuilder
+    countQuery = countQuery.eq('user_id', session.user.id)
+    countQuery = countQuery.gte('score', min_score)
+    countQuery = countQuery.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
+    countQuery = countQuery.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
 
     if (search) {
       countQuery = supabase
         .from('matches')
-        .select('id, contracts!inner(id, title)', { count: 'exact', head: true })
-        .eq('user_id', session.user.id)
-        .gte('score', min_score)
-        .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
-        .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
-        .ilike('contracts.title', `%${search}%`)
+        .select('id, contracts!inner(id, title)', { count: 'exact', head: true }) as unknown as CountQueryBuilder
+      countQuery = countQuery.eq('user_id', session.user.id)
+      countQuery = countQuery.gte('score', min_score)
+      countQuery = countQuery.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
+      countQuery = countQuery.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
+      countQuery = countQuery.ilike('contracts.title', `%${search}%`)
     }
 
-    const { count: totalCount } = await countQuery
+    const { count: totalCount } = await countQuery.execute()
     const total = totalCount ?? 0
 
     return NextResponse.json({
@@ -202,7 +238,7 @@ export async function GET(request: NextRequest) {
       user: {
         user_id: session.user.id,
       },
-    })
+    }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     console.error('[/api/user-matches] Unexpected error:', err)
     return NextResponse.json(

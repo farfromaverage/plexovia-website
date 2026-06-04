@@ -63,8 +63,12 @@ export async function GET(request: NextRequest) {
       avgScore = scores.reduce((a, b) => a + b, 0) / scores.length
 
       matchesCurrent.forEach(m => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const c: any = Array.isArray(m.contracts) ? (m.contracts[0] || {}) : (m.contracts || {})
+        const contract = Array.isArray(m.contracts) ? (m.contracts[0] || {}) : (m.contracts || {})
+        const c = contract as {
+          id?: string; title?: string; agency?: string; deadline?: string | null;
+          url?: string | null; naics_code?: string | null; value_min?: unknown;
+          value_max?: unknown; set_aside?: string;
+        }
         
         // Aggregate total value (use value_max as the representative contract value)
         const val = c.value_max || c.value_min
@@ -99,7 +103,7 @@ export async function GET(request: NextRequest) {
       totalValue,
       topMatches,
       setAsideBreakdown
-    })
+    }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     console.error('[/api/overview] Unhandled error:', err)
     return NextResponse.json({
