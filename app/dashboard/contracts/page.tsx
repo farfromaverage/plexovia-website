@@ -41,7 +41,7 @@ function fmtDeadline(d: string | null): { label: string; days: number | null } {
   const days = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
   if (days < 0) return { label: "Expired", days };
   if (days === 0) return { label: "Due today", days: 0 };
-  if (days === 1) return { label: "1 day left", days: 1 };
+  if (days === 1) return { label: "Due tomorrow", days: 1 };
   return { label: `${days} days left`, days };
 }
 
@@ -132,6 +132,15 @@ function ContractsPage() {
     setPage(urlPage);
     setStatusFilter(urlFilter);
   }, [urlPage, urlFilter]);
+
+  // Scope localStorage key to user session
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) cs.init(session.user.id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -359,7 +368,7 @@ function ContractsPage() {
       {staleData && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", marginBottom: "var(--space-3)", background: "var(--warning-subtle)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: "0.8125rem", color: "var(--app-text)" }} role="alert">
           <span style={{ flex: 1 }}>New contract matches are available.</span>
-          <button onClick={() => { setStaleData(false); load(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
+          <button onClick={() => { setStaleData(false); knownOverviewRef.current = -1; load(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
             Refresh
           </button>
         </div>
@@ -480,7 +489,7 @@ const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, o
       exit={{ opacity: 0, x: 50, transition: { duration: 0.2, ease: [0.25, 1, 0.5, 1] } }}
       transition={{
         duration: 0.35,
-        delay: index * 0.04,
+        delay: Math.min(index * 0.04, 0.6),
         ease: [0.25, 1, 0.5, 1],
       }}
     >

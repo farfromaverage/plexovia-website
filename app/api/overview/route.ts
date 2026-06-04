@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Fetch current period matches
     const { data: matchesCurrent } = await supabase
       .from('matches')
-      .select('score, created_at, contracts(value_min, value_max, set_aside, title, agency, id, deadline, url, naics_code)')
+      .select('score, created_at, contracts!inner(value_min, value_max, set_aside, title, agency, id, deadline, url, naics_code)')
       .eq('user_id', session.user.id)
       .gte('created_at', periodStart.toISOString())
       .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })

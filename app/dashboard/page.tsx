@@ -172,15 +172,13 @@ export default function DashboardPage() {
       setMatches(mapped);
       const total = json.pagination?.total || 0;
       setMatchTotal(total);
+      setLastRefreshed(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
       return total;
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return -1;
       setMatchError(true);
       return -1;
     } finally {
-      if (!abortRef.current?.signal.aborted) {
-        setLastRefreshed(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
-      }
       setMatchesLoading(false);
     }
   }, []);
@@ -333,7 +331,7 @@ export default function DashboardPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", marginBottom: "var(--space-5)", background: "var(--warning-subtle)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: "0.8125rem", color: "var(--app-text)" }} role="alert">
           <span style={{ fontSize: "1.1rem" }} aria-hidden="true">&#9830;</span>
           <span style={{ flex: 1 }}>New contract matches are available.</span>
-          <button onClick={() => { setStaleData(false); fetchMatches(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
+          <button onClick={() => { setStaleData(false); knownOverviewRef.current = -1; fetchMatches(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
             Refresh
           </button>
         </div>

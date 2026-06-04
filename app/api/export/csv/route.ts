@@ -15,6 +15,7 @@ interface ExportMatchRow {
   created_at: string
   contracts: Array<{
     title: string | null
+    agency: string | null
     state: string | null
     naics_code: string | null
     psc_code: string | null
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       .from('matches')
       .select(
         'score, match_reasons, created_at, ' +
-        'contracts!inner(title, state, naics_code, psc_code, ' +
+        'contracts!inner(title, agency, state, naics_code, psc_code, ' +
         'set_aside, deadline, posted_date, url)'
       ) as unknown as ExportQueryBuilder)
       .eq('user_id', session.user.id)
@@ -71,6 +72,7 @@ export async function GET(request: NextRequest) {
     const headers = [
       'Score',
       'Title',
+      'Agency',
       'NAICS Code',
       'PSC Code',
       'State',
@@ -106,6 +108,7 @@ export async function GET(request: NextRequest) {
       return [
         m.score ?? '',
         escapeCsv(c.title),
+        escapeCsv(c.agency),
         escapeCsv(c.naics_code),
         escapeCsv(c.psc_code),
         escapeCsv(c.state),
