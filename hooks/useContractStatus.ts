@@ -116,6 +116,16 @@ export function useContractStatus() {
     return ids.filter(id => statusMap[id]?.dismissed).length;
   }, [statusMap]);
 
+  /** Get total bookmarked count across ALL contracts in localStorage */
+  const totalBookmarkedCount = useCallback((): number => {
+    return Object.values(statusMap).filter(e => e?.bookmarked).length;
+  }, [statusMap]);
+
+  /** Get total dismissed count across ALL contracts in localStorage */
+  const totalDismissedCount = useCallback((): number => {
+    return Object.values(statusMap).filter(e => e?.dismissed).length;
+  }, [statusMap]);
+
   return {
     toggleBookmark,
     dismiss,
@@ -126,6 +136,8 @@ export function useContractStatus() {
     isViewed,
     bookmarkedCount,
     dismissedCount,
+    totalBookmarkedCount,
+    totalDismissedCount,
     UNDO_WINDOW_MS,
   };
 }

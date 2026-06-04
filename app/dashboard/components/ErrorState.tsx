@@ -4,11 +4,13 @@ import { AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Props {
+  title?: string;
   message?: string;
   onRetry?: () => void;
 }
 
 export default function ErrorState({
+  title = "Unable to load contracts",
   message = "Something went wrong. Please try again.",
   onRetry,
 }: Props) {
@@ -40,7 +42,7 @@ export default function ErrorState({
         fontWeight: 600, fontSize: "0.9375rem", color: "var(--app-text-secondary)",
         margin: 0, lineHeight: 1.35,
       }}>
-        Unable to load contracts
+        {title}
       </p>
       <p style={{
         color: "var(--app-muted)",

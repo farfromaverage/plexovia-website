@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -147,19 +147,27 @@ export default function DashboardPage() {
 
   const { newCount } = useLastVisit(matches.map(m => m.rawMatchedAt));
 
+  const abortRef = useRef<AbortController | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadedRef = useRef(false);
   const fetchMatches = useCallback(async (): Promise<number> => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setMatchesLoading(true);
     setMatchError(false);
     try {
-      const res = await fetch("/api/user-matches?per_page=10&sort=score");
+      const res = await fetch("/api/user-matches?per_page=10&sort=score", { signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
+      if (controller.signal.aborted) return -1;
       const mapped = (json.matches || []).map(mapMatch);
       setMatches(mapped);
       const total = json.pagination?.total || 0;
       setMatchTotal(total);
       return total;
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return -1;
       setMatchError(true);
       return -1;
     } finally {
@@ -169,6 +177,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadProfile(userId: string) {
+      if (loadedRef.current) return;
+      loadedRef.current = true;
       const { data } = await supabase
         .from("profiles")
         .select("id,email,plan,trial_ends_at,onboarding_complete,naics_codes,states,keywords,set_aside_preferences")
@@ -179,12 +189,11 @@ export default function DashboardPage() {
       if (total === 0 && data?.onboarding_complete) {
         setIsPolling(true);
         let elapsed = 0;
-        const interval = setInterval(async () => {
+        pollRef.current = setInterval(async () => {
           elapsed += 5000;
           const result = await fetchMatches();
-          if (result > 0 || elapsed >= 60000) { clearInterval(interval); setIsPolling(false); }
+          if (result > 0 || elapsed >= 60000) { clearInterval(pollRef.current!); setIsPolling(false); }
         }, 5000);
-        return () => clearInterval(interval);
       }
     }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -196,15 +205,14 @@ export default function DashboardPage() {
       if (!session) router.replace("/auth/login");
       else if (loading) loadProfile(session.user.id);
     }, 800);
-    return () => { subscription.unsubscribe(); clearTimeout(fallback); };
+    return () => { subscription.unsubscribe(); clearTimeout(fallback); if (pollRef.current) clearInterval(pollRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
     return (
       <div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 28, height: 28, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} aria-label="Loading dashboard…" role="status" />
-        <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
+        <div className="dash-spin" style={{ width: 28, height: 28, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%" }} aria-label="Loading dashboard…" role="status" />
       </div>
     );
   }
@@ -330,7 +338,7 @@ export default function DashboardPage() {
         </div>
 
         {matchError && (
-          <div style={{ padding: "10px var(--space-6)", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--app-border)", background: "var(--danger-subtle)" }}>
+          <div role="alert" style={{ padding: "10px var(--space-6)", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--app-border)", background: "var(--danger-subtle)" }}>
             <AlertCircle size={13} style={{ color: "var(--danger)" }} aria-hidden="true" />
             <span style={{ fontSize: "0.8125rem", color: "var(--danger)" }}>
               Could not load contracts.{" "}
@@ -357,7 +365,7 @@ export default function DashboardPage() {
           matches.slice(0, 5).map(c => <ContractRow key={c.id} c={c} />)
         ) : isPolling ? (
           <div style={{ padding: "3rem var(--space-6)", textAlign: "center" }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", border: "2px solid var(--accent)", borderTopColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", animation: "spin 0.9s linear infinite" }}>
+            <div className="dash-spin" style={{ width: 44, height: 44, borderRadius: "50%", border: "2px solid var(--accent)", borderTopColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
               <Zap size={16} style={{ color: "var(--accent)" }} aria-hidden="true" />
             </div>
             <p style={{ fontWeight: 600, color: "var(--app-text)", margin: "0 0 0.25rem" }}>Analyzing federal opportunities</p>
@@ -375,8 +383,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
     </div>
   );
 }

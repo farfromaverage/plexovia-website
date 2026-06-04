@@ -81,21 +81,10 @@ function FooterCol({
   );
 }
 
-import { useState, useEffect } from "react";
+import { useEngineStats } from "./engine-stats-provider";
 
 function LiveStats() {
-  const [stats, setStats] = useState<{ total: number | null }>({ total: null });
-  
-  useEffect(() => {
-    fetch(`/api/engine-stats?t=${Date.now()}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.total_contracts !== undefined) {
-          setStats({ total: data.total_contracts });
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const { totalContracts } = useEngineStats();
 
   return (
     <div style={{ marginTop: "2rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
@@ -108,7 +97,7 @@ function LiveStats() {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]"></span>
         </span>
         <span style={{ fontFamily: "var(--font-geist-mono)", color: "var(--accent)", fontSize: "0.875rem" }}>
-          {stats.total !== null ? `${stats.total.toLocaleString()} active contracts` : 'connecting...'}
+          {`${totalContracts.toLocaleString()} active contracts`}
         </span>
       </div>
     </div>

@@ -5,6 +5,10 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key_to_pass_build");
 const rateLimitMap = new Map<string, { count: number, resetAt: number }>()
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
@@ -40,10 +44,10 @@ export async function POST(req: Request) {
       subject: `Support Request: ${subject}`,
       html: `
         <h3>New Support Request</h3>
-        <p><strong>From:</strong> ${name} (${user.email})</p>
+        <p><strong>From:</strong> ${escapeHtml(name)} (${user.email})</p>
         <p><strong>User ID:</strong> ${user.id}</p>
         <hr />
-        <p>${message.replace(/\n/g, '<br/>')}</p>
+        <p>${escapeHtml(message).replace(/\n/g, '<br/>')}</p>
       `
     })
 

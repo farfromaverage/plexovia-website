@@ -178,6 +178,7 @@ function Step2FederalOrgs({
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search by code or name (e.g. DOD or defense)"
+          aria-label="Search federal organizations"
           className="w-full max-w-[400px] pl-[38px] pr-4 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)]"
         />
       </div>
@@ -282,6 +283,7 @@ function Step2({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && canAddCustom) { toggleNaics(trimmed); setQuery(""); } }}
           placeholder="Search by code or keyword (e.g. 541511 or engineering)"
+          aria-label="Search NAICS codes"
           className="w-full pl-[38px] pr-4 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-xl text-[var(--app-text)] text-[14px] outline-none transition-colors focus:border-[var(--accent)]"
         />
       </div>
@@ -329,6 +331,7 @@ function Step2({
             onChange={(e) => { setPscInput(e.target.value); setPscQuery(e.target.value); }}
             onKeyDown={(e) => { if (e.key === "Enter") addPsc(); }}
             placeholder="e.g. D302, R425"
+            aria-label="Add PSC code"
             className="flex-1 px-3 py-2 bg-[var(--app-surface-2)]/50 border border-[var(--app-border)] rounded-lg text-[var(--app-text)] text-[13px] outline-none focus:border-[var(--accent)] uppercase"
             autoComplete="off"
           />
@@ -456,7 +459,7 @@ function Step3({
               <button type="button" onClick={() => setKeywords(keywords.filter((k) => k !== kw))} className="text-[var(--accent)] hover:text-white"><X size={12} strokeWidth={2.5} /></button>
             </span>
           ))}
-          <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'pos')} onBlur={() => flush('pos')} placeholder={keywords.length === 0 ? "e.g. cybersecurity, network infrastructure" : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
+          <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'pos')} onBlur={() => flush('pos')} placeholder={keywords.length === 0 ? "e.g. cybersecurity, network infrastructure" : ""} aria-label="Add positive keyword" className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
         </div>
       </div>
 
@@ -473,7 +476,7 @@ function Step3({
               <button type="button" onClick={() => setExcludeKeywords(excludeKeywords.filter((k) => k !== kw))} className="text-[var(--danger)] hover:text-[var(--danger)]/70"><X size={12} strokeWidth={2.5} /></button>
             </span>
           ))}
-          <input ref={exRef} type="text" value={exInput} onChange={(e) => setExInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'neg')} onBlur={() => flush('neg')} placeholder={excludeKeywords.length === 0 ? "e.g. janitorial, landscaping" : ""} className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
+          <input ref={exRef} type="text" value={exInput} onChange={(e) => setExInput(e.target.value)} onKeyDown={(e) => handleKeyDown(e, 'neg')} onBlur={() => flush('neg')} placeholder={excludeKeywords.length === 0 ? "e.g. janitorial, landscaping" : ""} aria-label="Add negative keyword" className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[var(--app-text)] text-[13px] placeholder-[var(--app-faint)] mt-1 px-1" />
         </div>
       </div>
     </div>
@@ -584,13 +587,13 @@ export default function OnboardingPage() {
     }).catch(() => ({ ok: false, status: "error" }));
 
     // Check if matching succeeded — this determines user's first impression
-    const matchOk = matchResult.ok;
+    const matchOk = matchResult.ok && matchResult.status !== 'failed';
 
     if (matchOk) {
       setBuildStatus("Contracts matched! Redirecting to your dashboard…");
     } else {
-      // Engine was slow/down, but profile is saved. Twice-daily pipeline will catch up.
-      setBuildStatus("Your dashboard is being prepared. Redirecting…");
+      // Engine was unavailable, but profile is saved. Pipeline runs at 11:00 + 18:00 UTC daily.
+      setBuildStatus("Your dashboard is being prepared. Pipeline runs at 11:00 and 18:00 UTC daily. Redirecting…");
     }
 
     // Brief delay so user sees the final status message
@@ -603,7 +606,8 @@ export default function OnboardingPage() {
   async function handleSkip() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = "/auth/login"; return; }
-    await supabase.from("profiles").update({ onboarding_complete: true }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ onboarding_complete: true }).eq("id", user.id);
+    if (error) { setError("Failed to skip. Please try again."); return; }
     window.location.href = "/dashboard";
   }
 

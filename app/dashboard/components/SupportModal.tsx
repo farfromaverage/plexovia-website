@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Send, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { lockBodyScroll, unlockBodyScroll } from "./modalScrollLock";
+
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function SupportModal({ isOpen, onClose, userEmail, userName }: { isOpen: boolean, onClose: () => void, userEmail: string, userName: string }) {
   const [subject, setSubject] = useState("");
@@ -9,6 +12,44 @@ export function SupportModal({ isOpen, onClose, userEmail, userName }: { isOpen:
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    lockBodyScroll();
+    return () => { unlockBodyScroll(); };
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key !== "Tab" || !modalRef.current) return;
+
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -32,7 +73,7 @@ export function SupportModal({ isOpen, onClose, userEmail, userName }: { isOpen:
       if (!res.ok) throw new Error(data.error || "Failed to send message");
       
       setSuccess(true);
-      setTimeout(() => {
+      successTimeoutRef.current = setTimeout(() => {
         onClose();
         setSuccess(false);
         setSubject("");
@@ -46,11 +87,11 @@ export function SupportModal({ isOpen, onClose, userEmail, userName }: { isOpen:
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[var(--app-surface)] w-full max-w-md rounded-2xl border border-[var(--app-border)] shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="dialog" aria-modal="true">
+      <div ref={modalRef} className="bg-[var(--app-surface)] w-full max-w-md rounded-2xl border border-[var(--app-border)] shadow-2xl flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--app-border)] bg-[var(--app-surface-2)]">
           <h2 className="font-semibold text-[var(--app-text)]">Contact Support</h2>
-          <button onClick={onClose} className="p-1 rounded-md text-[var(--app-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-bg)] transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1 rounded-md text-[var(--app-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-bg)] transition-colors">
             <X size={18} />
           </button>
         </div>

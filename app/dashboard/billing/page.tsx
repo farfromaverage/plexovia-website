@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ExternalLink, CreditCard, Calendar, Zap, AlertCircle } from "lucide-react";
+import { ExternalLink, CreditCard, Calendar, Zap, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 const PLAN_DETAILS = {
@@ -37,21 +37,42 @@ export default function BillingPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
+  const loadProfile = useCallback(async () => {
+    try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/auth/login"); return; }
-      const { data } = await supabase
+      const { data, error: dbErr } = await supabase
         .from("profiles")
         .select("id,plan,plan_expires_at,trial_ends_at,ls_customer_id,email")
         .eq("id", user.id)
         .single();
-      if (data) setProfile(data);
+      if (dbErr) throw new Error(dbErr.message);
+      if (data) {
+        setProfile(data);
+        setError(null);
+      } else {
+        setError("Profile not found. Please try again.");
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load billing information.");
+    }
+  }, [router]);
+
+  useEffect(() => {
+    async function initialLoad() {
+      setLoading(true);
+      await loadProfile();
       setLoading(false);
     }
-    load();
-  }, [router]);
+    initialLoad();
+  }, [loadProfile]);
+
+  useEffect(() => {
+    const interval = setInterval(loadProfile, 60_000);
+    return () => clearInterval(interval);
+  }, [loadProfile]);
 
   // Remap legacy 'pro' and 'premium' to 'active'
   const rawPlan = profile?.plan ?? "trial";
@@ -74,8 +95,56 @@ export default function BillingPage() {
   };
 
   if (loading) return (
-    <div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <span style={{ color: "var(--app-muted)" }}>Loading billing…</span>
+    <div className="dash-main">
+      <div style={s.wrap}>
+        <div className="dash-skeleton" style={{ width: 180, height: 28, marginBottom: 8, borderRadius: 4 }} />
+        <div className="dash-skeleton" style={{ width: 280, height: 16, marginBottom: "2rem", borderRadius: 4 }} />
+        <div style={s.card}>
+          <div className="dash-skeleton" style={{ width: 100, height: 12, marginBottom: 12, borderRadius: 4 }} />
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+            <div style={{ flex: 1 }}>
+              <div className="dash-skeleton" style={{ width: 160, height: 28, marginBottom: 10, borderRadius: 999 }} />
+              <div className="dash-skeleton" style={{ width: 90, height: 20, marginBottom: 10, borderRadius: 4 }} />
+              <div className="dash-skeleton" style={{ width: 200, height: 14, borderRadius: 4 }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="dash-skeleton" style={{ width: 140, height: 38, borderRadius: 6 }} />
+              <div className="dash-skeleton" style={{ width: 210, height: 38, borderRadius: 6 }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="dash-main">
+      <div style={s.wrap}>
+        <h1 style={s.h1}>Billing & Plan</h1>
+        <p style={s.sub}>Manage your subscription and payment information.</p>
+        <div style={{ ...s.card, textAlign: "center", padding: "3rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: "50%",
+            background: "var(--danger-subtle)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <AlertCircle size={22} style={{ color: "var(--danger)" }} aria-hidden="true" />
+          </div>
+          <p style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--app-text-secondary)", margin: 0, lineHeight: 1.35 }}>
+            Unable to load billing information
+          </p>
+          <p style={{ color: "var(--app-muted)", fontSize: "0.8125rem", margin: 0, maxWidth: 380, lineHeight: 1.6 }}>
+            {error}
+          </p>
+          <button
+            onClick={() => { setError(null); setLoading(true); loadProfile().then(() => setLoading(false)); }}
+            className="dash-btn"
+            style={{ marginTop: "var(--space-1)", minHeight: 36 }}
+          >
+            <RefreshCw size={14} /> Try again
+          </button>
+        </div>
+      </div>
     </div>
   );
 

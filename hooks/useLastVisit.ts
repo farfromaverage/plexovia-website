@@ -4,11 +4,24 @@ import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "plexovia-last-visit";
 
+function computeNewCount(dates: (string | null)[], lastVisit: Date | null): number {
+  if (!lastVisit) return dates.filter(Boolean).length;
+  const lastTs = lastVisit.getTime();
+  return dates.filter(d => {
+    if (!d) return false;
+    return new Date(d).getTime() > lastTs;
+  }).length;
+}
+
 /**
  * Tracks last visit timestamp and counts items newer than last visit.
  *
  * On mount: reads localStorage → compares against provided dates → returns count.
- * On unmount/blur: writes current timestamp to localStorage.
+ * When dates change (e.g. matches load asynchronously): recomputes count without
+ * re-saving the timestamp.
+ * On pagehide (navigation/tab-close): writes current timestamp to localStorage.
+ * Uses visibilitychange + pagehide instead of blur to avoid accidental timestamp
+ * resets from alt-tabbing or clicking outside the window.
  *
  * Edge cases:
  * - First visit ever: lastVisit = null, newCount = total (all are "new")
@@ -23,29 +36,20 @@ export function useLastVisit(dates: (string | null)[]): {
   const [lastVisit, setLastVisit] = useState<Date | null>(null);
   const [newCount, setNewCount]   = useState(0);
 
+  // Read lastVisit from localStorage on mount, recompute newCount when dates change
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       const lastDate = stored ? new Date(stored) : null;
       setLastVisit(lastDate);
-
-      if (!lastDate) {
-        // First visit — all items are "new"
-        setNewCount(dates.filter(Boolean).length);
-      } else {
-        const lastTs = lastDate.getTime();
-        const count = dates.filter(d => {
-          if (!d) return false;
-          return new Date(d).getTime() > lastTs;
-        }).length;
-        setNewCount(count);
-      }
+      setNewCount(computeNewCount(dates, lastDate));
     } catch {
-      // localStorage unavailable — silent degrade
       setNewCount(0);
     }
+  }, [dates]);
 
-    // Write current timestamp on unmount or page blur
+  // Save timestamp on pagehide (navigation away) — not on blur (alt-tab etc.)
+  useEffect(() => {
     function saveTimestamp() {
       try {
         localStorage.setItem(STORAGE_KEY, new Date().toISOString());
@@ -54,14 +58,13 @@ export function useLastVisit(dates: (string | null)[]): {
       }
     }
 
-    window.addEventListener("blur", saveTimestamp);
+    // pagehide fires on tab close / navigation away across all browsers
+    window.addEventListener("pagehide", saveTimestamp);
 
     return () => {
-      saveTimestamp();
-      window.removeEventListener("blur", saveTimestamp);
+      window.removeEventListener("pagehide", saveTimestamp);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  // dates intentionally not in deps — we only compute on mount
+  }, []);
 
   return { lastVisit, newCount };
 }

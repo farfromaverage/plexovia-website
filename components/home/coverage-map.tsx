@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usaMapDimensions } from "@/lib/usa-map-dimensions";
 import { MapPin, Crosshair, Radar } from "lucide-react";
+import { useEngineStats } from "./engine-stats-provider";
 
 // Fallback proxy data (used if live Supabase stats fail)
 const FALLBACK_STATE_DATA: Record<string, number> = {
@@ -17,35 +18,13 @@ const FALLBACK_STATE_DATA: Record<string, number> = {
   WY: 45
 };
 
-
-
-
 export default function CoverageMap() {
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const mapRef = useRef<SVGSVGElement>(null);
-  const [stateData, setStateData] = useState<Record<string, number>>(FALLBACK_STATE_DATA);
+  const { contractsByState } = useEngineStats();
 
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch(`/api/engine-stats?t=${Date.now()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.contracts_by_state && Object.keys(data.contracts_by_state).length > 0) {
-            setStateData(data.contracts_by_state);
-          }
-        }
-      } catch (e) {
-        // keep fallback
-      }
-    }
-
-    fetchStats();
-    // Poll every 15 seconds to keep it truly live from engine
-    const interval = setInterval(fetchStats, 15000);
-    return () => clearInterval(interval);
-  }, []);
+  const stateData = Object.keys(contractsByState).length > 0 ? contractsByState : FALLBACK_STATE_DATA;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     setMousePos({ x: e.clientX, y: e.clientY });

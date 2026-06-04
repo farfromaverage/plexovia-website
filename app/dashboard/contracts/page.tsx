@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, ExternalLink, FileText, MapPin, Shield, Star,
@@ -100,6 +100,7 @@ function ContractsPage() {
   const [loading, setLoading] = useState(true);
   const [naicsCodes, setNaicsCodes] = useState<string[]>([]);
   const [error, setError] = useState(false);
+  const [exportError, setExportError] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [exportOpen, setExportOpen] = useState(false);
@@ -128,23 +129,31 @@ function ContractsPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const fetchMatches = async (p: number) => {
+  const fetchMatches = async (p: number, signal?: AbortSignal) => {
     const params = new URLSearchParams({ page: String(p), per_page: String(PER_PAGE), min_score: "0", sort: "recency" });
-    const res = await fetch(`/api/user-matches?${params.toString()}`);
+    const res = await fetch(`/api/user-matches?${params.toString()}`, { signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   };
 
+  const abortRef = useRef<AbortController | null>(null);
   const load = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(false);
     try {
-      const json = await fetchMatches(page);
+      const json = await fetchMatches(page, controller.signal);
+      if (controller.signal.aborted) return;
       const rows = (json.matches || []).map(mapRow);
       setContracts(rows);
       setTotal(json.pagination?.total || 0);
-    } catch { setError(true); }
-    finally { setLoading(false); }
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setError(true);
+    }
+    finally { if (abortRef.current === controller) setLoading(false); }
   }, [page]);
 
   useEffect(() => { load(); }, [page, load]);
@@ -193,11 +202,12 @@ function ContractsPage() {
       a.download = `plexovia-matches-${days}d-${new Date().toISOString().split("T")[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch { alert("Failed to export CSV. Please try again."); }
+    } catch {
+      setExportError(true);
+      setTimeout(() => setExportError(false), 5000);
+    }
     finally { setExporting(false); }
   }
-
-  const allIds = useMemo(() => contracts.map(c => c.id), [contracts]);
 
   return (
     <div className="dash-main dash-fade-in">
@@ -218,6 +228,7 @@ function ContractsPage() {
                 {exporting ? <RefreshCw size={13} className="dash-spin" aria-hidden="true" /> : <Download size={13} aria-hidden="true" />}
                 {exporting ? "Exporting…" : "Export CSV"}
               </button>
+              {exportError && <span style={{ fontSize: "0.72rem", color: "var(--danger)", marginLeft: "var(--space-2)" }}>Export failed</span>}
               {exportOpen && (
                 <div className="dash-dropdown-menu" role="listbox" aria-label="Export date range">
                   {EXPORT_DAY_OPTIONS.map(d => (
@@ -253,11 +264,11 @@ function ContractsPage() {
               onClick={() => setStatusFilter(tab.key)}
             >
               {tab.label}
-              {tab.key === "bookmarked" && cs.bookmarkedCount(allIds) > 0 && (
-                <span className="dash-tab-count">{cs.bookmarkedCount(allIds)}</span>
+              {tab.key === "bookmarked" && cs.totalBookmarkedCount() > 0 && (
+                <span className="dash-tab-count">{cs.totalBookmarkedCount()}</span>
               )}
-              {tab.key === "dismissed" && cs.dismissedCount(allIds) > 0 && (
-                <span className="dash-tab-count">{cs.dismissedCount(allIds)}</span>
+              {tab.key === "dismissed" && cs.totalDismissedCount() > 0 && (
+                <span className="dash-tab-count">{cs.totalDismissedCount()}</span>
               )}
             </button>
           ))}
@@ -284,7 +295,7 @@ function ContractsPage() {
             title={total === 0 && naicsCodes.length > 0 ? "No active matches found" : statusFilter !== "all" ? `No ${statusFilter} contracts` : "No matches yet"}
             message={total === 0 && naicsCodes.length > 0
               ? "Contracts are fetched from SAM.gov twice daily at 11:00 and 18:00 UTC. Check back after the next pipeline run."
-              : statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
+              : statusFilter !== "all" && contracts.length > 0 ? `No ${statusFilter} contracts on this page. Try browsing other pages or check the All tab.` : statusFilter !== "all" ? "Try switching to the 'All' tab." : total === 0 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily." : "Try adjusting your filters."}
           />
         ) : (
           <AnimatePresence initial={false}>
@@ -345,7 +356,7 @@ function ContractsPage() {
 }
 
 /* ─── Row Component ───────────────────────────────────────────────── */
-function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss, onView, index }: {
+const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss, onView, index }: {
   c: ContractRow; isBookmarked: boolean; isViewed: boolean;
   onToggleBookmark: () => void; onDismiss: () => void; onView: () => void;
   index: number;
@@ -438,7 +449,7 @@ function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss,
       </div>
     </motion.div>
   );
-}
+});
 
 /* ─── Deadline Badge ───────────────────────────────────────────── */
 function DeadlineBadge({ label, urgency }: {

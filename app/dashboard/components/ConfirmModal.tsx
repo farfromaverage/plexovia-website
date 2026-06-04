@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { AlertTriangle } from "lucide-react";
+import { lockBodyScroll, unlockBodyScroll } from "./modalScrollLock";
+
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface Props {
   title: string;
@@ -23,29 +26,39 @@ export default function ConfirmModal({
   onCancel,
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Focus confirm button on open
     confirmRef.current?.focus();
+    lockBodyScroll();
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") { onCancel(); return; }
+      if (e.key !== "Tab" || !modalRef.current) return;
+
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     }
     document.addEventListener("keydown", handleKeyDown);
 
-    // Lock body scroll
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = prev;
+      unlockBodyScroll();
     };
   }, [onCancel]);
 
   return (
     <div
-      role="dialog"
+      role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
       aria-describedby="confirm-modal-desc"
@@ -63,6 +76,7 @@ export default function ConfirmModal({
       onClick={onCancel}
     >
       <div
+        ref={modalRef}
         onClick={e => e.stopPropagation()}
         style={{
           background: "var(--app-surface)",
@@ -75,12 +89,6 @@ export default function ConfirmModal({
           animation: "dash-modal-up 0.18s ease",
         }}
       >
-        <style>{`
-          @keyframes dash-modal-up {
-            from { opacity:0; transform:translateY(12px); }
-            to   { opacity:1; transform:translateY(0); }
-          }
-        `}</style>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "1.25rem" }}>
           <AlertTriangle
             size={20}

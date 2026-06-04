@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { counterReveal, viewportConfig } from "@/lib/motion";
+import { useEngineStats } from "./engine-stats-provider";
 
 interface StatItem {
   value:  number;
@@ -10,12 +11,6 @@ interface StatItem {
   suffix?: string;
   prefix?: string;
 }
-
-const initialStats: StatItem[] = [
-  { value: 15847, label: "contracts scanned this week",              suffix: "" },
-  { value: 3,     label: "federal procurement sources scanned nightly", suffix: "" },
-  { value: 6,     label: "hours ago. Legacy platforms take 48h.", suffix: "h" },
-];
 
 function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; suffix?: string; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -58,37 +53,19 @@ function AnimatedNumber({ value, suffix = "", prefix = "" }: { value: number; su
 export default function StatsBar() {
   const ref    = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, viewportConfig);
-  const [liveStats, setLiveStats] = useState<StatItem[]>(initialStats);
+  const { totalContracts, federalSources, lastRunAt } = useEngineStats();
 
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        const res = await fetch(`/api/engine-stats?t=${Date.now()}`);
-        if (!res.ok) return;
-        const data = await res.json();
+  let hrs = 6;
+  if (lastRunAt) {
+    const hoursAgo = Math.round((Date.now() - new Date(lastRunAt).getTime()) / 3600000);
+    hrs = Math.max(1, hoursAgo);
+  }
 
-        let hrs = 6;
-        if (data.last_run_at) {
-          const hoursAgo = Math.round((Date.now() - new Date(data.last_run_at).getTime()) / 3600000);
-          hrs = Math.max(1, hoursAgo);
-        }
-
-        setLiveStats([
-          { value: data.total_contracts > 0 ? data.total_contracts : 15847, label: 'contracts scanned this week',              suffix: '' },
-          { value: data.federal_sources  > 0 ? data.federal_sources  : 3,     label: 'federal procurement sources scanned nightly', suffix: '' },
-          { value: hrs,                                                       label: 'hours ago. Legacy platforms take 48h.', suffix: 'h' },
-        ]);
-      } catch {
-        // Silently keep current stats on error
-      }
-    }
-    loadStats();
-
-    // Poll live from the backend every 15 seconds instead of faking the increments
-    const interval = setInterval(loadStats, 15000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const liveStats: StatItem[] = [
+    { value: totalContracts > 0 ? totalContracts : 15847, label: 'contracts scanned this week',              suffix: '' },
+    { value: federalSources  > 0 ? federalSources  : 3,     label: 'federal procurement sources scanned nightly', suffix: '' },
+    { value: hrs,                                            label: 'hours ago. Legacy platforms take 48h.', suffix: 'h' },
+  ];
 
   return (
     <section

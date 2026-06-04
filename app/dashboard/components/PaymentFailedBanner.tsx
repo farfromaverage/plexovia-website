@@ -47,7 +47,7 @@ export default function PaymentFailedBanner() {
         <Link href="/dashboard/billing" style={{ color: "inherit", textDecoration: "underline", display: "flex", alignItems: "center", gap: "4px" }}>
           Update Payment Method <ArrowRight size={14} />
         </Link>
-        <button onClick={() => setShow(false)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", opacity: 0.7 }}>
+        <button onClick={() => setShow(false)} aria-label="Close" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", opacity: 0.7 }}>
           <X size={16} />
         </button>
       </div>

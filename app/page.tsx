@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EngineStatsProvider } from "@/components/home/engine-stats-provider";
 import Hero from "@/components/home/hero";
 import SocialProofBar from "@/components/home/social-proof-bar";
 import ProblemSection from "@/components/home/problem-section";
@@ -62,16 +63,18 @@ export default function LandingPage() {
 
   return (
     <div style={{ backgroundColor: "var(--pub-bg)" }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      <Hero />
-      <SocialProofBar />
-      <ProblemSection />
-      <DigestPreview />
-      <StatsBar />
-      <CoverageMap />
-      <FAQSection />
-      <FinalCTA />
-      <Footer />
+      <EngineStatsProvider>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+        <Hero />
+        <SocialProofBar />
+        <ProblemSection />
+        <DigestPreview />
+        <StatsBar />
+        <CoverageMap />
+        <FAQSection />
+        <FinalCTA />
+        <Footer />
+      </EngineStatsProvider>
     </div>
   );
 }
