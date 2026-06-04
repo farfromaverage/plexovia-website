@@ -176,7 +176,7 @@ function ContractsPage() {
     return !cs.isDismissed(c.id);
   });
 
-  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / (statusFilter === "bookmarked" || statusFilter === "dismissed" ? FILTER_BATCH : PER_PAGE)));
 
   function handlePageChange(np: number) { setPage(Math.max(1, Math.min(totalPages, np))); }
 
@@ -318,8 +318,8 @@ function ContractsPage() {
         )}
       </div>
 
-      {/* Pagination — hidden when filter is active since counts are client-side estimates */}
-      {!loading && totalPages > 1 && statusFilter === "all" && (
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
           <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
             Page {page} of {totalPages} · {total.toLocaleString()} total matches
