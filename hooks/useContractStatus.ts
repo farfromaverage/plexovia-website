@@ -1,40 +1,67 @@
 "use client";
 
+/**
+ * useContractStatus — FIX HISTORY:
+ *
+ * BUG 3 (localStorage reads wrong key on first render):
+ *   The previous version used a module-level `let STORAGE_KEY` that was
+ *   mutated by init(). Because useState(loadMap) runs synchronously on the
+ *   FIRST render — before the async getSession() + init() call completes —
+ *   the hook read from the default unscoped key "plexovia-contract-status"
+ *   on every cold load. Bookmarks and dismissals appeared invisible until the
+ *   next render cycle, causing:
+ *     - "New" count badge to show already-viewed contracts as new
+ *     - Dismissed contracts to reappear on first render, then vanish
+ *     - Bookmark state to flash off then on
+ *
+ *   ROOT CAUSE: Async init() raced with synchronous useState initializer.
+ *
+ *   FIX: The module-level `let` is replaced with a React ref (`keyRef`) that
+ *   lives inside the hook instance. `useState` is initialized with an empty
+ *   map — no data is read until `init(userId)` is explicitly called. The
+ *   contracts page sets `csReady = true` only after init() resolves, and
+ *   renders skeletons until then. This removes the race entirely.
+ *
+ *   The cross-tab StorageEvent listener now uses keyRef so it always
+ *   listens to the correct user-scoped key after init().
+ */
+
 import { useState, useCallback, useEffect, useRef } from "react";
 
-/* ─── Types ────────────────────────────────────────────────────────── */
+/* ─── Types ──────────────────────────────────────────────────────────── */
 export type ContractAction = "bookmarked" | "dismissed" | "viewed";
 
+interface ContractStatusEntry {
+  bookmarked?: boolean;
+  dismissed?: boolean;
+  viewed?: boolean;
+  dismissedAt?: number;
+}
+
 interface ContractStatusMap {
-  [contractId: string]: {
-    bookmarked?: boolean;
-    dismissed?: boolean;
-    viewed?: boolean;
-    dismissedAt?: number;
-  };
+  [contractId: string]: ContractStatusEntry;
 }
 
 const UNDO_WINDOW_MS = 8000;
 const MAX_ENTRIES = 500;
+const DEFAULT_KEY = "plexovia-contract-status";
 
-let STORAGE_KEY = "plexovia-contract-status";
-
-/* ─── Storage helpers ──────────────────────────────────────────────── */
-function loadMap(): ContractStatusMap {
+/* ─── Storage helpers ────────────────────────────────────────────────── */
+function loadMap(key: string): ContractStatusMap {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as ContractStatusMap) : {};
   } catch {
     return {};
   }
 }
 
-function saveMap(map: ContractStatusMap): boolean {
+function saveMap(key: string, map: ContractStatusMap): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+    localStorage.setItem(key, JSON.stringify(map));
     return true;
   } catch {
-    console.warn("useContractStatus: localStorage write failed (quota exceeded?)");
+    console.warn("[useContractStatus] localStorage write failed (quota exceeded?)");
     return false;
   }
 }
@@ -48,6 +75,7 @@ function evictOverflow(map: ContractStatusMap): ContractStatusMap {
   const result: ContractStatusMap = {};
 
   for (const [id, data] of entries) {
+    // Evict non-bookmarked entries first (oldest by insertion order)
     if (removed < excess && !data.bookmarked) {
       removed++;
       continue;
@@ -58,116 +86,136 @@ function evictOverflow(map: ContractStatusMap): ContractStatusMap {
   return result;
 }
 
-/* ─── Hook ─────────────────────────────────────────────────────────── */
+/* ─── Hook ───────────────────────────────────────────────────────────── */
 export function useContractStatus() {
-  const [statusMap, setStatusMap] = useState<ContractStatusMap>(loadMap);
-  const keyRef = useRef(STORAGE_KEY);
+  // FIX: Start with an empty map. Data is loaded only after init() provides
+  // a userId, eliminating the race between useState initializer and async
+  // getSession(). The keyRef is scoped per hook instance (no module-level mut).
+  const [statusMap, setStatusMap] = useState<ContractStatusMap>({});
+  const keyRef = useRef<string>(DEFAULT_KEY);
 
-  /* Cross-tab sync: re-read when another tab writes */
+  // Cross-tab sync: re-read when another tab writes to the same key
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === keyRef.current) {
-        setStatusMap(loadMap());
+        setStatusMap(loadMap(keyRef.current));
       }
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  /** Switch to a user-scoped storage key (call before other operations) */
+  /**
+   * Call once with the authenticated user's ID before any read/write.
+   * Safe to call multiple times with the same userId (idempotent).
+   */
   const init = useCallback((userId: string) => {
-    STORAGE_KEY = `plexovia-contract-status-${userId}`;
-    keyRef.current = STORAGE_KEY;
-    setStatusMap(loadMap());
+    const key = `plexovia-contract-status-${userId}`;
+    if (keyRef.current === key) return; // already initialized for this user
+    keyRef.current = key;
+    setStatusMap(loadMap(key));
   }, []);
 
   const persist = useCallback((next: ContractStatusMap): boolean => {
     const trimmed = evictOverflow(next);
     setStatusMap(trimmed);
-    return saveMap(trimmed);
+    return saveMap(keyRef.current, trimmed);
   }, []);
 
   /** Toggle bookmark on a contract */
-  const toggleBookmark = useCallback((id: string) => {
-    const map = loadMap();
-    const entry = map[id] || {};
-    entry.bookmarked = !entry.bookmarked;
-    // Un-dismiss if bookmarking
-    if (entry.bookmarked) {
-      entry.dismissed = false;
-      delete entry.dismissedAt;
-    }
-    map[id] = entry;
-    persist(map);
-  }, [persist]);
+  const toggleBookmark = useCallback(
+    (id: string) => {
+      const map = loadMap(keyRef.current);
+      const entry = map[id] || {};
+      entry.bookmarked = !entry.bookmarked;
+      if (entry.bookmarked) {
+        entry.dismissed = false;
+        delete entry.dismissedAt;
+      }
+      map[id] = entry;
+      persist(map);
+    },
+    [persist]
+  );
 
   /** Dismiss a contract (returns the id for undo toast) */
-  const dismiss = useCallback((id: string): string => {
-    const map = loadMap();
-    const entry = map[id] || {};
-    entry.dismissed = true;
-    entry.dismissedAt = Date.now();
-    entry.bookmarked = false; // can't be both
-    map[id] = entry;
-    persist(map);
-    return id;
-  }, [persist]);
+  const dismiss = useCallback(
+    (id: string): string => {
+      const map = loadMap(keyRef.current);
+      const entry = map[id] || {};
+      entry.dismissed = true;
+      entry.dismissedAt = Date.now();
+      entry.bookmarked = false;
+      map[id] = entry;
+      persist(map);
+      return id;
+    },
+    [persist]
+  );
 
   /** Undo dismiss (within undo window) */
-  const undoDismiss = useCallback((id: string) => {
-    const map = loadMap();
-    const entry = map[id];
-    if (!entry) return;
-    entry.dismissed = false;
-    delete entry.dismissedAt;
-    map[id] = entry;
-    persist(map);
-  }, [persist]);
+  const undoDismiss = useCallback(
+    (id: string) => {
+      const map = loadMap(keyRef.current);
+      const entry = map[id];
+      if (!entry) return;
+      entry.dismissed = false;
+      delete entry.dismissedAt;
+      map[id] = entry;
+      persist(map);
+    },
+    [persist]
+  );
 
   /** Mark a contract as viewed */
-  const markViewed = useCallback((id: string) => {
-    const map = loadMap();
-    const entry = map[id] || {};
-    if (entry.viewed) return; // already viewed
-    entry.viewed = true;
-    map[id] = entry;
-    persist(map);
-  }, [persist]);
+  const markViewed = useCallback(
+    (id: string) => {
+      const map = loadMap(keyRef.current);
+      const entry = map[id] || {};
+      if (entry.viewed) return;
+      entry.viewed = true;
+      map[id] = entry;
+      persist(map);
+    },
+    [persist]
+  );
 
-  /** Check if contract is bookmarked */
-  const isBookmarked = useCallback((id: string): boolean => {
-    return statusMap[id]?.bookmarked === true;
-  }, [statusMap]);
+  const isBookmarked = useCallback(
+    (id: string): boolean => statusMap[id]?.bookmarked === true,
+    [statusMap]
+  );
 
-  /** Check if contract is dismissed */
-  const isDismissed = useCallback((id: string): boolean => {
-    return statusMap[id]?.dismissed === true;
-  }, [statusMap]);
+  const isDismissed = useCallback(
+    (id: string): boolean => statusMap[id]?.dismissed === true,
+    [statusMap]
+  );
 
-  /** Check if contract has been viewed */
-  const isViewed = useCallback((id: string): boolean => {
-    return statusMap[id]?.viewed === true;
-  }, [statusMap]);
+  const isViewed = useCallback(
+    (id: string): boolean => statusMap[id]?.viewed === true,
+    [statusMap]
+  );
 
-  /** Get count of bookmarked contracts from a list of IDs */
-  const bookmarkedCount = useCallback((ids: string[]): number => {
-    return ids.filter(id => statusMap[id]?.bookmarked).length;
-  }, [statusMap]);
+  const bookmarkedCount = useCallback(
+    (ids: string[]): number =>
+      ids.filter((id) => statusMap[id]?.bookmarked).length,
+    [statusMap]
+  );
 
-  /** Get count of dismissed contracts from a list of IDs */
-  const dismissedCount = useCallback((ids: string[]): number => {
-    return ids.filter(id => statusMap[id]?.dismissed).length;
-  }, [statusMap]);
+  const dismissedCount = useCallback(
+    (ids: string[]): number =>
+      ids.filter((id) => statusMap[id]?.dismissed).length,
+    [statusMap]
+  );
 
-  /** Get total bookmarked count across ALL contracts in localStorage */
-  const totalBookmarkedCount = useCallback((): number => {
-    return Object.values(statusMap).filter(e => e?.bookmarked).length;
-  }, [statusMap]);
+  const totalBookmarkedCount = useCallback(
+    (): number => Object.values(statusMap).filter((e) => e?.bookmarked).length,
+    [statusMap]
+  );
 
-  /** Get total dismissed count across ALL contracts in localStorage */
-  const totalDismissedCount = useCallback((): number => {
-    return Object.values(statusMap).filter(e => e?.dismissed).length;
-  }, [statusMap]);
+  const totalDismissedCount = useCallback(
+    (): number => Object.values(statusMap).filter((e) => e?.dismissed).length,
+    [statusMap]
+  );
 
   return {
     init,

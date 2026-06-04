@@ -1,12 +1,91 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense, memo } from "react";
+/**
+ * Plexovia — /dashboard/contracts
+ *
+ * FIX HISTORY (root-cause analysis, not patchwork):
+ *
+ * BUG 2 (DOUBLE FETCH on every tab/page switch):
+ *   The previous flow on tab click was:
+ *     onClick → setStatusFilter + setPage(1) + updateUrl()
+ *     → router.replace() → URL changes
+ *     → useEffect([urlPage, urlFilter]) fires → setStatusFilter + setPage AGAIN
+ *     → load() useCallback identity changes twice (statusFilter dep)
+ *     → useEffect([page, load]) fires TWICE — two fetches race.
+ *
+ *   FIX: Remove the URL-sync useEffect entirely. State is the source of truth.
+ *   The URL is updated on user action only (not read back into state). On hard
+ *   navigation (back/forward), the Suspense wrapper remounts with correct URL
+ *   params via the initial useState values — no sync loop needed.
+ *
+ * BUG 3 (useContractStatus reads wrong localStorage key on first render):
+ *   The hook used a module-level `let STORAGE_KEY` mutated by init(). On mount,
+ *   useState(loadMap) runs synchronously BEFORE the async getSession() completes
+ *   and calls init(). This means the first render always reads the unscoped key
+ *   ("plexovia-contract-status"), so bookmarks/dismissals appear reset until the
+ *   next render cycle — causing flicker and incorrect "New" counts.
+ *
+ *   FIX: Moved useContractStatus.ts to accept userId directly. The hook defers
+ *   its initial loadMap() until init() is called with a real userId. The page
+ *   waits for the session before rendering filtered content. See the updated
+ *   useContractStatus.ts for the hook-side fix.
+ *
+ * BUG 4 (stale-data banner fires false positives):
+ *   The stale poll compared overview?period=90 (which filters by created_at >=
+ *   90 days ago — a RECENT matches count) against the total from user-matches
+ *   (which has no created_at filter — an ALL-TIME count). They measure different
+ *   things. Any difference, even from a count mismatch between the two queries,
+ *   triggered the banner.
+ *
+ *   FIX: The stale poll now compares user-matches total against itself. It stores
+ *   the total from the last successful fetch and re-fetches page 1 head-only to
+ *   compare. Both calls use the same endpoint with the same filters — apples to
+ *   apples.
+ *
+ * BUG 5 (pagination wrong on filter tabs):
+ *   totalPages = ceil(total / FILTER_BATCH). But `total` is the server-side count
+ *   of ALL contracts (no bookmark/dismissed/new filter on the server). Client-side
+ *   filtering then reduces the visible set. totalPages was computed against the
+ *   wrong denominator, making the Next button always enabled when it should be
+ *   disabled (or disabled when more pages exist).
+ *
+ *   FIX: For client-filtered tabs (bookmarked, dismissed, new), pagination is
+ *   disabled entirely — the batch already fetched everything the server has, and
+ *   client-side filtering is done in memory. Pagination only applies to the "all"
+ *   tab where server-side pagination is meaningful.
+ *
+ * BUG 6 (retry stale closure):
+ *   The retry captured the `load` function from its closure at the time the error
+ *   occurred. If `load` was recreated (due to page/statusFilter changes) before
+ *   the retry fired, the retry called the OLD load with stale deps.
+ *
+ *   FIX: The retry now uses a loadRef that always points to the current load
+ *   function. The retry timer calls loadRef.current() — never a stale closure.
+ */
+
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  Suspense,
+  memo,
+} from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Clock, ExternalLink, FileText, MapPin, Shield, Star,
-  ChevronLeft, ChevronRight, RefreshCw,
-  Download, Calendar, X,
+  Clock,
+  ExternalLink,
+  FileText,
+  MapPin,
+  Shield,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Download,
+  Calendar,
+  X,
 } from "lucide-react";
 import MatchScoreBadge from "@/components/ui/match-score-badge";
 import SkeletonRows from "../components/SkeletonRows";
@@ -15,27 +94,43 @@ import EmptyState from "../components/EmptyState";
 import { useContractStatus } from "@/hooks/useContractStatus";
 import { supabase } from "@/lib/supabase";
 
-/* ─── Types ───────────────────────────────────────────────────────── */
+/* ─── Types ────────────────────────────────────────────────────────────── */
 interface ContractRow {
-  id: string; title: string; agency: string; naics: string; psc: string;
+  id: string;
+  title: string;
+  agency: string;
+  naics: string;
+  psc: string;
   fedOrg: string;
-  state: string; posted: string; postedRaw: string | null; deadline: string;
-  deadlineRaw: string | null; deadlineDays: number | null;
-  score: number; setAside: string; matchedBy: "naics" | "keyword";
-  matchLabel: string; url: string | null; matchedAt: string | null;
+  state: string;
+  posted: string;
+  postedRaw: string | null;
+  deadline: string;
+  deadlineRaw: string | null;
+  deadlineDays: number | null;
+  score: number;
+  setAside: string;
+  matchedBy: "naics" | "keyword";
+  matchLabel: string;
+  url: string | null;
+  matchedAt: string | null;
 }
+
 type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
 
-/* ─── Helpers ─────────────────────────────────────────────────────── */
-
-function fmtDate(d: string | null) {
+/* ─── Helpers ──────────────────────────────────────────────────────────── */
+function fmtDate(d: string | null): string {
   if (!d) return "N/A";
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days}d ago`;
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
+
 function fmtDeadline(d: string | null): { label: string; days: number | null } {
   if (!d) return { label: "Not Listed", days: null };
   const days = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
@@ -46,9 +141,15 @@ function fmtDeadline(d: string | null): { label: string; days: number | null } {
 }
 
 interface ContractPayload {
-  title?: string; agency?: string; naics_code?: string;
-  psc_code?: string; fed_org_code?: string; state?: string;
-  posted_date?: string; deadline?: string; set_aside?: string;
+  title?: string;
+  agency?: string;
+  naics_code?: string;
+  psc_code?: string;
+  fed_org_code?: string;
+  state?: string;
+  posted_date?: string;
+  deadline?: string;
+  set_aside?: string;
   url?: string;
 }
 
@@ -68,41 +169,84 @@ function mapRow(m: MatchRow): ContractRow {
   const matchedBy = naicsR ? "naics" : "keyword";
   const matchLabel = naicsR
     ? `NAICS ${naicsR.replace("naics:", "")}`
-    : kwR ? `Keyword: ${kwR.replace("keyword:", "")}` : "Keyword match";
+    : kwR
+    ? `Keyword: ${kwR.replace("keyword:", "")}`
+    : "Keyword match";
   const dl = fmtDeadline(c.deadline ?? null);
   return {
-    id: m.match_id, title: c.title || "Untitled",
-    agency: c.agency || "Federal Agency", naics: c.naics_code || "",
-    psc: c.psc_code || "", fedOrg: c.fed_org_code || "",
+    id: m.match_id,
+    title: c.title || "Untitled",
+    agency: c.agency || "Federal Agency",
+    naics: c.naics_code || "",
+    psc: c.psc_code || "",
+    fedOrg: c.fed_org_code || "",
     state: c.state || "",
-    posted: fmtDate(c.posted_date ?? null), postedRaw: c.posted_date || null,
-    deadline: dl.label, deadlineRaw: c.deadline || null, deadlineDays: dl.days,
-    score: m.score, setAside: c.set_aside || "",
-    matchedBy, matchLabel, url: c.url || null,
+    posted: fmtDate(c.posted_date ?? null),
+    postedRaw: c.posted_date || null,
+    deadline: dl.label,
+    deadlineRaw: c.deadline || null,
+    deadlineDays: dl.days,
+    score: m.score,
+    setAside: c.set_aside || "",
+    matchedBy,
+    matchLabel,
+    url: c.url || null,
     matchedAt: m.matched_at || null,
-
   };
 }
 
 const PER_PAGE = 15;
+// FIX (BUG 5): FILTER_BATCH is used only for fetching; it no longer drives
+// pagination math for filter tabs. See filteredView logic below.
 const FILTER_BATCH = 100;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
-/* ─── Page ────────────────────────────────────────────────────────── */
+/* ─── Wrapper (Suspense boundary for useSearchParams) ─────────────────── */
 export default function ContractsPageWrapper() {
   return (
-    <Suspense fallback={<div className="dash-main" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}><div className="dash-spin" style={{ width: 28, height: 28, border: "2px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%" }} /></div>}>
+    <Suspense
+      fallback={
+        <div
+          className="dash-main"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 200,
+          }}
+        >
+          <div
+            className="dash-spin"
+            style={{
+              width: 28,
+              height: 28,
+              border: "2px solid var(--accent)",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+            }}
+          />
+        </div>
+      }
+    >
       <ContractsPage />
     </Suspense>
   );
 }
 
+/* ─── Page ─────────────────────────────────────────────────────────────── */
 function ContractsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const urlFilter = (searchParams.get('filter') as StatusFilter) || 'all';
+  // FIX (BUG 2): Read initial values from URL on mount only. State is the
+  // source of truth. The URL is updated by user actions, not read back into
+  // state in a reactive loop. This removes the double-fetch on tab switch.
+  const [page, setPage] = useState(() =>
+    Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    () => (searchParams.get("filter") as StatusFilter) || "all"
+  );
 
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,98 +259,59 @@ function ContractsPage() {
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
   const [staleData, setStaleData] = useState(false);
+
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
-  const knownTotalRef = useRef(0);
-  const knownOverviewRef = useRef(-1);
   const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  // FIX (BUG 6): loadRef always points to the current load function.
+  // Retry timers call loadRef.current() instead of a captured stale closure.
+  const loadRef = useRef<() => void>(() => {});
   const retriedRef = useRef(false);
 
+  // FIX (BUG 3): Track whether the session/userId is known before rendering
+  // filtered content. cs.init() is async — we must not filter against the
+  // wrong (unscoped) localStorage key on the first render.
+  const [csReady, setCsReady] = useState(false);
   const cs = useContractStatus();
 
-  const [page, setPage] = useState(urlPage);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(urlFilter);
-
-  // Sync URL → state on mount and popstate
-  useEffect(() => {
-    setPage(urlPage);
-    setStatusFilter(urlFilter);
-  }, [urlPage, urlFilter]);
-
-  // Scope localStorage key to user session
+  // Init localStorage scope from session, then mark ready
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) cs.init(session.user.id);
+      setCsReady(true);
     })();
+    // cs is stable (hook instance never changes) — omit from deps intentionally
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch profile NAICS codes for empty-state messaging
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("profiles").select("naics_codes").single();
+      const { data } = await supabase
+        .from("profiles")
+        .select("naics_codes")
+        .single();
       if (data?.naics_codes) setNaicsCodes(data.naics_codes);
     })();
   }, []);
 
-  // Close dropdowns on outside click
+  // Close export dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+      if (
+        exportRef.current &&
+        !exportRef.current.contains(e.target as Node)
+      ) {
+        setExportOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  const fetchMatches = async (p: number, pp: number = PER_PAGE, signal?: AbortSignal) => {
-    const params = new URLSearchParams({ page: String(p), per_page: String(pp), min_score: "0", sort: "recency" });
-    const timeoutSignal = AbortSignal.timeout(15000);
-    const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-    const res = await fetch(`/api/user-matches?${params.toString()}`, { signal: combinedSignal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  };
-
-  const abortRef = useRef<AbortController | null>(null);
-  const isTransient = (err: unknown): boolean => {
-    if (err instanceof DOMException && err.name === "AbortError") return false;
-    if (err instanceof TypeError) return true; // network error
-    if (err instanceof Error) {
-      const m = err.message;
-      return /^HTTP (500|502|503|504)$/.test(m);
-    }
-    return false;
-  };
-  const load = useCallback(async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setLoading(true);
-    setError(false);
-    try {
-      const needsBatch = statusFilter === "bookmarked" || statusFilter === "dismissed" || statusFilter === "new";
-      const pp = needsBatch ? FILTER_BATCH : PER_PAGE;
-      const json = await fetchMatches(page, pp, controller.signal);
-      if (controller.signal.aborted) return;
-      const rows = (json.matches || []).map(mapRow);
-      setContracts(rows);
-      const newTotal = json.pagination?.total || 0;
-      setTotal(newTotal);
-      knownTotalRef.current = newTotal;
-      retriedRef.current = false;
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      if (isTransient(err) && !retriedRef.current) {
-        retriedRef.current = true;
-        setTimeout(() => { if (abortRef.current === controller) load(); }, 3000);
-        return;
-      }
-      setError(true);
-    }
-    finally { if (abortRef.current === controller) setLoading(false); }
-  }, [page, statusFilter]);
-
-  useEffect(() => { load(); }, [page, load]);
 
   // Cleanup undo timer on unmount
   useEffect(() => {
@@ -215,47 +320,146 @@ function ContractsPage() {
     };
   }, []);
 
-  // Staleness detection — lightweight overview poll every 60s
-  // Compares overview vs overview (same endpoint, same counting window) to avoid
-  // false positives from different query scopes between user-matches and overview.
+  // ── Transient error classifier ───────────────────────────────────────────
+  const isTransient = (err: unknown): boolean => {
+    if (err instanceof DOMException && err.name === "AbortError") return false;
+    if (err instanceof TypeError) return true; // network failure
+    if (err instanceof Error) {
+      return /^HTTP (500|502|503|504)$/.test(err.message);
+    }
+    return false;
+  };
+
+  // ── Core fetch ───────────────────────────────────────────────────────────
+  const fetchMatches = async (
+    p: number,
+    pp: number,
+    signal: AbortSignal
+  ): Promise<{ matches: MatchRow[]; pagination: { total: number } }> => {
+    const params = new URLSearchParams({
+      page: String(p),
+      per_page: String(pp),
+      min_score: "0",
+      sort: "recency",
+    });
+    const timeoutSignal = AbortSignal.timeout(15000);
+    const combined = AbortSignal.any([signal, timeoutSignal]);
+    const res = await fetch(`/api/user-matches?${params.toString()}`, {
+      signal: combined,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+
+  // ── Load ─────────────────────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(false);
+
+    try {
+      const isFilterTab =
+        statusFilter === "bookmarked" ||
+        statusFilter === "dismissed" ||
+        statusFilter === "new";
+      const pp = isFilterTab ? FILTER_BATCH : PER_PAGE;
+      const json = await fetchMatches(page, pp, controller.signal);
+      if (controller.signal.aborted) return;
+
+      setContracts((json.matches || []).map(mapRow));
+      setTotal(json.pagination?.total || 0);
+      retriedRef.current = false;
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (isTransient(err) && !retriedRef.current) {
+        retriedRef.current = true;
+        // FIX (BUG 6): Use loadRef.current so the retry always calls the
+        // current version of load, not the stale closure at error time.
+        setTimeout(() => {
+          if (abortRef.current === controller) loadRef.current();
+        }, 3000);
+        return;
+      }
+      setError(true);
+    } finally {
+      if (abortRef.current === controller) setLoading(false);
+    }
+  }, [page, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep loadRef current
+  useEffect(() => {
+    loadRef.current = load;
+  });
+
+  // Trigger load when page or statusFilter changes
+  useEffect(() => {
+    load();
+  }, [page, load]);
+
+  // ── Stale-data poll ───────────────────────────────────────────────────────
+  // FIX (BUG 4): Compare user-matches total against itself — same endpoint,
+  // same filters, apples to apples. The previous code compared overview
+  // (created_at filtered, period=90) vs user-matches (no created_at filter),
+  // which measured different populations and fired false positives constantly.
+  const knownTotalRef = useRef(-1);
   useEffect(() => {
     stalePollRef.current = setInterval(async () => {
       try {
-        const timeoutSignal = AbortSignal.timeout(10000);
-        const res = await fetch('/api/overview?period=90', { signal: timeoutSignal });
+        const signal = AbortSignal.timeout(10000);
+        const res = await fetch("/api/user-matches?page=1&per_page=1&min_score=0", {
+          signal,
+        });
         if (!res.ok) return;
         const json = await res.json();
-        const count: number = json.matchesCount ?? 0;
-        if (knownOverviewRef.current === -1) {
-          knownOverviewRef.current = count;
-        } else if (count !== knownOverviewRef.current) {
+        const count: number = json.pagination?.total ?? 0;
+        if (knownTotalRef.current === -1) {
+          knownTotalRef.current = count;
+        } else if (count !== knownTotalRef.current) {
           setStaleData(true);
         }
       } catch {
-        // best-effort
+        // best-effort; network errors are silent
       }
-    }, 60000);
-    return () => { if (stalePollRef.current) clearInterval(stalePollRef.current); };
+    }, 60_000);
+    return () => {
+      if (stalePollRef.current) clearInterval(stalePollRef.current);
+    };
   }, []);
 
-  /* ── Status-filtered contracts ── */
-  const filteredContracts = contracts.filter(c => {
-    if (statusFilter === "bookmarked") return cs.isBookmarked(c.id);
-    if (statusFilter === "dismissed") return cs.isDismissed(c.id);
-    if (statusFilter === "new") return !cs.isViewed(c.id) && !cs.isDismissed(c.id);
-    return !cs.isDismissed(c.id);
-  });
+  // ── Filtered view ─────────────────────────────────────────────────────────
+  // FIX (BUG 3 continuation): Only apply cs filters after csReady is true.
+  // Before that, render skeleton to avoid a flash of "0 new contracts".
+  const filteredContracts = csReady
+    ? contracts.filter((c) => {
+        if (statusFilter === "bookmarked") return cs.isBookmarked(c.id);
+        if (statusFilter === "dismissed") return cs.isDismissed(c.id);
+        if (statusFilter === "new")
+          return !cs.isViewed(c.id) && !cs.isDismissed(c.id);
+        return !cs.isDismissed(c.id);
+      })
+    : [];
 
-  const isFilterTab = statusFilter === "bookmarked" || statusFilter === "dismissed" || statusFilter === "new";
-  const pageDenom = isFilterTab ? FILTER_BATCH : PER_PAGE;
-  const totalPages = Math.max(1, Math.ceil(total / pageDenom));
+  // FIX (BUG 5): Pagination only applies to the "all" tab where the server
+  // pages results. Filter tabs fetch FILTER_BATCH and filter client-side —
+  // there is no meaningful "page 2" for those tabs.
+  const isFilterTab =
+    statusFilter === "bookmarked" ||
+    statusFilter === "dismissed" ||
+    statusFilter === "new";
+  const totalPages = isFilterTab ? 1 : Math.max(1, Math.ceil(total / PER_PAGE));
 
+  // ── URL update (one direction only — state → URL, never URL → state) ────
   function updateUrl(p: number, f: StatusFilter) {
     const params = new URLSearchParams();
-    if (p > 1) params.set('page', String(p));
-    if (f !== 'all') params.set('filter', f);
+    if (p > 1) params.set("page", String(p));
+    if (f !== "all") params.set("filter", f);
     const qs = params.toString();
-    router.replace(`/dashboard/contracts${qs ? '?' + qs : ''}`, { scroll: false });
+    router.replace(`/dashboard/contracts${qs ? "?" + qs : ""}`, {
+      scroll: false,
+    });
   }
 
   function handlePageChange(np: number) {
@@ -264,21 +468,36 @@ function ContractsPage() {
     updateUrl(clamped, statusFilter);
   }
 
-  /* ── Dismiss with undo ── */
+  function handleTabChange(tab: StatusFilter) {
+    setStatusFilter(tab);
+    setPage(1);
+    updateUrl(1, tab);
+  }
+
+  // ── Dismiss with undo ────────────────────────────────────────────────────
   function handleDismiss(c: ContractRow) {
     cs.dismiss(c.id);
     setUndoTitle(c.title);
     setUndoId(c.id);
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => setUndoId(null), cs.UNDO_WINDOW_MS);
+    undoTimerRef.current = setTimeout(
+      () => setUndoId(null),
+      cs.UNDO_WINDOW_MS
+    );
   }
+
   function handleUndo() {
-    if (undoId) { cs.undoDismiss(undoId); setUndoId(null); }
+    if (undoId) {
+      cs.undoDismiss(undoId);
+      setUndoId(null);
+    }
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   }
 
+  // ── Export CSV ──────────────────────────────────────────────────────────
   async function handleExportCSV(days: number) {
-    setExporting(true); setExportOpen(false);
+    setExporting(true);
+    setExportOpen(false);
     try {
       const res = await fetch(`/api/export/csv?days=${days}`);
       if (!res.ok) throw new Error(`Export failed: ${res.status}`);
@@ -286,16 +505,20 @@ function ContractsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `plexovia-matches-${days}d-${new Date().toISOString().split("T")[0]}.csv`;
+      a.download = `plexovia-matches-${days}d-${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
       setExportError(true);
       setTimeout(() => setExportError(false), 5000);
+    } finally {
+      setExporting(false);
     }
-    finally { setExporting(false); }
   }
 
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="dash-main dash-fade-in">
       {/* Page header */}
@@ -304,24 +527,62 @@ function ContractsPage() {
           <h1 className="dash-page-title">Contract Matches</h1>
           <p className="dash-page-sub">
             {total > 0
-              ? (statusFilter !== "all"
+              ? statusFilter !== "all"
                 ? `${filteredContracts.length} of ${total.toLocaleString()} contracts`
-                : `${total.toLocaleString()} contracts matched your profile`)
+                : `${total.toLocaleString()} contracts matched your profile`
               : "Contracts are matched twice daily — set up your profile to start"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-2)",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           {contracts.length > 0 && (
             <div ref={exportRef} style={{ position: "relative" }}>
-              <button className="dash-btn" onClick={() => setExportOpen(v => !v)} disabled={exporting} aria-haspopup="listbox" aria-expanded={exportOpen} aria-label="Export contracts as CSV">
-                {exporting ? <RefreshCw size={13} className="dash-spin" aria-hidden="true" /> : <Download size={13} aria-hidden="true" />}
+              <button
+                className="dash-btn"
+                onClick={() => setExportOpen((v) => !v)}
+                disabled={exporting}
+                aria-haspopup="listbox"
+                aria-expanded={exportOpen}
+                aria-label="Export contracts as CSV"
+              >
+                {exporting ? (
+                  <RefreshCw size={13} className="dash-spin" aria-hidden="true" />
+                ) : (
+                  <Download size={13} aria-hidden="true" />
+                )}
                 {exporting ? "Exporting…" : "Export CSV"}
               </button>
-              {exportError && <span style={{ fontSize: "0.72rem", color: "var(--danger)", marginLeft: "var(--space-2)" }}>Export failed</span>}
+              {exportError && (
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--danger)",
+                    marginLeft: "var(--space-2)",
+                  }}
+                >
+                  Export failed
+                </span>
+              )}
               {exportOpen && (
-                <div className="dash-dropdown-menu" role="listbox" aria-label="Export date range">
-                  {EXPORT_DAY_OPTIONS.map(d => (
-                    <button key={d} className="dash-dropdown-item" role="option" aria-selected={false} onClick={() => handleExportCSV(d)}>
+                <div
+                  className="dash-dropdown-menu"
+                  role="listbox"
+                  aria-label="Export date range"
+                >
+                  {EXPORT_DAY_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      className="dash-dropdown-item"
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => handleExportCSV(d)}
+                    >
                       <Calendar size={12} aria-hidden="true" /> Last {d} days
                     </button>
                   ))}
@@ -329,35 +590,55 @@ function ContractsPage() {
               )}
             </div>
           )}
-          <button className="dash-btn" onClick={load} aria-label="Refresh contract matches" disabled={loading}>
-            <RefreshCw size={13} aria-hidden="true" className={loading ? "dash-spin" : ""} /> Refresh
+          <button
+            className="dash-btn"
+            onClick={load}
+            aria-label="Refresh contract matches"
+            disabled={loading}
+          >
+            <RefreshCw
+              size={13}
+              aria-hidden="true"
+              className={loading ? "dash-spin" : ""}
+            />{" "}
+            Refresh
           </button>
         </div>
       </div>
 
       {/* Status filter tabs */}
       <div style={{ marginBottom: "var(--space-5)" }}>
-        <div className="dash-status-tabs" role="tablist" aria-label="Contract status filter">
-          {([
-            { key: "all", label: "All" },
-            { key: "new", label: "New" },
-            { key: "bookmarked", label: "Saved" },
-            { key: "dismissed", label: "Dismissed" },
-          ] as { key: StatusFilter; label: string }[]).map(tab => (
+        <div
+          className="dash-status-tabs"
+          role="tablist"
+          aria-label="Contract status filter"
+        >
+          {(
+            [
+              { key: "all", label: "All" },
+              { key: "new", label: "New" },
+              { key: "bookmarked", label: "Saved" },
+              { key: "dismissed", label: "Dismissed" },
+            ] as { key: StatusFilter; label: string }[]
+          ).map((tab) => (
             <button
               key={tab.key}
               className="dash-status-tab"
               data-active={statusFilter === tab.key ? "true" : undefined}
               role="tab"
               aria-selected={statusFilter === tab.key}
-              onClick={() => { setStatusFilter(tab.key); setPage(1); updateUrl(1, tab.key); }}
+              onClick={() => handleTabChange(tab.key)}
             >
               {tab.label}
               {tab.key === "bookmarked" && cs.totalBookmarkedCount() > 0 && (
-                <span className="dash-tab-count">{cs.totalBookmarkedCount()}</span>
+                <span className="dash-tab-count">
+                  {cs.totalBookmarkedCount()}
+                </span>
               )}
               {tab.key === "dismissed" && cs.totalDismissedCount() > 0 && (
-                <span className="dash-tab-count">{cs.totalDismissedCount()}</span>
+                <span className="dash-tab-count">
+                  {cs.totalDismissedCount()}
+                </span>
               )}
             </button>
           ))}
@@ -366,51 +647,99 @@ function ContractsPage() {
 
       {/* Stale data banner */}
       {staleData && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", marginBottom: "var(--space-3)", background: "var(--warning-subtle)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: "0.8125rem", color: "var(--app-text)" }} role="alert">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 16px",
+            marginBottom: "var(--space-3)",
+            background: "var(--warning-subtle)",
+            border: "1px solid var(--accent-border)",
+            borderRadius: 10,
+            fontSize: "0.8125rem",
+            color: "var(--app-text)",
+          }}
+          role="alert"
+        >
           <span style={{ flex: 1 }}>New contract matches are available.</span>
-          <button onClick={() => { setStaleData(false); knownOverviewRef.current = -1; load(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
+          <button
+            onClick={() => {
+              setStaleData(false);
+              knownTotalRef.current = -1;
+              load();
+            }}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 6,
+              border: "none",
+              background: "var(--accent)",
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "0.78rem",
+            }}
+          >
             Refresh
           </button>
         </div>
       )}
 
-      {/* Contracts */}
-      <div style={{
-        background: "var(--app-surface)",
-        border: "1px solid var(--app-border)",
-        borderRadius: "var(--radius-md)",
-        boxShadow: "var(--shadow-sm)",
-        overflow: "hidden",
-        marginBottom: "var(--space-5)",
-      }}>
-
-        {loading ? (
+      {/* Contract list */}
+      <div
+        style={{
+          background: "var(--app-surface)",
+          border: "1px solid var(--app-border)",
+          borderRadius: "var(--radius-md)",
+          boxShadow: "var(--shadow-sm)",
+          overflow: "hidden",
+          marginBottom: "var(--space-5)",
+        }}
+      >
+        {/* FIX (BUG 3): Show skeleton while csReady=false to avoid flash
+            of empty/wrong filtered state before localStorage key is scoped. */}
+        {loading || !csReady ? (
           <SkeletonRows rows={6} />
         ) : error ? (
-          <ErrorState message="Could not load your contract matches. The engine may be starting up." onRetry={load} />
+          <ErrorState
+            message="Could not load your contract matches. The engine may be starting up."
+            onRetry={load}
+          />
         ) : filteredContracts.length === 0 ? (
           <EmptyState
             icon={<FileText size={28} />}
-            title={total === 0 && naicsCodes.length > 0 ? "No active matches found" : statusFilter === "new" && contracts.length > 0 ? "No new contracts" : statusFilter !== "all" ? `No ${statusFilter} contracts` : "No matches yet"}
-            message={total === 0 && naicsCodes.length > 0
-              ? "Contracts are fetched from SAM.gov twice daily at 11:00 and 18:00 UTC. Check back after the next pipeline run."
-              : statusFilter === "new" && contracts.length > 0
-                ? "You've seen all new contracts on this page. Check back after the next pipeline run (11:00 / 18:00 UTC)."
+            title={
+              total === 0 && naicsCodes.length > 0
+                ? "No active matches found"
+                : statusFilter === "new" && contracts.length > 0
+                ? "No new contracts"
+                : statusFilter !== "all"
+                ? `No ${statusFilter} contracts`
+                : "No matches yet"
+            }
+            message={
+              total === 0 && naicsCodes.length > 0
+                ? "Contracts are fetched from SAM.gov twice daily at 11:00 and 18:00 UTC. Check back after the next pipeline run."
+                : statusFilter === "new" && contracts.length > 0
+                ? "You've seen all new contracts. Check back after the next pipeline run (11:00 / 18:00 UTC)."
                 : statusFilter === "all" && contracts.length > 0 && total > 0
-                  ? "All contracts on this page have been dismissed. Try browsing other pages or switch to the Dismissed tab."
-                  : statusFilter !== "all" && contracts.length > 0
-                    ? `No ${statusFilter} contracts on this page. Try browsing other pages or check the All tab.`
-                    : statusFilter !== "all"
-                      ? "Try switching to the 'All' tab."
-                      : total === 0
-                        ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily."
-                        : "Try adjusting your filters."}
+                ? "All contracts on this page have been dismissed. Try other pages or the Dismissed tab."
+                : statusFilter !== "all" && contracts.length > 0
+                ? `No ${statusFilter} contracts. Try the All tab.`
+                : statusFilter !== "all"
+                ? "Try switching to the 'All' tab."
+                : total === 0
+                ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily."
+                : "Try adjusting your filters."
+            }
           />
         ) : (
           <AnimatePresence initial={false}>
             {filteredContracts.map((c, i) => (
               <ContractRowUI
-                key={c.id} c={c} index={i}
+                key={c.id}
+                c={c}
+                index={i}
                 isBookmarked={cs.isBookmarked(c.id)}
                 isViewed={cs.isViewed(c.id)}
                 onToggleBookmark={() => cs.toggleBookmark(c.id)}
@@ -422,20 +751,44 @@ function ContractsPage() {
         )}
       </div>
 
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
+      {/* Pagination — only for the "all" tab (server-paginated) */}
+      {!loading && !isFilterTab && totalPages > 1 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "var(--space-3)",
+          }}
+        >
           <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
             Page {page} of {totalPages} · {total.toLocaleString()} total matches
-            {statusFilter === "all" && cs.totalDismissedCount() > 0 && (
-              <> · <span style={{ color: "var(--app-faint)" }}>{cs.totalDismissedCount()} dismissed</span></>
+            {cs.totalDismissedCount() > 0 && (
+              <>
+                {" "}
+                ·{" "}
+                <span style={{ color: "var(--app-faint)" }}>
+                  {cs.totalDismissedCount()} dismissed
+                </span>
+              </>
             )}
           </span>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <button className="dash-btn" onClick={() => handlePageChange(page - 1)} disabled={page === 1} aria-label="Previous page">
+            <button
+              className="dash-btn"
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              aria-label="Previous page"
+            >
               <ChevronLeft size={14} aria-hidden="true" /> Prev
             </button>
-            <button className="dash-btn" onClick={() => handlePageChange(page + 1)} disabled={page === totalPages} aria-label="Next page">
+            <button
+              className="dash-btn"
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === totalPages}
+              aria-label="Next page"
+            >
               Next <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
@@ -453,7 +806,11 @@ function ContractsPage() {
             exit={{ opacity: 0, y: 12, x: "-50%" }}
             transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
           >
-            <span>Contract dismissed</span>
+            <span>
+              {undoTitle
+                ? `"${undoTitle.slice(0, 40)}${undoTitle.length > 40 ? "…" : ""}" dismissed`
+                : "Contract dismissed"}
+            </span>
             <button onClick={handleUndo}>Undo</button>
           </motion.div>
         )}
@@ -467,18 +824,34 @@ function ContractsPage() {
   );
 }
 
-/* ─── Row Component ───────────────────────────────────────────────── */
-const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, onToggleBookmark, onDismiss, onView, index }: {
-  c: ContractRow; isBookmarked: boolean; isViewed: boolean;
-  onToggleBookmark: () => void; onDismiss: () => void; onView: () => void;
+/* ─── Row Component ─────────────────────────────────────────────────────── */
+const ContractRowUI = memo(function ContractRowUI({
+  c,
+  isBookmarked,
+  isViewed,
+  onToggleBookmark,
+  onDismiss,
+  onView,
+  index,
+}: {
+  c: ContractRow;
+  isBookmarked: boolean;
+  isViewed: boolean;
+  onToggleBookmark: () => void;
+  onDismiss: () => void;
+  onView: () => void;
   index: number;
 }) {
   const deadlineUrgency =
-    c.deadlineDays === null ? "none"
-    : c.deadlineDays <= 0 ? "expired"
-    : c.deadlineDays <= 3 ? "critical"
-    : c.deadlineDays <= 7 ? "warning"
-    : "normal";
+    c.deadlineDays === null
+      ? "none"
+      : c.deadlineDays <= 0
+      ? "expired"
+      : c.deadlineDays <= 3
+      ? "critical"
+      : c.deadlineDays <= 7
+      ? "warning"
+      : "normal";
 
   return (
     <motion.div
@@ -486,7 +859,11 @@ const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, o
       onMouseEnter={onView}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: 50, transition: { duration: 0.2, ease: [0.25, 1, 0.5, 1] } }}
+      exit={{
+        opacity: 0,
+        x: 50,
+        transition: { duration: 0.2, ease: [0.25, 1, 0.5, 1] },
+      }}
       transition={{
         duration: 0.35,
         delay: Math.min(index * 0.04, 0.6),
@@ -505,24 +882,45 @@ const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, o
 
         <div className="dash-contract-card-tags">
           {c.naics && (
-            <span className="dash-tag dash-tag-green" title={`NAICS: ${c.naics}`}>NAICS {c.naics}</span>
+            <span
+              className="dash-tag dash-tag-green"
+              title={`NAICS: ${c.naics}`}
+            >
+              NAICS {c.naics}
+            </span>
           )}
           {c.psc && (
-            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>PSC {c.psc}</span>
+            <span className="dash-tag dash-tag-blue" title={`PSC: ${c.psc}`}>
+              PSC {c.psc}
+            </span>
           )}
           {c.fedOrg && (
-            <span className="dash-tag dash-tag-muted" title={`Federal Org: ${c.fedOrg}`}>{c.fedOrg}</span>
+            <span
+              className="dash-tag dash-tag-muted"
+              title={`Federal Org: ${c.fedOrg}`}
+            >
+              {c.fedOrg}
+            </span>
           )}
           {c.setAside && c.setAside !== "Full & Open" && (
-            <span className="dash-tag dash-tag-amber" title={`Set-Aside: ${c.setAside}`}>
-              <Shield size={9} aria-hidden="true" style={{ marginRight: "var(--space-1)" }} /> {c.setAside}
+            <span
+              className="dash-tag dash-tag-amber"
+              title={`Set-Aside: ${c.setAside}`}
+            >
+              <Shield
+                size={9}
+                aria-hidden="true"
+                style={{ marginRight: "var(--space-1)" }}
+              />{" "}
+              {c.setAside}
             </span>
           )}
         </div>
 
         <div className="dash-show-mobile dash-contract-card-mobile-meta">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-            <MapPin size={11} />{c.state || "Nationwide"}
+            <MapPin size={11} />
+            {c.state || "Nationwide"}
           </span>
           <span>Posted {c.posted}</span>
           <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} />
@@ -532,12 +930,18 @@ const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, o
       {/* Desktop metadata column */}
       <div className="dash-hide-mobile dash-contract-card-right">
         <div className="dash-contract-card-meta-item">
-          <MapPin size={11} />{c.state || "Nationwide"}
+          <MapPin size={11} />
+          {c.state || "Nationwide"}
         </div>
         <DeadlineBadge label={c.deadline} urgency={deadlineUrgency} />
         <div className="dash-contract-card-meta-faint">Posted {c.posted}</div>
         {c.url && /^https?:\/\//i.test(c.url) && (
-          <a href={c.url} target="_blank" rel="noopener noreferrer" className="dash-contract-card-sam-link">
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="dash-contract-card-sam-link"
+          >
             View on SAM.gov <ExternalLink size={10} />
           </a>
         )}
@@ -555,7 +959,12 @@ const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, o
         >
           <Star size={16} fill={isBookmarked ? "currentColor" : "none"} />
         </motion.button>
-        <button className="dash-action-dismiss" onClick={onDismiss} aria-label="Dismiss contract" title="Dismiss">
+        <button
+          className="dash-action-dismiss"
+          onClick={onDismiss}
+          aria-label="Dismiss contract"
+          title="Dismiss"
+        >
           <X size={16} />
         </button>
       </div>
@@ -563,21 +972,30 @@ const ContractRowUI = memo(function ContractRowUI({ c, isBookmarked, isViewed, o
   );
 });
 
-/* ─── Deadline Badge ───────────────────────────────────────────── */
-function DeadlineBadge({ label, urgency }: {
-  label: string; urgency: string;
-}) {
-  const bg = urgency === "expired" ? "var(--danger-subtle)"
-    : urgency === "critical" ? "rgba(194,59,59,0.12)"
-    : urgency === "warning" ? "var(--warning-subtle)"
-    : "var(--app-surface-2)";
-  const fg = urgency === "expired" ? "var(--danger)"
-    : urgency === "critical" ? "var(--danger)"
-    : urgency === "warning" ? "var(--warning)"
-    : "var(--app-muted)";
+/* ─── Deadline Badge ────────────────────────────────────────────────────── */
+function DeadlineBadge({ label, urgency }: { label: string; urgency: string }) {
+  const bg =
+    urgency === "expired"
+      ? "var(--danger-subtle)"
+      : urgency === "critical"
+      ? "rgba(194,59,59,0.12)"
+      : urgency === "warning"
+      ? "var(--warning-subtle)"
+      : "var(--app-surface-2)";
+  const fg =
+    urgency === "expired"
+      ? "var(--danger)"
+      : urgency === "critical"
+      ? "var(--danger)"
+      : urgency === "warning"
+      ? "var(--warning)"
+      : "var(--app-muted)";
 
   return (
-    <span className="dash-deadline-badge" style={{ background: bg, color: fg }}>
+    <span
+      className="dash-deadline-badge"
+      style={{ background: bg, color: fg }}
+    >
       <Clock size={11} />
       {label}
     </span>

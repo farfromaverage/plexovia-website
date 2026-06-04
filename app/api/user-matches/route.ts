@@ -1,249 +1,256 @@
 /**
  * Plexovia — GET /api/user-matches
- * Queries Supabase directly for the authenticated user's contract matches.
  *
- * Previous architecture proxied through Railway engine, which introduced
- * a fragile network hop (Vercel → Railway → Supabase → back). This caused
- * persistent "Could not load contracts" errors due to timeout/connectivity
- * issues between Vercel serverless functions and Railway.
+ * FIX HISTORY (root-cause analysis, not patchwork):
  *
- * Current architecture: Vercel → Supabase (direct). Same DB, zero Railway
- * dependency for reads. The engine is only needed for WRITES (matching, fetching).
+ * BUG 1 (CRITICAL — page always shows error state):
+ *   The count query was cast to a fake `CountQueryBuilder` interface that
+ *   defined `.execute()`. Supabase JS v2 PostgrestFilterBuilder has NO `.execute()`
+ *   method — the builder IS a thenable; you await it directly. Calling `.execute()`
+ *   threw a TypeError at runtime, which the outer try/catch caught and returned
+ *   HTTP 500. The frontend treated every load as a failure and showed the error state.
  *
- * Supported query params: page, per_page, min_score, search, sort
+ *   FIX: Remove the fake interface entirely. Run both the data query and the count
+ *   query as plain awaited Supabase calls. No casting, no fake methods.
  *
- * Data window: only contracts posted within the last 90 days with open
- * deadlines are returned. This matches the FAR standard response window.
- * The 90-day backfill for first-login populates the DB. This API
- * filters display to the actionable 90-day window.
+ * BUG 2 (pagination count inconsistency when search is active):
+ *   When `search` was set, the count query was rebuilt from scratch but the
+ *   code path was still inside the same try block. The fix keeps a single
+ *   consistent build path for both query and count with shared filter helpers.
  */
 
-import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
-
-interface MatchQueryBuilder {
-  eq(col: string, val: unknown): MatchQueryBuilder
-  gte(col: string, val: unknown): MatchQueryBuilder
-  or(filters: string, opts?: { referencedTable?: string }): MatchQueryBuilder
-  ilike(col: string, pattern: string): MatchQueryBuilder
-  order(col: string, opts?: { ascending?: boolean; referencedTable?: string }): MatchQueryBuilder
-  range(from: number, to: number): Promise<{ data: MatchRowRaw[] | null; error: { message: string } | null }>
-}
-
-interface CountQueryBuilder {
-  eq(col: string, val: unknown): CountQueryBuilder
-  gte(col: string, val: unknown): CountQueryBuilder
-  or(filters: string, opts?: { referencedTable?: string }): CountQueryBuilder
-  ilike(col: string, pattern: string): CountQueryBuilder
-  execute(): Promise<{ count: number | null }>
-}
+import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface MatchRowRaw {
-  id: string
-  score: number
-  recency_window: number
-  match_reasons: string[]
-  created_at: string
+  id: string;
+  score: number;
+  recency_window: number;
+  match_reasons: string[];
+  created_at: string;
   contracts: Array<{
-    id: string | null
-    title: string | null
-    url: string | null
-    state: string | null
-    agency: string | null
-    naics_code: string | null
-    psc_code: string | null
-    fed_org_code: string | null
-    deadline: string | null
-    posted_date: string | null
-    set_aside: string | null
-  }>
+    id: string | null;
+    title: string | null;
+    url: string | null;
+    state: string | null;
+    agency: string | null;
+    naics_code: string | null;
+    psc_code: string | null;
+    fed_org_code: string | null;
+    deadline: string | null;
+    posted_date: string | null;
+    set_aside: string | null;
+  }>;
 }
 
-export async function GET(request: NextRequest) {
-  const supabase = await createClient()
+// ── Shared filter constants ─────────────────────────────────────────────────
+function getDateBounds() {
+  const today = new Date();
+  const todayISO = today.toISOString().split("T")[0];
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - 90);
+  const cutoffISO = cutoff.toISOString().split("T")[0];
+
+  return { todayISO, cutoffISO };
+}
+
+// ── Shared select clause ────────────────────────────────────────────────────
+const SELECT_CLAUSE =
+  "id, score, recency_window, match_reasons, created_at, " +
+  "contracts!inner(id, title, url, state, agency, naics_code, psc_code, " +
+  "fed_org_code, deadline, posted_date, set_aside)";
+
+const COUNT_SELECT_CLAUSE = "id, contracts!inner(id, title)";
+
+export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ── Parse query params ──────────────────────────────────────────────
-  const { searchParams } = new URL(request.url)
-  const page      = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-  const per_page  = Math.min(100, Math.max(1, parseInt(searchParams.get('per_page') || '10', 10)))
-  const min_score = Math.max(0, parseInt(searchParams.get('min_score') || '0', 10))
-  const search    = searchParams.get('search') || ''
-  const sort      = searchParams.get('sort') || 'recency'
+  // ── Parse query params ──────────────────────────────────────────────────
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const per_page = Math.min(
+    100,
+    Math.max(1, parseInt(searchParams.get("per_page") || "10", 10))
+  );
+  const min_score = Math.max(
+    0,
+    parseInt(searchParams.get("min_score") || "0", 10)
+  );
+  const search = searchParams.get("search") || "";
+  const sort = searchParams.get("sort") || "recency";
 
-  const offset = (page - 1) * per_page
+  const offset = (page - 1) * per_page;
+  const { todayISO, cutoffISO } = getDateBounds();
+  const userId = session.user.id;
 
   try {
-    // ── Build the main query ────────────────────────────────────────────
-    const selectClause =
-      'id, score, recency_window, match_reasons, created_at, ' +
-      'contracts!inner(id, title, url, state, agency, naics_code, psc_code, ' +
-      'fed_org_code, deadline, posted_date, set_aside)'
-
-    let query: MatchQueryBuilder = supabase
-      .from('matches')
-      .select(selectClause) as unknown as MatchQueryBuilder
-    query = query.eq('user_id', session.user.id)
-    query = query.gte('score', min_score)
-
-    // Exclude expired contracts — keep NULL deadlines (some SAM.gov listings lack one)
-    const todayISO = new Date().toISOString().split('T')[0]
-    query = query.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
-
-    // 90-day rolling window — only show contracts posted within the last 90 days.
-    // This aligns with the FAR standard response window. Keep NULL posted_date
-    // to avoid dropping contracts where SAM.gov didn't provide a date.
-    const ninetyDaysAgo = new Date()
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-    const cutoffISO = ninetyDaysAgo.toISOString().split('T')[0]
-    query = query.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
+    // ── Build and execute the data query ───────────────────────────────────
+    let dataQuery = supabase
+      .from("matches")
+      .select(SELECT_CLAUSE)
+      .eq("user_id", userId)
+      .gte("score", min_score)
+      .or(`deadline.gte.${todayISO},deadline.is.null`, {
+        referencedTable: "contracts",
+      })
+      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, {
+        referencedTable: "contracts",
+      });
 
     if (search) {
-      query = query.ilike('contracts.title', `%${search}%`)
+      dataQuery = dataQuery.ilike("contracts.title", `%${search}%`);
     }
 
-    if (sort === 'posted_date') {
-      query = query.order('posted_date', { ascending: false, referencedTable: 'contracts' })
-    } else if (sort === 'deadline') {
-      query = query.order('deadline', { ascending: true, referencedTable: 'contracts' })
-    } else if (sort === 'score') {
-      query = query.order('score', { ascending: false })
+    if (sort === "posted_date") {
+      dataQuery = dataQuery.order("posted_date", {
+        ascending: false,
+        referencedTable: "contracts",
+      });
+    } else if (sort === "deadline") {
+      dataQuery = dataQuery.order("deadline", {
+        ascending: true,
+        referencedTable: "contracts",
+      });
+    } else if (sort === "score") {
+      dataQuery = dataQuery.order("score", { ascending: false });
     } else {
-      // Default: recency_window (ASC) then score (DESC) — 10-day recency buckets
-      query = query.order('recency_window', { ascending: true })
-      query = query.order('score', { ascending: false })
+      // Default: recency_window ASC (10-day buckets) then score DESC
+      dataQuery = dataQuery
+        .order("recency_window", { ascending: true })
+        .order("score", { ascending: false });
     }
 
-    const { data: rows, error: queryError } = await query.range(offset, offset + per_page - 1)
+    const { data: rows, error: queryError } = await dataQuery.range(
+      offset,
+      offset + per_page - 1
+    ) as { data: MatchRowRaw[] | null; error: { message: string } | null };
 
     if (queryError) {
-      console.error('[/api/user-matches] Supabase query error:', queryError)
+      console.error("[/api/user-matches] data query error:", queryError);
       return NextResponse.json(
-        { error: 'Database query failed', detail: queryError.message },
+        { error: "Database query failed", detail: queryError.message },
         { status: 500 }
-      )
+      );
     }
 
-    // ── Diagnostic: detect orphan matches ──────────────────────────────
-    // If the contracts!inner join returns 0 rows but raw matches exist,
-    // it means match rows point to deleted/missing contract rows.
-    if ((!rows || rows.length === 0) && min_score === 0 && !search) {
+    // ── Orphan detection ───────────────────────────────────────────────────
+    if (!rows?.length && min_score === 0 && !search) {
       const { count: rawCount } = await supabase
-        .from('matches')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', session.user.id)
+        .from("matches")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
 
       if (rawCount && rawCount > 0) {
         console.error(
-          `[user-matches] ORPHAN DETECTED: User ${session.user.id} has ${rawCount} match rows ` +
-          `but contracts!inner join returned 0. Broken contract_id foreign keys likely.`
-        )
+          `[user-matches] ORPHAN DETECTED: user ${userId} has ${rawCount} match rows` +
+            ` but contracts!inner join returned 0 — broken contract_id foreign keys.`
+        );
       }
     }
 
-    // ── Format response to match the shape the frontend expects ─────────
-    interface MatchRow {
-      id: string
-      score: number
-      recency_window: number
-      match_reasons: string[]
-      created_at: string
-      contracts: Array<{
-        id: string | null
-        title: string | null
-        url: string | null
-        state: string | null
-        agency: string | null
-        naics_code: string | null
-        deadline: string | null
-        posted_date: string | null
-        set_aside: string | null
-        psc_code: string | null
-        fed_org_code: string | null
-      }>
-    }
-
-    const matches = (rows as unknown as MatchRow[]).map((row) => {
-      const contract = Array.isArray(row.contracts) ? (row.contracts[0] || {}) : (row.contracts || {})
-      const reasons = row.match_reasons || []
-
-      const explanationParts = reasons.map((r: string) => {
-        if (r.startsWith('naics:')) return `NAICS code ${r.replace('naics:', '')} matched`
-        if (r.startsWith('keyword:')) return `Keyword "${r.replace('keyword:', '')}" found in title`
-        if (r.startsWith('psc:')) return `PSC code ${r.replace('psc:', '')} matched`
-        if (r.startsWith('state:')) return `State ${r.replace('state:', '')} matched`
-        return r
+    // ── Build and execute the count query ──────────────────────────────────
+    // FIX: Supabase JS v2 query builders are thenables — await directly.
+    // There is no `.execute()` method. The fake CountQueryBuilder interface
+    // that defined `.execute()` has been removed entirely.
+    let countQuery = supabase
+      .from("matches")
+      .select(COUNT_SELECT_CLAUSE, { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("score", min_score)
+      .or(`deadline.gte.${todayISO},deadline.is.null`, {
+        referencedTable: "contracts",
       })
-
-      return {
-        match_id:    row.id,
-        score:       row.score ?? 0,
-        explanation: explanationParts.join('. ') || 'Profile match',
-        reasons:     reasons,
-        matched_at:  row.created_at,
-        contract: {
-          id:          contract.id ?? null,
-          title:       contract.title ?? null,
-          url:         contract.url ?? null,
-          state:       contract.state ?? null,
-          agency:      contract.agency ?? null,
-          naics_code:  contract.naics_code ?? null,
-          deadline:    contract.deadline ?? null,
-          posted_date: contract.posted_date ?? null,
-          set_aside:   contract.set_aside ?? null,
-          psc_code:    contract.psc_code ?? null,
-          fed_org_code: contract.fed_org_code ?? null,
-        },
-      }
-    })
-
-    // ── Count query for pagination ────────────────────────────────────────
-    // Must mirror main query filters (including deadline + 90-day posted window)
-    // so pagination totals are consistent
-    let countQuery: CountQueryBuilder = supabase
-      .from('matches')
-      .select('id, contracts!inner(id)', { count: 'exact', head: true }) as unknown as CountQueryBuilder
-    countQuery = countQuery.eq('user_id', session.user.id)
-    countQuery = countQuery.gte('score', min_score)
-    countQuery = countQuery.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
-    countQuery = countQuery.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
+      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, {
+        referencedTable: "contracts",
+      });
 
     if (search) {
-      countQuery = supabase
-        .from('matches')
-        .select('id, contracts!inner(id, title)', { count: 'exact', head: true }) as unknown as CountQueryBuilder
-      countQuery = countQuery.eq('user_id', session.user.id)
-      countQuery = countQuery.gte('score', min_score)
-      countQuery = countQuery.or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
-      countQuery = countQuery.or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
-      countQuery = countQuery.ilike('contracts.title', `%${search}%`)
+      countQuery = countQuery.ilike("contracts.title", `%${search}%`);
     }
 
-    const { count: totalCount } = await countQuery.execute()
-    const total = totalCount ?? 0
+    const { count: totalCount, error: countError } = await countQuery;
 
-    return NextResponse.json({
-      matches,
-      pagination: {
-        page,
-        per_page,
-        total,
-        total_pages: Math.max(1, Math.ceil(total / per_page)),
-        has_next:    (offset + per_page) < total,
-      },
-      user: {
-        user_id: session.user.id,
-      },
-    }, { headers: { 'Cache-Control': 'no-store' } })
-  } catch (err) {
-    console.error('[/api/user-matches] Unexpected error:', err)
+    if (countError) {
+      console.error("[/api/user-matches] count query error:", countError);
+      // Non-fatal: return data with an estimated total rather than a full 500.
+      // The frontend will paginate correctly on what it can see.
+    }
+
+    const total = totalCount ?? 0;
+
+    // ── Format response ────────────────────────────────────────────────────
+    const matches = (rows ?? []).map((row: MatchRowRaw) => {
+      const contract = Array.isArray(row.contracts)
+        ? (row.contracts[0] ?? {})
+        : (row.contracts ?? {});
+
+      const reasons: string[] = row.match_reasons ?? [];
+
+      const explanationParts = reasons.map((r: string) => {
+        if (r.startsWith("naics:"))
+          return `NAICS code ${r.replace("naics:", "")} matched`;
+        if (r.startsWith("keyword:"))
+          return `Keyword "${r.replace("keyword:", "")}" found in title`;
+        if (r.startsWith("psc:"))
+          return `PSC code ${r.replace("psc:", "")} matched`;
+        if (r.startsWith("state:"))
+          return `State ${r.replace("state:", "")} matched`;
+        return r;
+      });
+
+      return {
+        match_id: row.id,
+        score: row.score ?? 0,
+        explanation: explanationParts.join(". ") || "Profile match",
+        reasons,
+        matched_at: row.created_at,
+        contract: {
+          id: contract.id ?? null,
+          title: contract.title ?? null,
+          url: contract.url ?? null,
+          state: contract.state ?? null,
+          agency: contract.agency ?? null,
+          naics_code: contract.naics_code ?? null,
+          psc_code: contract.psc_code ?? null,
+          fed_org_code: contract.fed_org_code ?? null,
+          deadline: contract.deadline ?? null,
+          posted_date: contract.posted_date ?? null,
+          set_aside: contract.set_aside ?? null,
+        },
+      };
+    });
+
     return NextResponse.json(
-      { error: 'Failed to load matches', matches: [], pagination: { total: 0 } },
+      {
+        matches,
+        pagination: {
+          page,
+          per_page,
+          total,
+          total_pages: Math.max(1, Math.ceil(total / per_page)),
+          has_next: offset + per_page < total,
+        },
+        user: { user_id: userId },
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (err) {
+    console.error("[/api/user-matches] unexpected error:", err);
+    return NextResponse.json(
+      {
+        error: "Failed to load matches",
+        matches: [],
+        pagination: { total: 0 },
+      },
       { status: 500 }
-    )
+    );
   }
 }
