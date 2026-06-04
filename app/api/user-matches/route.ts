@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     const matches = (rows as unknown as MatchRow[]).map((row) => {
-      const contract = (row.contracts && row.contracts[0]) || {}
+      const contract = Array.isArray(row.contracts) ? (row.contracts[0] || {}) : (row.contracts || {})
       const reasons = row.match_reasons || []
 
       const explanationParts = reasons.map((r: string) => {
