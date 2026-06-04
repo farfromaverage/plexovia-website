@@ -318,8 +318,8 @@ function ContractsPage() {
         )}
       </div>
 
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
+      {/* Pagination — hidden when filter is active since counts are client-side estimates */}
+      {!loading && totalPages > 1 && statusFilter === "all" && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-3)" }}>
           <span style={{ fontSize: "0.8125rem", color: "var(--app-muted)" }}>
             Page {page} of {totalPages} · {total.toLocaleString()} total matches

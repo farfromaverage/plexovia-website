@@ -150,7 +150,7 @@ export async function POST(req: Request) {
       }
 
       case 'subscription_resumed': {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({
             plan: 'active',
@@ -160,6 +160,7 @@ export async function POST(req: Request) {
             updated_at: new Date().toISOString()
           })
           .eq('id', finalUserId);
+        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
         
         // Trigger payment/subscription resumed effectively as success
         await triggerEngineEmail('/api/internal/payment-success', { user_email: customerEmail });
@@ -167,24 +168,26 @@ export async function POST(req: Request) {
       }
 
       case 'subscription_expired': {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({
             active: false,
             updated_at: new Date().toISOString()
           })
           .eq('id', finalUserId);
+        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
         break;
       }
 
       case 'subscription_payment_failed': {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({
             payment_failed: true,
             updated_at: new Date().toISOString()
           })
           .eq('id', finalUserId);
+        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
 
         console.log(`Payment failed recorded for ${customerEmail}.`);
         break;

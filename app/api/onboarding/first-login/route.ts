@@ -34,10 +34,11 @@ export async function GET() {
     })
 
     if (!engineRes.ok) throw new Error(`Engine returned ${engineRes.status}`)
-    return NextResponse.json(await engineRes.json())
+    const data = await engineRes.json()
+    return NextResponse.json({ ...data, engineAvailable: true })
   } catch (error) {
     console.error('[first-login] fed-orgs proxy failed:', error)
-    return NextResponse.json({ agencies: [] }, { status: 502 })
+    return NextResponse.json({ agencies: [], engineAvailable: false }, { status: 502 })
   }
 }
 
