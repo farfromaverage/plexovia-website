@@ -45,11 +45,14 @@ interface MatchRowRaw {
 
 // ── Shared filter constants ─────────────────────────────────────────────────
 function getDateBounds() {
-  const today = new Date();
+  const now = new Date();
+  // Anchor to midnight UTC so the 90-day window is stable throughout the day.
+  // Without this, the cutoff advances hour-by-hour and can diverge from the
+  // pipeline's cutoff (computed once at pipeline run time).
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const todayISO = today.toISOString().split("T")[0];
 
-  const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() - 90);
+  const cutoff = new Date(today.getTime() - 90 * 86400000);
   const cutoffISO = cutoff.toISOString().split("T")[0];
 
   return { todayISO, cutoffISO };

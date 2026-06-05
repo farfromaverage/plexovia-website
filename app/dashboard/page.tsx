@@ -164,7 +164,7 @@ export default function DashboardPage() {
     try {
       const timeoutSignal = AbortSignal.timeout(15000);
       const combinedSignal = AbortSignal.any([controller.signal, timeoutSignal]);
-      const res = await fetch("/api/user-matches?per_page=10&sort=score", { signal: combinedSignal });
+      const res = await fetch("/api/user-matches?per_page=10&sort=recency", { signal: combinedSignal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (controller.signal.aborted) return -1;
