@@ -198,7 +198,7 @@ function mapRow(m: MatchRow): ContractRow {
 const PER_PAGE = 15;
 // FIX (BUG 5): FILTER_BATCH is used only for fetching; it no longer drives
 // pagination math for filter tabs. See filteredView logic below.
-const FILTER_BATCH = 100;
+const FILTER_BATCH = 500;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
 /* ─── Wrapper (Suspense boundary for useSearchParams) ─────────────────── */
@@ -267,7 +267,8 @@ function ContractsPage() {
   // FIX (BUG 6): loadRef always points to the current load function.
   // Retry timers call loadRef.current() instead of a captured stale closure.
   const loadRef = useRef<() => void>(() => {});
-  const retriedRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const profileLoading = useRef(true);
 
   // FIX (BUG 3): Track whether the session/userId is known before rendering
   // filtered content. cs.init() is async — we must not filter against the
@@ -296,6 +297,7 @@ function ContractsPage() {
         .select("naics_codes")
         .single();
       if (data?.naics_codes) setNaicsCodes(data.naics_codes);
+      profileLoading.current = false;
     })();
   }, []);
 
@@ -335,7 +337,7 @@ function ContractsPage() {
     p: number,
     pp: number,
     signal: AbortSignal
-  ): Promise<{ matches: MatchRow[]; pagination: { total: number } }> => {
+  ): Promise<{ matches: MatchRow[]; pagination: { total: number }; last_pipeline_completed_at?: string | null }> => {
     const params = new URLSearchParams({
       page: String(p),
       per_page: String(pp),
@@ -365,22 +367,47 @@ function ContractsPage() {
         statusFilter === "bookmarked" ||
         statusFilter === "dismissed" ||
         statusFilter === "new";
-      const pp = isFilterTab ? FILTER_BATCH : PER_PAGE;
-      const json = await fetchMatches(page, pp, controller.signal);
-      if (controller.signal.aborted) return;
-
-      setContracts((json.matches || []).map(mapRow));
-      setTotal(json.pagination?.total || 0);
-      retriedRef.current = false;
+      if (isFilterTab) {
+        const firstPage = await fetchMatches(1, 100, controller.signal);
+        if (controller.signal.aborted) return;
+        let allRows = [...(firstPage.matches || [])];
+        const totalAvail = firstPage.pagination?.total || 0;
+        const maxPages = Math.min(5, Math.ceil(totalAvail / 100));
+        for (let p = 2; p <= maxPages; p++) {
+          const nextPage = await fetchMatches(p, 100, controller.signal);
+          if (controller.signal.aborted) return;
+          allRows.push(...(nextPage.matches || []));
+        }
+        setContracts(allRows.map(mapRow));
+        setTotal(allRows.length);
+        if (firstPage.last_pipeline_completed_at) {
+          lastPipelineAtRef.current = firstPage.last_pipeline_completed_at;
+        }
+      } else {
+        const json = await fetchMatches(page, PER_PAGE, controller.signal);
+        if (controller.signal.aborted) return;
+        const actualTotal = json.pagination?.total || 0;
+        if ((json.matches || []).length === 0 && actualTotal > 0 && page > 1) {
+          setPage(1);
+          updateUrl(1, statusFilter);
+          return;
+        }
+        setContracts((json.matches || []).map(mapRow));
+        setTotal(actualTotal);
+        if (json.last_pipeline_completed_at) {
+          lastPipelineAtRef.current = json.last_pipeline_completed_at;
+        }
+      }
+      retryCountRef.current = 0;
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      if (isTransient(err) && !retriedRef.current) {
-        retriedRef.current = true;
-        // FIX (BUG 6): Use loadRef.current so the retry always calls the
-        // current version of load, not the stale closure at error time.
+      if (isTransient(err) && retryCountRef.current < 3) {
+        const delays = [3000, 6000, 12000];
+        const delay = delays[retryCountRef.current];
+        retryCountRef.current++;
         setTimeout(() => {
           if (abortRef.current === controller) loadRef.current();
-        }, 3000);
+        }, delay);
         return;
       }
       setError(true);
@@ -400,11 +427,9 @@ function ContractsPage() {
   }, [page, load]);
 
   // ── Stale-data poll ───────────────────────────────────────────────────────
-  // FIX (BUG 4): Compare user-matches total against itself — same endpoint,
-  // same filters, apples to apples. The previous code compared overview
-  // (created_at filtered, period=90) vs user-matches (no created_at filter),
-  // which measured different populations and fired false positives constantly.
-  const knownTotalRef = useRef(-1);
+  // Uses last_pipeline_completed_at from the API (deterministic) instead of
+  // count comparison which can drift due to pagination or timezone boundaries.
+  const lastPipelineAtRef = useRef<string | null>(null);
   useEffect(() => {
     stalePollRef.current = setInterval(async () => {
       try {
@@ -414,10 +439,11 @@ function ContractsPage() {
         });
         if (!res.ok) return;
         const json = await res.json();
-        const count: number = json.pagination?.total ?? 0;
-        if (knownTotalRef.current === -1) {
-          knownTotalRef.current = count;
-        } else if (count !== knownTotalRef.current) {
+        const pipelineAt: string | null = json.last_pipeline_completed_at ?? null;
+        if (!pipelineAt) return;
+        if (lastPipelineAtRef.current === null) {
+          lastPipelineAtRef.current = pipelineAt;
+        } else if (pipelineAt !== lastPipelineAtRef.current) {
           setStaleData(true);
         }
       } catch {
@@ -666,7 +692,7 @@ function ContractsPage() {
           <button
             onClick={() => {
               setStaleData(false);
-              knownTotalRef.current = -1;
+              lastPipelineAtRef.current = null;
               load();
             }}
             style={{
@@ -715,6 +741,8 @@ function ContractsPage() {
                 ? "No new contracts"
                 : statusFilter !== "all"
                 ? `No ${statusFilter} contracts`
+                : contracts.length === 0 && total > 0
+                ? "No contracts to display"
                 : "No matches yet"
             }
             message={
@@ -728,8 +756,12 @@ function ContractsPage() {
                 ? `No ${statusFilter} contracts. Try the All tab.`
                 : statusFilter !== "all"
                 ? "Try switching to the 'All' tab."
+                : total === 0 && profileLoading.current
+                ? "Loading your profile..."
                 : total === 0
                 ? "Add your NAICS codes and keywords in your Profile. Contracts are matched twice daily."
+                : contracts.length === 0 && total > 0 && statusFilter === "all"
+                ? "No contracts to display. Try refreshing or checking other tabs."
                 : "Try adjusting your filters."
             }
           />

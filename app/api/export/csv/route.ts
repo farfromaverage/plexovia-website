@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
     const daysParam = parseInt(searchParams.get('days') || '30', 10)
     const days = Math.min(90, Math.max(1, isNaN(daysParam) ? 30 : daysParam))
 
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - days)
+    const now = new Date()
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    const cutoffDate = new Date(today.getTime() - days * 86400000)
     const cutoffISO = cutoffDate.toISOString().split('T')[0]
-
-    const todayISO = new Date().toISOString().split('T')[0]
+    const todayISO = today.toISOString().split('T')[0]
     const { data, error } = await (supabase
       .from('matches')
       .select(
@@ -122,12 +122,10 @@ export async function GET(request: NextRequest) {
 
     const csvContent = '\ufeff' + [headers.join(','), ...rows].join('\n')
 
-    const today = new Date().toISOString().split('T')[0]
-
     return new NextResponse(csvContent, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="plexovia-matches-${days}d-${today}.csv"`,
+        'Content-Disposition': `attachment; filename="plexovia-matches-${days}d-${todayISO}.csv"`,
         'Cache-Control': 'no-store',
       },
     })

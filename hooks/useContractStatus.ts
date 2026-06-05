@@ -42,6 +42,11 @@ interface ContractStatusMap {
   [contractId: string]: ContractStatusEntry;
 }
 
+interface VersionedMap {
+  map: ContractStatusMap;
+  version: number;
+}
+
 const UNDO_WINDOW_MS = 8000;
 const MAX_ENTRIES = 500;
 const DEFAULT_KEY = "plexovia-contract-status";
@@ -50,9 +55,25 @@ const DEFAULT_KEY = "plexovia-contract-status";
 function loadMap(key: string): ContractStatusMap {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as ContractStatusMap) : {};
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const { _v, ...map } = parsed;
+    return map as ContractStatusMap;
   } catch {
     return {};
+  }
+}
+
+function loadVersioned(key: string): VersionedMap {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return { map: {}, version: 0 };
+    const parsed = JSON.parse(raw);
+    const version = typeof parsed._v === "number" ? parsed._v : 0;
+    const { _v, ...map } = parsed;
+    return { map: map as ContractStatusMap, version };
+  } catch {
+    return { map: {}, version: 0 };
   }
 }
 
@@ -93,6 +114,7 @@ export function useContractStatus() {
   // getSession(). The keyRef is scoped per hook instance (no module-level mut).
   const [statusMap, setStatusMap] = useState<ContractStatusMap>({});
   const keyRef = useRef<string>(DEFAULT_KEY);
+  const versionRef = useRef(0);
 
   // Cross-tab sync: re-read when another tab writes to the same key
   useEffect(() => {
@@ -113,13 +135,44 @@ export function useContractStatus() {
     const key = `plexovia-contract-status-${userId}`;
     if (keyRef.current === key) return; // already initialized for this user
     keyRef.current = key;
-    setStatusMap(loadMap(key));
+    const { map, version } = loadVersioned(key);
+    setStatusMap(map);
+    versionRef.current = version;
   }, []);
 
   const persist = useCallback((next: ContractStatusMap): boolean => {
     const trimmed = evictOverflow(next);
-    setStatusMap(trimmed);
-    return saveMap(keyRef.current, trimmed);
+    const { map: stored, version: storedVersion } = loadVersioned(keyRef.current);
+
+    let finalMap: ContractStatusMap;
+    if (storedVersion !== versionRef.current && storedVersion > 0) {
+      finalMap = { ...stored };
+      for (const [id, entry] of Object.entries(trimmed)) {
+        const s = stored[id];
+        if (!s) { finalMap[id] = entry; continue; }
+        if (entry.bookmarked) { finalMap[id] = { ...s, ...entry, bookmarked: true }; continue; }
+        if (s.bookmarked) { continue; }
+        if (entry.dismissed && s.dismissed) {
+          if ((entry.dismissedAt ?? 0) > (s.dismissedAt ?? 0)) { finalMap[id] = entry; }
+          continue;
+        }
+        finalMap[id] = entry;
+      }
+    } else {
+      finalMap = trimmed;
+    }
+
+    const newVersion = storedVersion + 1;
+    versionRef.current = newVersion;
+
+    try {
+      localStorage.setItem(keyRef.current, JSON.stringify({ ...finalMap, _v: newVersion }));
+      setStatusMap(finalMap);
+      return true;
+    } catch {
+      console.warn("[useContractStatus] localStorage write failed (quota exceeded?)");
+      return false;
+    }
   }, []);
 
   /** Toggle bookmark on a contract */

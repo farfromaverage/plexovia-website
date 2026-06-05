@@ -231,6 +231,20 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // ── Fetch pipeline sync timestamp ──────────────────────────────────────
+    let lastPipelineCompletedAt: string | null = null;
+    try {
+      const { data: psRow } = await supabase
+        .from("pipeline_state")
+        .select("value")
+        .eq("key", "last_pipeline_completed_at")
+        .limit(1)
+        .single();
+      if (psRow?.value) lastPipelineCompletedAt = psRow.value;
+    } catch {
+      // pipeline_state may not exist yet — non-fatal
+    }
+
     return NextResponse.json(
       {
         matches,
@@ -242,6 +256,7 @@ export async function GET(request: NextRequest) {
           has_next: offset + per_page < total,
         },
         user: { user_id: userId },
+        last_pipeline_completed_at: lastPipelineCompletedAt,
       },
       { headers: { "Cache-Control": "no-store" } }
     );
@@ -252,6 +267,7 @@ export async function GET(request: NextRequest) {
         error: "Failed to load matches",
         matches: [],
         pagination: { total: 0 },
+        last_pipeline_completed_at: null,
       },
       { status: 500 }
     );

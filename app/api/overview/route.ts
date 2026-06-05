@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
     const previousPeriodStart = new Date(periodStart)
     previousPeriodStart.setDate(periodStart.getDate() - period)
 
-    const ninetyDaysAgo = new Date()
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-    const cutoffISO = ninetyDaysAgo.toISOString().split('T')[0]
-    const todayISO = new Date().toISOString().split('T')[0]
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    const ninetyDaysAgoUTC = new Date(today.getTime() - 90 * 86400000)
+    const cutoffISO = ninetyDaysAgoUTC.toISOString().split('T')[0]
+    const todayISO = today.toISOString().split('T')[0]
 
     // Fetch current period matches
-    const { data: matchesCurrent } = await supabase
+    const { data: matchesCurrent, error: currentError } = await supabase
       .from('matches')
       .select('score, created_at, contracts!inner(value_min, value_max, set_aside, title, agency, id, deadline, url, naics_code)')
       .eq('user_id', session.user.id)
@@ -35,13 +35,25 @@ export async function GET(request: NextRequest) {
       .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
       .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
 
+    if (currentError) {
+      console.error('[/api/overview] current period query error:', currentError)
+      return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
+    }
+
     // Fetch previous period matches for comparison
-    const { data: matchesPrevious } = await supabase
+    const { data: matchesPrevious, error: previousError } = await supabase
       .from('matches')
-      .select('score')
+      .select('score, contracts!inner(id)')
       .eq('user_id', session.user.id)
       .gte('created_at', previousPeriodStart.toISOString())
       .lt('created_at', periodStart.toISOString())
+      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
+      .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
+
+    if (previousError) {
+      console.error('[/api/overview] previous period query error:', previousError)
+      return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
+    }
 
     const currentCount = matchesCurrent?.length || 0
     const previousCount = matchesPrevious?.length || 0
@@ -96,13 +108,30 @@ export async function GET(request: NextRequest) {
       if (topMatches.length > 5) topMatches.length = 5
     }
 
+    // Fetch pipeline sync timestamp for deterministic staleness detection
+    let lastPipelineCompletedAt: string | null = null
+    try {
+      const { data: pipelineState } = await supabase
+        .from('pipeline_state')
+        .select('value')
+        .eq('key', 'last_pipeline_completed_at')
+        .limit(1)
+        .single()
+      if (pipelineState?.value) {
+        lastPipelineCompletedAt = pipelineState.value
+      }
+    } catch {
+      // pipeline_state may not exist yet — non-fatal
+    }
+
     return NextResponse.json({
       matchesCount: currentCount,
       percentChange: Math.round(weekOverWeekChange),
       avgScore: Math.round(avgScore),
       totalValue,
       topMatches,
-      setAsideBreakdown
+      setAsideBreakdown,
+      last_pipeline_completed_at: lastPipelineCompletedAt,
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     console.error('[/api/overview] Unhandled error:', err)

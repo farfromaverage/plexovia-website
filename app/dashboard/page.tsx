@@ -152,9 +152,20 @@ export default function DashboardPage() {
   const abortRef = useRef<AbortController | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const knownTotalRef = useRef(0);
-  const knownOverviewRef = useRef(-1);
+  const lastPipelineAtRef = useRef<string | null>(null);
   const loadedRef = useRef(false);
+  const fetchMatchesRef = useRef<(revalidate?: boolean) => Promise<number>>(async () => -1);
+  const retryCountRef = useRef(0);
+
+  const isTransient = (err: unknown): boolean => {
+    if (err instanceof DOMException && err.name === "AbortError") return false;
+    if (err instanceof TypeError) return true;
+    if (err instanceof Error) {
+      return /^HTTP (500|502|503|504)$/.test(err.message);
+    }
+    return false;
+  };
+
   const fetchMatches = useCallback(async (): Promise<number> => {
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -173,15 +184,31 @@ export default function DashboardPage() {
       const total = json.pagination?.total || 0;
       setMatchTotal(total);
       setLastRefreshed(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+      // Sync the pipeline timestamp so the stale poll detects future runs
+      if (json.last_pipeline_completed_at) {
+        lastPipelineAtRef.current = json.last_pipeline_completed_at;
+      }
+      retryCountRef.current = 0;
       return total;
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return -1;
+      if (isTransient(err) && retryCountRef.current < 3) {
+        const delays = [3000, 6000, 12000];
+        const delay = delays[retryCountRef.current];
+        retryCountRef.current++;
+        setTimeout(() => { fetchMatchesRef.current(); }, delay);
+        return -1;
+      }
       setMatchError(true);
       return -1;
     } finally {
       setMatchesLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchMatchesRef.current = fetchMatches;
+  });
 
   useEffect(() => {
     async function loadProfile(userId: string) {
@@ -203,8 +230,6 @@ export default function DashboardPage() {
           if (result > 0 || elapsed >= 60000) { clearInterval(pollRef.current!); setIsPolling(false); }
         }, 5000);
       }
-      // Track known total for staleness detection
-      knownTotalRef.current = total;
     }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) { router.replace("/auth/login"); return; }
@@ -216,19 +241,20 @@ export default function DashboardPage() {
       else if (loading) loadProfile(session.user.id);
     }, 800);
 
-    // Start staleness detection — lightweight overview poll every 60s
-    // Compares overview vs overview (same endpoint, same counting window) to avoid
-    // false positives from different query scopes between user-matches and overview.
+    // Start staleness detection — checks pipeline_state timestamp every 60s.
+    // Uses last_pipeline_completed_at (deterministic) instead of count comparison
+    // (which can drift due to pagination boundaries or timezone shifts).
     stalePollRef.current = setInterval(async () => {
       try {
         const timeoutSignal = AbortSignal.timeout(10000);
-        const res = await fetch('/api/overview?period=90', { signal: timeoutSignal });
+        const res = await fetch('/api/overview?period=1', { signal: timeoutSignal });
         if (!res.ok) return;
         const json = await res.json();
-        const count: number = json.matchesCount ?? 0;
-        if (knownOverviewRef.current === -1) {
-          knownOverviewRef.current = count;
-        } else if (count !== knownOverviewRef.current) {
+        const pipelineAt: string | null = json.last_pipeline_completed_at ?? null;
+        if (!pipelineAt) return; // no pipeline has run yet
+        if (lastPipelineAtRef.current === null) {
+          lastPipelineAtRef.current = pipelineAt;
+        } else if (pipelineAt !== lastPipelineAtRef.current) {
           setStaleData(true);
         }
       } catch {
@@ -331,7 +357,7 @@ export default function DashboardPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", marginBottom: "var(--space-5)", background: "var(--warning-subtle)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: "0.8125rem", color: "var(--app-text)" }} role="alert">
           <span style={{ fontSize: "1.1rem" }} aria-hidden="true">&#9830;</span>
           <span style={{ flex: 1 }}>New contract matches are available.</span>
-          <button onClick={() => { setStaleData(false); knownOverviewRef.current = -1; fetchMatches(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
+          <button onClick={() => { setStaleData(false); lastPipelineAtRef.current = null; fetchMatches(); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}>
             Refresh
           </button>
         </div>
