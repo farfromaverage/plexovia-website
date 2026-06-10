@@ -57,7 +57,7 @@ function loadMap(key: string): ContractStatusMap {
     const raw = localStorage.getItem(key);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    const { _v, ...map } = parsed;
+    const { _v: _, ...map } = parsed;
     return map as ContractStatusMap;
   } catch {
     return {};
@@ -70,22 +70,13 @@ function loadVersioned(key: string): VersionedMap {
     if (!raw) return { map: {}, version: 0 };
     const parsed = JSON.parse(raw);
     const version = typeof parsed._v === "number" ? parsed._v : 0;
-    const { _v, ...map } = parsed;
+    const { _v: _, ...map } = parsed;
     return { map: map as ContractStatusMap, version };
   } catch {
     return { map: {}, version: 0 };
   }
 }
 
-function saveMap(key: string, map: ContractStatusMap): boolean {
-  try {
-    localStorage.setItem(key, JSON.stringify(map));
-    return true;
-  } catch {
-    console.warn("[useContractStatus] localStorage write failed (quota exceeded?)");
-    return false;
-  }
-}
 
 function evictOverflow(map: ContractStatusMap): ContractStatusMap {
   const entries = Object.entries(map);

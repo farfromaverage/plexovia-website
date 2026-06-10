@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { fadeInUp, stagger, pathDraw, viewportConfig } from "@/lib/motion";
+import { fadeInUp, stagger, viewportConfig } from "@/lib/motion";
 
 const steps = [
   {
@@ -85,7 +85,7 @@ export default function HowItWorks() {
             className="relative space-y-10 md:space-y-12 md:pl-20"
             role="list"
           >
-            {steps.map((step, i) => (
+            {steps.map((step) => (
               <motion.li
                 key={step.number}
                 variants={fadeInUp}

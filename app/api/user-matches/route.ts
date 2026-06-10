@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
     if (queryError) {
       console.error("[/api/user-matches] data query error:", queryError);
       return NextResponse.json(
-        { error: "Database query failed", detail: queryError.message },
+        { error: "Database query failed", detail: "Query failed" },
         { status: 500 }
       );
     }

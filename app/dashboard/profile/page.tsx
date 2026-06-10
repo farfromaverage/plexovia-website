@@ -314,28 +314,32 @@ export default function ProfilePage() {
     setSaving(true);
     setError(null);
 
-    const { error: err } = await supabase
-      .from("profiles")
-      .update({
-        naics_codes: resolvedNaics,
-        psc_codes: resolvedPsc,
-        states: selectedStates,
-        keywords: resolvedKw,
-        exclude_keywords: resolvedEx,
-        email_frequency: frequency,
-        set_aside_preferences: setAsides,
-        fed_org_prefs: fedOrgs,
-      })
-      .eq("id", userId);
+    try {
+      const { error: err } = await supabase
+        .from("profiles")
+        .update({
+          naics_codes: resolvedNaics,
+          psc_codes: resolvedPsc,
+          states: selectedStates,
+          keywords: resolvedKw,
+          exclude_keywords: resolvedEx,
+          email_frequency: frequency,
+          set_aside_preferences: setAsides,
+          fed_org_prefs: fedOrgs,
+        })
+        .eq("id", userId);
 
-    setSaving(false);
-
-    if (err) {
+      if (err) {
+        setError("Failed to save your profile. Please try again.");
+      } else {
+        setSaved(true);
+        setIsDirty(false);
+        setTimeout(() => setSaved(false), 3500);
+      }
+    } catch {
       setError("Failed to save your profile. Please try again.");
-    } else {
-      setSaved(true);
-      setIsDirty(false);
-      setTimeout(() => setSaved(false), 3500);
+    } finally {
+      setSaving(false);
     }
   }
 

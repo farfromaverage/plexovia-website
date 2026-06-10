@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usaMapDimensions } from "@/lib/usa-map-dimensions";
-import { MapPin, Crosshair, Radar } from "lucide-react";
+import { Crosshair, Radar } from "lucide-react";
 import { useEngineStats } from "./engine-stats-provider";
 
 // Fallback proxy data (used if live Supabase stats fail)
@@ -171,7 +171,7 @@ export default function CoverageMap() {
             gap: "6px",
           }}
         >
-          {Object.entries(usaMapDimensions).map(([abbr, dim]) => {
+          {Object.entries(usaMapDimensions).map(([abbr, _dim]) => {
             const count = stateData[abbr] || 0;
             return (
               <div

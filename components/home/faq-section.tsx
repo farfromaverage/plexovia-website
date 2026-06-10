@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { fadeInUp, stagger } from "@/lib/motion";
+
 
 /* ─────────────────────────────────────────────────────────
    FAQSection — 5 objection-crushing questions
@@ -52,17 +52,6 @@ const FAQS = [
   },
 ] as const;
 
-
-/* JSON-LD FAQ schema */
-const JSONLD = {
-  "@context": "https://schema.org",
-  "@type":    "FAQPage",
-  mainEntity: FAQS.map((faq) => ({
-    "@type":        "Question",
-    name:           faq.q,
-    acceptedAnswer: { "@type": "Answer", text: faq.a },
-  })),
-};
 
 /* ── Single accordion item ── */
 function AccordionItem({
@@ -163,7 +152,7 @@ function AccordionItem({
 export default function FAQSection({
   items,
   title = "Questions contractors ask before signing up.",
-  hideCta = false,
+  hideCta: _hideCta = false,
 }: {
   items?: { id: string; q: string; a: string }[];
   title?: React.ReactNode;

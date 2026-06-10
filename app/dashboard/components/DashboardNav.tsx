@@ -32,7 +32,7 @@ export default function DashboardNav() {
   const router   = useRouter();
 
   const [userEmail,      setUserEmail]      = useState<string | null>(null);
-  const [userName,       setUserName]       = useState<string>("");
+  const [userName,       _setUserName]      = useState<string>("");
   const [signingOut,     setSigningOut]     = useState(false);
   const [trialDaysLeft,  setTrialDaysLeft]  = useState<number | null>(null);
   const [showSupport,    setShowSupport]    = useState(false);

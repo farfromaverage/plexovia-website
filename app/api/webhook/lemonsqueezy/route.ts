@@ -5,8 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 // Helper to reliably ping the Python backend for emails
 async function triggerEngineEmail(endpoint: string, payload: any) {
   const engineUrl = (process.env.RAILWAY_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-  const internalKey = process.env.INTERNAL_API_KEY || '';
-  
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!internalKey) {
+    console.error(`[webhook] INTERNAL_API_KEY not configured — cannot trigger engine email ${endpoint}`);
+    return;
+  }
+
   try {
     const res = await fetch(`${engineUrl}${endpoint}`, {
       method: 'POST',
@@ -26,12 +30,17 @@ async function triggerEngineEmail(endpoint: string, payload: any) {
 
 export async function POST(req: Request) {
   try {
+    const secret = process.env.LS_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('LS_WEBHOOK_SECRET is not configured — rejecting webhook');
+      return new NextResponse('Webhook secret not configured', { status: 500 });
+    }
+
     // Initialize Supabase with service role key to bypass RLS in the webhook
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_KEY! // Note: Vercel needs this for webhooks to update profiles safely
     );
-    const secret = process.env.LS_WEBHOOK_SECRET || '';
     // 1. Get the raw body as text for HMAC verification
     const text = await req.text();
     const hmac = crypto.createHmac('sha256', secret);

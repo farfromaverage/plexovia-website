@@ -48,7 +48,6 @@ function fmtDeadline(d: string | null): { label: string; days: number | null } {
   return { label: new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }), days };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapMatch(m: any): ContractDisplay {
   const reasons = m.reasons || [];
   const naicsReason = reasons.find((r: string) => r.startsWith("naics:"));

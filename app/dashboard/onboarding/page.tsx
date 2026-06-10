@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2,
@@ -484,7 +483,6 @@ function Step3({
 }
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const [step,     setStep]     = useState(1);
   const [naicsList, setNaicsList] = useState<{code: string; title: string}[]>([]);
   const [pscList, setPscList] = useState<{code: string; title: string}[]>([]);
@@ -544,6 +542,7 @@ export default function OnboardingPage() {
   const [buildStatus, setBuildStatus] = useState("");
 
   async function handleFinish() {
+    if (saving || buildingDashboard) return;
     setSaving(true);
     setError("");
     const { data: { user } } = await supabase.auth.getUser();
@@ -569,12 +568,8 @@ export default function OnboardingPage() {
     }
 
     // Phase 2: Trigger pipelines — show building state
+    setBuildingDashboard(true);
     setSaving(false);
-    setBuildingDashboard(true);
-    setBuildStatus("Starting contract matching engine…");
-
-    // Trigger matching pipeline
-    setBuildingDashboard(true);
     setBuildStatus("Starting contract matching engine…");
 
     const matchResult = await fetch("/api/onboarding/first-login", {
@@ -604,6 +599,7 @@ export default function OnboardingPage() {
   const canNext = step === 1 ? true : step === 2 ? true : step === 3 ? (naics.length > 0 || pscCodes.length > 0) : true;
 
   async function handleSkip() {
+    if (saving || buildingDashboard) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = "/auth/login"; return; }
     const { error } = await supabase.from("profiles").update({ onboarding_complete: true }).eq("id", user.id);

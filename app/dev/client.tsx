@@ -4,8 +4,8 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
   fadeInUp, fadeInLeft, fadeInRight,
-  stagger, staggerFast, scaleHover,
-  accordionContent, counterReveal,
+  stagger,
+  accordionContent,
   viewportConfig,
 } from "@/lib/motion";
 import Button, { ButtonLink } from "@/components/ui/button";
@@ -106,7 +106,6 @@ export default function DevPageClient() {
   const featuresRef = useRef<HTMLDivElement>(null);
   const featInView  = useInView(featuresRef, viewportConfig);
   const statsRef    = useRef<HTMLDivElement>(null);
-  const statsInView = useInView(statsRef, viewportConfig);
 
   return (
     <div className="min-h-screen bg-[#F7F5F0]">

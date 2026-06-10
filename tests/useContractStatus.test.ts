@@ -137,7 +137,7 @@ describe('useContractStatus', () => {
 
   it('logs warning on localStorage quota failure', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const setSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceeded')
     })
 

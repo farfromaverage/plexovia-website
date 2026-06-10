@@ -9,6 +9,7 @@
  * - Falls back gracefully if engine is unreachable.
  */
 
+import crypto from 'crypto'
 import { NextResponse } from 'next/server'
 
 // Force dynamic rendering to bypass Vercel static cache sticking on stale data
@@ -16,10 +17,14 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(request: Request) {
-  const internalKey = process.env.INTERNAL_API_KEY || ''
+  const internalKey = process.env.INTERNAL_API_KEY
+  if (!internalKey) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   const providedKey = request.headers.get('x-internal-key') || ''
-
-  if (!internalKey || providedKey !== internalKey) {
+  const a = Buffer.from(providedKey, 'utf8')
+  const b = Buffer.from(internalKey, 'utf8')
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

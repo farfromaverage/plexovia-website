@@ -196,9 +196,6 @@ function mapRow(m: MatchRow): ContractRow {
 }
 
 const PER_PAGE = 15;
-// FIX (BUG 5): FILTER_BATCH is used only for fetching; it no longer drives
-// pagination math for filter tabs. See filteredView logic below.
-const FILTER_BATCH = 500;
 const EXPORT_DAY_OPTIONS = [7, 14, 30, 60, 90];
 
 /* ─── Wrapper (Suspense boundary for useSearchParams) ─────────────────── */
@@ -370,7 +367,7 @@ function ContractsPage() {
       if (isFilterTab) {
         const firstPage = await fetchMatches(1, 100, controller.signal);
         if (controller.signal.aborted) return;
-        let allRows = [...(firstPage.matches || [])];
+        const allRows = [...(firstPage.matches || [])];
         const totalAvail = firstPage.pagination?.total || 0;
         const maxPages = Math.min(5, Math.ceil(totalAvail / 100));
         for (let p = 2; p <= maxPages; p++) {

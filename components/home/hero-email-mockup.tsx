@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useSpring, useMotionValue, useMotionTemplate, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Server, AlertCircle, Sparkles, ChevronRight, BarChart3, Database, Workflow, Bell, Fingerprint, Zap } from "lucide-react";
+import { Sparkles, BarChart3, Database, Workflow, Bell, Fingerprint, Zap } from "lucide-react";
 
 const mockMatches = [
   {
@@ -27,39 +27,6 @@ const mockMatches = [
     insight: "100% remote delivery authorized in SOW. High historical win probability based on previous GSA Schedule 70 awards.",
     setAside: "8(a) Competitive",
   },
-];
-
-const matchTemplates = [
-  {
-    score: 95,
-    title: "Healthcare IT Modernization & Support",
-    agency: "Department of Veterans Affairs",
-    value: "Est. $3.0M - $6.5M",
-    dueDate: "June 15, 2026",
-    naics: "541512",
-    insight: "Strong SDVOSB match. 'Health IT' keyword detected 8 times in SOW.",
-    setAside: "SDVOSB",
-  },
-  {
-    score: 88,
-    title: "Logistics and Supply Chain Management System",
-    agency: "Defense Logistics Agency",
-    value: "Est. $5.0M - $10.0M",
-    dueDate: "July 22, 2026",
-    naics: "541519",
-    insight: "Past performance indicates high probability for DLA contracts. Enterprise systems alignment.",
-    setAside: "Small Business",
-  },
-  {
-    score: 93,
-    title: "Base Security Systems Upgrade",
-    agency: "Department of the Air Force",
-    value: "Est. $1.5M - $3.5M",
-    dueDate: "May 25, 2026",
-    naics: "541512",
-    insight: "Security clearance preferred. Perfect match for your active physical security capabilities.",
-    setAside: "8(a) Competitive",
-  }
 ];
 
 /* ── HUD Process Step ────────────────────────────────────────────── */
@@ -157,7 +124,7 @@ export default function HeroEmailMockup({ layout = "vertical" }: { layout?: "ver
         } else {
           setActiveMatches(mockMatches);
         }
-      } catch (e) {
+      } catch {
         setActiveMatches(mockMatches);
         setScannedCount(15847);
       }

@@ -26,7 +26,11 @@ export async function GET() {
     const engineUrl = process.env.RAILWAY_API_URL
       || process.env.NEXT_PUBLIC_RAILWAY_API_URL
       || 'https://plexovia-engine-production.up.railway.app'
-    const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY || ''
+    const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY
+    if (!internalKey) {
+      console.error('[first-login] INTERNAL_API_KEY not configured — cannot proxy to engine')
+      return NextResponse.json({ agencies: [], engineAvailable: false }, { status: 500 })
+    }
 
     const engineRes = await fetch(`${engineUrl}/api/internal/fed-orgs`, {
       headers: { 'x-internal-key': internalKey },
@@ -55,7 +59,11 @@ export async function POST(request: NextRequest) {
   const engineUrl = process.env.RAILWAY_API_URL
     || process.env.NEXT_PUBLIC_RAILWAY_API_URL
     || 'https://plexovia-engine-production.up.railway.app'
-  const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY || ''
+  const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY
+  if (!internalKey) {
+    console.error('[first-login] INTERNAL_API_KEY not configured — cannot trigger pipeline')
+    return NextResponse.json({ error: 'Internal API key not configured' }, { status: 500 })
+  }
 
   const requestBody = JSON.stringify({
     user_id: session.user.id,

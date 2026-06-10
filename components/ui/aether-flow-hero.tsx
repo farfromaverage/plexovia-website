@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle, Radar } from 'lucide-react';
+import { ArrowRight, CheckCircle } from 'lucide-react';
 
 export default function AetherFlowHero() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

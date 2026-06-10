@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ExternalLink, CreditCard, Calendar, Zap, AlertCircle, RefreshCw } from "lucide-react";
-import Link from "next/link";
 
 const PLAN_DETAILS = {
   trial: {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Bell, Mail, Calendar, TrendingUp, CheckCircle, AlertCircle } from "lucide-react";
+import { Bell, Mail } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface AlertPrefs {
@@ -74,25 +74,28 @@ export default function AlertSettingsPage() {
     email: null,
   });
   const [loading, setLoading] = useState(true);
-  const [userId,  setUserId]  = useState<string | null>(null);
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace("/auth/login"); return; }
-      setUserId(session.user.id);
-
       const { data, error: dbErr } = await supabase
         .from("profiles")
-        .select("email, bid_calendar_digest, performance_digest")
+        .select("email")
         .eq("id", session.user.id)
         .single();
 
-      if (!dbErr && data) {
+      if (dbErr) {
+        console.error("[alerts] Profile load failed:", dbErr.message);
+        setError("Could not load your alert preferences. Showing defaults.");
+        setPrefs({ email: session.user.email ?? null });
+      } else if (data) {
         setPrefs({
           email:               data.email ?? (session.user.email ?? null),
         });
+      } else {
+        setPrefs({ email: session.user.email ?? null });
       }
       setLoading(false);
     }
@@ -126,6 +129,12 @@ export default function AlertSettingsPage() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <div style={{ padding: "10px 14px", marginBottom: "1rem", background: "var(--app-surface-2)", border: "1px solid var(--app-border)", borderRadius: 8, color: "var(--app-muted)", fontSize: "0.8125rem" }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ maxWidth: 680 }}>
 
