@@ -26,12 +26,10 @@ const SET_ASIDES = [
   { value: "SB",       label: "Small Business" },
   { value: "8A",       label: "8(a) Business Development" },
   { value: "WOSB",     label: "Women-Owned Small Business (WOSB)" },
+  { value: "EDWOSB",   label: "Economically Disadvantaged WOSB (EDWOSB)" },
   { value: "SDVOSB",   label: "Service-Disabled Veteran-Owned (SDVOSB)" },
   { value: "HUBZONE",  label: "HUBZone" },
-  { value: "IEE",      label: "Indian Economic Enterprise" },
-  { value: "BICIV",    label: "Buy Indian Act" },
   { value: "VETERAN",  label: "Veteran-Owned Small Business (VOSB)" },
-  { value: "LAS",      label: "Local Area Set-Aside" },
 ];
 
 /* ─── Profile type ───────────────────────────────────────── */

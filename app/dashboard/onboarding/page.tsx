@@ -75,12 +75,10 @@ function Step1({
     { code: "SB",       label: "Small Business" },
     { code: "8A",       label: "8(a)" },
     { code: "WOSB",     label: "Women-Owned (WOSB)" },
+    { code: "EDWOSB",   label: "Economically Disadvantaged WOSB (EDWOSB)" },
     { code: "SDVOSB",   label: "Service-Disabled Veteran-Owned" },
     { code: "HUBZONE",  label: "HUBZone" },
-    { code: "IEE",      label: "Indian Economic Enterprise" },
-    { code: "BICIV",    label: "Buy Indian Act" },
     { code: "VETERAN",  label: "Veteran-Owned" },
-    { code: "LAS",      label: "Local Area Set-Aside" },
   ];
 
   function toggle(code: string) {
