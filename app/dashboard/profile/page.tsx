@@ -127,7 +127,7 @@ export default function ProfilePage() {
       setKeywords(d.keywords ?? []);
       setExcludeKeywords(d.exclude_keywords ?? []);
       setFrequency(d.email_frequency ?? "daily");
-      setSetAsides(d.set_aside_preferences ?? []);
+      setSetAsides((d.set_aside_preferences ?? []).filter(c => SET_ASIDES.some(s => s.value === c)));
       setFedOrgs(d.fed_org_prefs ?? []);
     }
     setLoading(false);

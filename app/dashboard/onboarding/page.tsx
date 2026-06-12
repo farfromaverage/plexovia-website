@@ -515,7 +515,11 @@ export default function OnboardingPage() {
       if (!data) return;
       if (data.naics_codes?.length)  setNaics(data.naics_codes);
       if (data.states?.length)       setStates(data.states);
-      if (data.set_aside_preferences?.length) setSetAsides(data.set_aside_preferences);
+      if (data.set_aside_preferences?.length) {
+        setSetAsides(data.set_aside_preferences.filter((c: string) =>
+          ["SB", "8A", "WOSB", "EDWOSB", "SDVOSB", "HUBZONE", "VETERAN"].includes(c)
+        ));
+      }
       if (data.psc_codes?.length)    setPscCodes(data.psc_codes);
       if (data.fed_org_prefs?.length) setFedOrgs(data.fed_org_prefs);
       
