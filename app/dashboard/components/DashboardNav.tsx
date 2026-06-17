@@ -6,13 +6,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User,
-  CreditCard, LogOut,
+  CreditCard, LogOut, LayoutList,
   HelpCircle, ChevronRight,
 } from "lucide-react";
 import { SupportModal } from "./SupportModal";
 
 /* ─── Navigation Items ─────────────────────────────────────────── */
 const NAV_ITEMS = [
+  { href: "/dashboard/pipeline",    label: "Pipeline",    icon: LayoutList },
   { href: "/dashboard",             label: "Overview",     icon: LayoutDashboard },
   { href: "/dashboard/contracts",   label: "Contracts",    icon: FileText },
   { href: "/dashboard/profile",     label: "Profile",      icon: User },
@@ -21,9 +22,9 @@ const NAV_ITEMS = [
 
 /* Bottom tabs: 4 items max (impeccable cognitive-load ≤5 rule) */
 const BOTTOM_TABS = [
-  { href: "/dashboard",             label: "Overview",   icon: LayoutDashboard },
-  { href: "/dashboard/contracts",   label: "Contracts",  icon: FileText },
-  { href: "/dashboard/profile",     label: "Profile",    icon: User },
+  { href: "/dashboard/pipeline",    label: "Pipeline",    icon: LayoutList },
+  { href: "/dashboard/contracts",   label: "Contracts",   icon: FileText },
+  { href: "/dashboard/profile",     label: "Profile",     icon: User },
 ] as const;
 
 /* ─── Component ────────────────────────────────────────────────── */
@@ -131,8 +132,8 @@ export default function DashboardNav() {
                   >
                     <Icon size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
                     {label}
-                    {/* Freshness badge on Contracts */}
-                    {label === "Contracts" && newMatchCount > 0 && (
+                    {/* Freshness badge on Contracts + Pipeline */}
+                    {(label === "Contracts" || label === "Pipeline") && newMatchCount > 0 && (
                       <span className="dash-nav-badge" aria-label={`${newMatchCount} new contracts`}>
                         {newMatchCount > 99 ? "99+" : newMatchCount}
                       </span>
@@ -181,7 +182,7 @@ export default function DashboardNav() {
               <Icon size={20} aria-hidden="true" />
               {label}
               {/* Freshness badge on Contracts tab */}
-              {label === "Contracts" && newMatchCount > 0 && (
+              {(label === "Contracts" || label === "Pipeline") && newMatchCount > 0 && (
                 <span className="dash-bottom-tab-badge" aria-label={`${newMatchCount} new`}>
                   {newMatchCount > 99 ? "99+" : newMatchCount}
                 </span>

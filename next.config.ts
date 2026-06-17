@@ -55,6 +55,17 @@ const nextConfig: NextConfig = {
 
   // Turbopack (default in Next.js 16) — empty config silences the webpack conflict warning
   turbopack: {},
+
+  async rewrites() {
+    const engineUrl = process.env.INTERNAL_ENGINE_URL || "https://plexovia-engine.railway.app";
+    return [
+      { source: "/api/user/pipeline/:path*", destination: `${engineUrl}/api/user/pipeline/:path*` },
+      { source: "/api/user/pipeline",        destination: `${engineUrl}/api/user/pipeline` },
+      { source: "/api/search",               destination: `${engineUrl}/api/search` },
+      { source: "/api/user/competitors/:path*", destination: `${engineUrl}/api/user/competitors/:path*` },
+      { source: "/api/calendar/:path*",      destination: `${engineUrl}/api/calendar/:path*` },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {
