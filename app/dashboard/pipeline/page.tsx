@@ -94,6 +94,33 @@ export default function PipelinePage() {
       const res = await engineFetch("/api/user/pipeline");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
+
+      const allNaics: Set<string> = new Set();
+      for (const col of (json.stages || [])) {
+        for (const item of col.items || []) {
+          if (item.naics_code) allNaics.add(item.naics_code);
+        }
+      }
+
+      let awardMap: Record<string, number> = {};
+      if (allNaics.size > 0) {
+        try {
+          const params = new URLSearchParams();
+          allNaics.forEach((n) => params.append("naics_codes", n));
+          const countRes = await engineFetch(`/api/user/competitors/award-counts?${params.toString()}`);
+          if (countRes.ok) {
+            const countJson = await countRes.json();
+            awardMap = countJson.award_counts || {};
+          }
+        } catch { /* best-effort; pipeline loads without award counts */ }
+      }
+
+      for (const col of (json.stages || [])) {
+        for (const item of col.items || []) {
+          item.award_count = awardMap[item.naics_code] || 0;
+        }
+      }
+
       setStages(json.stages || []);
       setScorecard(json.scorecard || null);
       setLastUpdated(json.last_updated || null);

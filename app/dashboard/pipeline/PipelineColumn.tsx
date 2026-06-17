@@ -1,9 +1,10 @@
 "use client";
 
 import {
-  FileText, Shield, ChevronRight, Plus, X, ExternalLink, Clock, Users,
+  FileText, Shield, ChevronRight, Plus, X, ExternalLink, Clock, Users, BarChart3,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { engineFetch } from "@/lib/engine";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -103,7 +104,22 @@ function PipelineCard({
   const [editing, setEditing] = useState(false);
   const [notes, setNotes] = useState(item.pipeline_notes || "");
   const [urlInput, setUrlInput] = useState("");
+  const [incumbent, setIncumbent] = useState<{
+    awardee_name: string;
+    award_amount: number | null;
+    award_date: string | null;
+  } | null | undefined>(undefined);
   const currentIdx = STAGE_ORDER.indexOf(item.pipeline_stage);
+
+  useEffect(() => {
+    if (expanded && incumbent === undefined && item.naics_code) {
+      const agencyParam = item.agency ? `&agency=${encodeURIComponent(item.agency)}` : "";
+      engineFetch(`/api/user/competitors/incumbent?naics_code=${item.naics_code}${agencyParam}`)
+        .then((r) => r.json())
+        .then((data) => setIncumbent(data))
+        .catch(() => setIncumbent(null));
+    }
+  }, [expanded, incumbent, item.naics_code, item.agency]);
   const deadline = fmtDeadline(item.deadline);
 
   const advance = () => {
@@ -177,6 +193,17 @@ function PipelineCard({
                 <Users size={9} aria-hidden="true" /> {item.density_label}
               </span>
             )}
+            {item.pipeline_stage === "identified" && item.award_count > 0 && (
+              <span style={{
+                fontSize: "0.625rem", fontWeight: 600, padding: "1px 6px",
+                borderRadius: 999,
+                background: "var(--accent-subtle)",
+                color: "var(--accent)",
+                display: "flex", alignItems: "center", gap: 3,
+              }}>
+                <BarChart3 size={9} aria-hidden="true" /> {item.award_count} awards
+              </span>
+            )}
             {deadline.expired && (
               <span style={{
                 fontSize: "0.625rem", fontWeight: 600, padding: "1px 6px",
@@ -239,6 +266,39 @@ function PipelineCard({
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <div style={{ marginTop: 10, borderTop: "1px solid var(--app-border)", paddingTop: 10 }}>
+              {/* Incumbent Intelligence */}
+              {incumbent !== undefined && (
+                <div style={{
+                  marginBottom: 10, padding: "8px 10px",
+                  background: "var(--accent-subtle)", borderRadius: 6,
+                  border: "1px solid var(--accent-border)",
+                }}>
+                  <label style={{ fontSize: "0.65rem", color: "var(--app-muted)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    Known Incumbent
+                  </label>
+                  {incumbent ? (
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: "0.8rem", color: "var(--app-text)" }}>
+                        {incumbent.awardee_name}
+                      </span>
+                      {incumbent.award_amount && (
+                        <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "var(--app-muted)" }}>
+                          ${(incumbent.award_amount / 1000000).toFixed(1)}M
+                        </span>
+                      )}
+                      {incumbent.award_date && (
+                        <span style={{ marginLeft: 6, fontSize: "0.68rem", color: "var(--app-faint)" }}>
+                          awarded {new Date(incumbent.award_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "0.75rem", color: "var(--app-faint)" }}>
+                      No known incumbent. This may be a new requirement.
+                    </span>
+                  )}
+                </div>
+              )}
               {/* Stage selector */}
               <div style={{ marginBottom: 10 }}>
                 <label style={{ fontSize: "0.7rem", color: "var(--app-muted)", display: "block", marginBottom: 4 }}>
