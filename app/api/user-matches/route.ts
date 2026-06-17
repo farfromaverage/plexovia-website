@@ -206,6 +206,18 @@ export async function GET(request: NextRequest) {
           return `PSC code ${r.replace("psc:", "")} matched`;
         if (r.startsWith("state:"))
           return `State ${r.replace("state:", "")} matched`;
+        if (r.startsWith("setaside:"))
+          return `Set-aside preference: ${r.replace("setaside:", "")}`;
+        if (r.startsWith("deadline:"))
+          return `Deadline: ${r.replace("deadline:", "").replace(/_/g, " ")}`;
+        if (r.startsWith("agency_affinity:"))
+          return `From your preferred agency (${r.replace("agency_affinity:", "")})`;
+        if (r.startsWith("fed_org:"))
+          return `Matches your preferred Federal Organization (${r.replace("fed_org:", "")})`;
+        if (r.startsWith("density:"))
+          return `Competition: ${r.replace("density:", "").replace(/_/g, " ")}`;
+        if (r.startsWith("recency:"))
+          return `Posted: ${r.replace("recency:", "").replace(/_/g, " ")}`;
         return r;
       });
 
