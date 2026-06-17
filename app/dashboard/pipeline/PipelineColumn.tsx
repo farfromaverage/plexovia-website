@@ -118,7 +118,7 @@ function PipelineCard({
       const agencyParam = item.agency ? `&agency=${encodeURIComponent(item.agency)}` : "";
       engineFetch(`/api/user/competitors/incumbent?naics_code=${item.naics_code}${agencyParam}`)
         .then((r) => r.json())
-        .then((data) => setIncumbent(data))
+        .then((data) => setIncumbent(data.incumbent))
         .catch(() => setIncumbent(null));
     }
   }, [expanded, incumbent, item.naics_code, item.agency]);
