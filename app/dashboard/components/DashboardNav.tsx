@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, User,
   CreditCard, LogOut, LayoutList,
-  HelpCircle, ChevronRight,
+  HelpCircle, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { SupportModal } from "./SupportModal";
 
@@ -15,8 +15,9 @@ import { SupportModal } from "./SupportModal";
 const NAV_ITEMS = [
   { href: "/dashboard/pipeline",    label: "Pipeline",    icon: LayoutList },
   { href: "/dashboard",             label: "Overview",     icon: LayoutDashboard },
-  { href: "/dashboard/contracts",   label: "Contracts",    icon: FileText },
-  { href: "/dashboard/profile",     label: "Profile",      icon: User },
+  { href: "/dashboard/contracts",   label: "Contracts",             icon: FileText },
+  { href: "/dashboard/competitors", label: "Market Intelligence",   icon: TrendingUp },
+  { href: "/dashboard/profile",     label: "Profile",               icon: User },
   { href: "/dashboard/billing",     label: "Billing",      icon: CreditCard },
 ] as const;
 
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
 const BOTTOM_TABS = [
   { href: "/dashboard/pipeline",    label: "Pipeline",    icon: LayoutList },
   { href: "/dashboard/contracts",   label: "Contracts",   icon: FileText },
+  { href: "/dashboard/competitors", label: "Intel",       icon: TrendingUp },
   { href: "/dashboard/profile",     label: "Profile",     icon: User },
 ] as const;
 
