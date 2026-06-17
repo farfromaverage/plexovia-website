@@ -13,11 +13,12 @@ Next.js 16.2.1 frontend for Plexovia. Dashboard for federal contract matches, us
 ## Ownership
 
 This subtree owns:
-- Dashboard pages (contracts, billing, onboarding, profile, settings)
+- Dashboard pages (pipeline kanban, contracts with search, competitors, billing, onboarding, profile, settings)
 - API routes (user-matches, overview, export, webhook, support, engine-stats, onboarding proxy)
 - Auth flow (login, signup, callback, password reset)
 - Supabase SSR client (anon key + user JWT, RLS-enforced)
 - UI components (shadcn/ui + custom)
+- Backend proxy layer (engine.ts JWT helper, next.config.ts rewrites)
 - Static data files (NAICS, PSC, federal organizations)
 - Public marketing pages (home, pricing, legal)
 
@@ -27,10 +28,11 @@ This subtree owns:
 |--------|---------------|
 | `app/api/` | Server-side route handlers. Auth via session or internal key. |
 | `app/auth/` | Login, signup, callback (code exchange), password flows. |
-| `app/dashboard/` | Protected pages. All use browser Supabase client. |
+| `app/dashboard/` | Protected pages (pipeline, contracts/search, competitors, billing, onboarding, profile, settings/alerts). All use browser Supabase client. |
 | `components/` | Reusable UI. `ui/` = shadcn primitives. `home/` = marketing. |
 | `hooks/` | `useContractStatus` (localStorage bookmarks), `useLastVisit`. |
 | `lib/supabase.ts` | Browser client (`createBrowserClient`). |
+| `lib/engine.ts` | `engineFetch()` helper — attaches JWT to proxied backend API calls. |
 | `lib/supabase/server.ts` | Server client (`createServerClient` with cookie handling). |
 | `public/data/` | Reference JSON: `naics-2022.json` (2,193), `psc-codes.json` (966), `federal-organizations.json` (42). |
 | `public/fonts/` | Self-hosted woff2/ttf. NO external font CDN. |
@@ -50,7 +52,7 @@ This subtree owns:
 ```bash
 npx tsc --noEmit    # type check
 npm run lint        # eslint (must be 0 errors, 0 warnings)
-npm run build       # production build (all 33 routes)
+npm run build       # production build (all 35 routes)
 ```
 
 ## Child DOX Index
