@@ -266,6 +266,26 @@ function PipelineCard({
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <div style={{ marginTop: 10, borderTop: "1px solid var(--app-border)", paddingTop: 10 }}>
+              {/* Stage selector */}
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: "0.7rem", color: "var(--app-muted)", display: "block", marginBottom: 4 }}>
+                  Stage
+                </label>
+                <select
+                  value={item.pipeline_stage}
+                  onChange={(e) => onStageChange(item.match_id, e.target.value)}
+                  style={{
+                    width: "100%", padding: "6px 8px", borderRadius: 6,
+                    border: "1px solid var(--app-border)", fontSize: "0.8rem",
+                    color: "var(--app-text)", background: "var(--app-surface)",
+                  }}
+                >
+                  {STAGE_ORDER.map((s) => (
+                    <option key={s} value={s}>{STAGE_LABEL[s]}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Incumbent Intelligence */}
               {incumbent !== undefined && (
                 <div style={{
@@ -294,30 +314,11 @@ function PipelineCard({
                     </div>
                   ) : (
                     <span style={{ fontSize: "0.75rem", color: "var(--app-faint)" }}>
-                      No known incumbent. This may be a new requirement.
+                      {item.naics_code ? "No known incumbent. This may be a new requirement." : "Enter a NAICS code to look up incumbents."}
                     </span>
                   )}
                 </div>
               )}
-              {/* Stage selector */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--app-muted)", display: "block", marginBottom: 4 }}>
-                  Stage
-                </label>
-                <select
-                  value={item.pipeline_stage}
-                  onChange={(e) => onStageChange(item.match_id, e.target.value)}
-                  style={{
-                    width: "100%", padding: "6px 8px", borderRadius: 6,
-                    border: "1px solid var(--app-border)", fontSize: "0.8rem",
-                    color: "var(--app-text)", background: "var(--app-surface)",
-                  }}
-                >
-                  {STAGE_ORDER.map((s) => (
-                    <option key={s} value={s}>{STAGE_LABEL[s]}</option>
-                  ))}
-                </select>
-              </div>
 
               {/* Notes */}
               <div style={{ marginBottom: 10 }}>
