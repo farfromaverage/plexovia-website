@@ -183,17 +183,6 @@ export default function AlertSettingsPage() {
               <Toggle id="daily-monitoring" checked={true} onChange={() => {}} disabled={true} />
             </div>
           </SettingRow>
-
-          <SettingRow
-            icon={<Bell size={15} aria-hidden="true" />}
-            label="Deadline Reminders"
-            description="Alerts at 14, 7, 3, and 1 day before a tracked bid closes."
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.78rem", color: "var(--success)", fontWeight: 600 }}>Active</span>
-              <Toggle id="monitoring-always-on" checked={true} onChange={() => {}} disabled={true} />
-            </div>
-          </SettingRow>
         </div>
 
 

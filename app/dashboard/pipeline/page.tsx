@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { engineFetch } from "@/lib/engine";
@@ -51,6 +51,7 @@ function Scorecard({ data }: { data: { total_tracked: number; active_pursuits: n
 /* ─── Page ──────────────────────────────────────────────────── */
 export default function PipelinePage() {
   const router = useRouter();
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stages, setStages] = useState<StageColumn[]>([]);
   const [scorecard, setScorecard] = useState<{
     total_tracked: number;
@@ -115,6 +116,10 @@ export default function PipelinePage() {
     });
   }, [router, fetchPipeline]);
 
+  useEffect(() => {
+    return () => { if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current); };
+  }, []);
+
   const handleStageChange = async (matchId: string, newStage: string) => {
     // Optimistic UI: move card immediately, then sync to backend
     setStages((prev) => {
@@ -151,8 +156,8 @@ export default function PipelinePage() {
         setLastUpdated(json.last_updated || null);
       }
       setAdvanceCount((c) => c + 1);
-      // Clear advance counter after 4 seconds
-      setTimeout(() => setAdvanceCount(0), 4000);
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = setTimeout(() => setAdvanceCount(0), 4000);
     } catch {
       // Revert on failure — refetch full pipeline state
       fetchPipeline();
