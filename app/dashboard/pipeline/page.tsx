@@ -253,14 +253,13 @@ export default function PipelinePage() {
   if (loading) {
     return (
       <div className="dash-main" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-        <div style={{ width: 36, height: 36, border: "2.5px solid var(--accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", marginBottom: "var(--space-4)" }} aria-label="Loading pipeline…" role="status" />
+        <div className="dash-spin" style={{ width: 36, height: 36, borderWidth: "2.5px", marginBottom: "var(--space-4)" }} aria-label="Loading pipeline…" role="status" />
         <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--app-text)", margin: "0 0 4px" }}>
           Loading your pipeline…
         </p>
         <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: 0 }}>
           Gathering contract matches, deadlines, and research notes
         </p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -272,8 +271,6 @@ export default function PipelinePage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

@@ -111,6 +111,8 @@ function PipelineCard({
   } | null | undefined>(undefined);
   const currentIdx = STAGE_ORDER.indexOf(item.pipeline_stage);
 
+  useEffect(() => { setNotes(item.pipeline_notes || ""); }, [item.pipeline_notes]);
+
   useEffect(() => {
     if (expanded && incumbent === undefined && item.naics_code) {
       const agencyParam = item.agency ? `&agency=${encodeURIComponent(item.agency)}` : "";
