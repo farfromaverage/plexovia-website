@@ -294,7 +294,8 @@ export default function BillingPage() {
 
             {plan === "trial" ? (
               <div style={{ fontSize: "0.82rem", color: "var(--app-muted)", lineHeight: 1.5 }}>
-                Subscribe to keep full access to your tracked opportunities, research notes, and deadline calendar.
+                You&apos;ve built this pipeline during your {trialDaysLeft}-day trial.{" "}
+                <strong style={{ color: "var(--app-text)" }}>Subscribe to keep full access</strong> to your tracked opportunities, research notes, and deadline calendar.
               </div>
             ) : plan === "cancelled" ? (
               <div style={{ fontSize: "0.82rem", color: "var(--danger)", lineHeight: 1.5, display: "flex", alignItems: "center", gap: 6 }}>
