@@ -18,6 +18,7 @@
   --app-surface:      #FFFFFF;
   --app-surface-2:    #F0F0F6;
   --app-surface-3:    #E8E8F0;
+  --app-surface-raised: #FFFFFF;
   --app-border:       #E0E0EA;
   --app-border-strong:#D0D0DC;
   --app-hover:        #E8E8F0;
@@ -34,6 +35,11 @@
   --warning-subtle:   rgba(194, 125, 26, 0.08);
   --danger:           #C23B3B;
   --danger-subtle:    rgba(194, 59, 59, 0.08);
+
+  --success-border:   rgba(26, 119, 66, 0.20);
+  --danger-border:    rgba(194, 59, 59, 0.20);
+  --warning-border:   rgba(194, 125, 26, 0.20);
+
   --info:             #2563EB;
   --info-subtle:      rgba(37, 99, 235, 0.08);
 

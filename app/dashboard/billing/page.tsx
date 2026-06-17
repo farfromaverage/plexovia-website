@@ -3,7 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ExternalLink, CreditCard, Calendar, Zap, AlertCircle, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, CreditCard, Calendar, Zap, AlertCircle, RefreshCw, LayoutList, ArrowRight } from "lucide-react";
+import { engineFetch } from "@/lib/engine";
 
 const PLAN_DETAILS = {
   trial: {
@@ -30,6 +32,8 @@ interface Profile {
   id: string; plan: string | null; plan_expires_at: string | null;
   trial_ends_at: string | null; ls_customer_id: string | null;
   email: string | null;
+  calendar_token: string | null;
+  deadline_reminders_enabled: boolean | null;
 }
 
 export default function BillingPage() {
@@ -37,6 +41,13 @@ export default function BillingPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pipelineSummary, setPipelineSummary] = useState<{
+    total_tracked: number;
+    active_pursuits: number;
+    notes_count: number;
+    calendar_active: boolean;
+    deadline_reminders_active: boolean;
+  } | null>(null);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -44,13 +55,33 @@ export default function BillingPage() {
       if (!user) { router.push("/auth/login"); return; }
       const { data, error: dbErr } = await supabase
         .from("profiles")
-        .select("id,plan,plan_expires_at,trial_ends_at,ls_customer_id,email")
+        .select("id,plan,plan_expires_at,trial_ends_at,ls_customer_id,email,calendar_token,deadline_reminders_enabled")
         .eq("id", user.id)
         .single();
       if (dbErr) throw new Error(dbErr.message);
       if (data) {
         setProfile(data);
         setError(null);
+        try {
+          const pipeResp = await engineFetch("/api/user/pipeline");
+          if (pipeResp.ok) {
+            const pipeJson = await pipeResp.json();
+            const stages = pipeJson.stages || [];
+            let notesCount = 0;
+            for (const col of stages) {
+              for (const item of col.items || []) {
+                if (item.pipeline_notes) notesCount += 1;
+              }
+            }
+            setPipelineSummary({
+              total_tracked: pipeJson.scorecard?.total_tracked ?? 0,
+              active_pursuits: pipeJson.scorecard?.active_pursuits ?? 0,
+              notes_count: notesCount,
+              calendar_active: !!data.calendar_token,
+              deadline_reminders_active: data.deadline_reminders_enabled ?? true,
+            });
+          }
+        } catch { /* pipeline API unavailable — silently omit the card */ }
       } else {
         setError("Profile not found. Please try again.");
       }
@@ -221,6 +252,66 @@ export default function BillingPage() {
             </div>
           )}
         </div>
+
+        {/* Pipeline Loss Summary Card */}
+        {pipelineSummary && (
+          <div style={{ ...s.card, border: "1px solid var(--accent-border)", background: "var(--accent-subtle)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <LayoutList size={16} color="var(--accent)" aria-hidden="true" />
+              <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--app-text)" }}>
+                {plan === "trial" ? "Your Trial Pipeline" : "Your Pipeline"}
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "var(--space-3)", marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>Tracked</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--app-text)" }}>{pipelineSummary.total_tracked}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>In Active Pursuit</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: pipelineSummary.active_pursuits > 0 ? "var(--accent)" : "var(--app-muted)" }}>{pipelineSummary.active_pursuits}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>With Research Notes</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: pipelineSummary.notes_count > 0 ? "var(--app-text)" : "var(--app-muted)" }}>
+                  {pipelineSummary.notes_count}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>Deadline Reminders</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: pipelineSummary.deadline_reminders_active ? "var(--success)" : "var(--app-muted)" }}>
+                  {pipelineSummary.deadline_reminders_active ? "Active" : "Off"}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>Calendar Sync</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: pipelineSummary.calendar_active ? "var(--success)" : "var(--app-muted)" }}>
+                  {pipelineSummary.calendar_active ? "Active" : "Not set"}
+                </div>
+              </div>
+            </div>
+
+            {plan === "trial" ? (
+              <div style={{ fontSize: "0.82rem", color: "var(--app-muted)", lineHeight: 1.5 }}>
+                Subscribe to keep full access to your tracked opportunities, research notes, and deadline calendar.
+              </div>
+            ) : plan === "cancelled" ? (
+              <div style={{ fontSize: "0.82rem", color: "var(--danger)", lineHeight: 1.5, display: "flex", alignItems: "center", gap: 6 }}>
+                Your pipeline data is preserved for 90 days after cancellation. Reactivate to regain access.
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <Link
+                  href="/dashboard/pipeline"
+                  style={{ fontSize: "0.82rem", color: "var(--accent)", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  Manage pipeline <ArrowRight size={14} />
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

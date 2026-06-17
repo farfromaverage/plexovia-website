@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Bell, Mail } from "lucide-react";
+import { Bell, CalendarDays, Copy, ExternalLink, Mail } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface AlertPrefs {
@@ -75,6 +75,10 @@ export default function AlertSettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
+  const [calendarToken, setCalendarToken] = useState<string | null>(null);
+  const [deadlineRemindersOn, setDeadlineRemindersOn] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -82,7 +86,7 @@ export default function AlertSettingsPage() {
       if (!session) { router.replace("/auth/login"); return; }
       const { data, error: dbErr } = await supabase
         .from("profiles")
-        .select("email")
+        .select("email, calendar_token, deadline_reminders_enabled")
         .eq("id", session.user.id)
         .single();
 
@@ -94,6 +98,9 @@ export default function AlertSettingsPage() {
         setPrefs({
           email:               data.email ?? (session.user.email ?? null),
         });
+        setCalendarToken(data.calendar_token ?? null);
+        setDeadlineRemindersOn(data.deadline_reminders_enabled ?? true);
+        setUserId(session.user.id);
       } else {
         setPrefs({ email: session.user.email ?? null });
       }
@@ -102,6 +109,30 @@ export default function AlertSettingsPage() {
     load();
   }, [router]);
 
+
+  const handleDeadlineToggle = async (v: boolean) => {
+    setDeadlineRemindersOn(v);
+    if (!userId) return;
+    try {
+      await supabase.from("profiles").update({ deadline_reminders_enabled: v }).eq("id", userId);
+    } catch { /* silent fail */ }
+  };
+
+  const calendarUrl = calendarToken
+    ? `https://plexovia.com/api/calendar/${calendarToken}/deadlines.ics`
+    : null;
+  const googleCalUrl = calendarUrl
+    ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(calendarUrl)}`
+    : null;
+
+  const copyUrl = async () => {
+    if (!calendarUrl) return;
+    try {
+      await navigator.clipboard.writeText(calendarUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard unavailable */ }
+  };
 
   if (loading) {
     return (
@@ -181,6 +212,75 @@ export default function AlertSettingsPage() {
             support@plexovia.com
           </a>.
           Toggling off an email report does not affect your dashboard monitoring. All matched contracts always appear in your dashboard.
+        </div>
+
+        {/* Deadline reminders + calendar */}
+        <div className="dash-section" style={{ marginBottom: "1.25rem" }}>
+          <p className="dash-label">Email &amp; Calendar</p>
+
+          <SettingRow
+            icon={<Mail size={15} aria-hidden="true" />}
+            label="Deadline Reminders"
+            description="Receive reminder emails at 14, 7, 3, and 1 day before every tracked bid deadline."
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "0.78rem", color: deadlineRemindersOn ? "var(--success)" : "var(--app-muted)", fontWeight: 600 }}>
+                {deadlineRemindersOn ? "Active" : "Off"}
+              </span>
+              <Toggle id="deadline-reminders" checked={deadlineRemindersOn} onChange={handleDeadlineToggle} />
+            </div>
+          </SettingRow>
+
+          <SettingRow
+            icon={<CalendarDays size={15} aria-hidden="true" />}
+            label="Deadline Calendar Sync"
+            description="Subscribe to your pipeline deadlines in Google Calendar, Outlook, or Apple Calendar. Updates automatically."
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end" }}>
+              {calendarUrl ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <button
+                      onClick={copyUrl}
+                      style={{
+                        padding: "5px 10px", borderRadius: 6, border: "1px solid var(--app-border)",
+                        background: "transparent", cursor: "pointer", fontSize: "0.75rem",
+                        color: "var(--app-text)", fontWeight: 600, display: "flex", alignItems: "center", gap: 4,
+                      }}
+                    >
+                      <Copy size={12} aria-hidden="true" />
+                      {copied ? "Copied" : "Copy URL"}
+                    </button>
+                    {googleCalUrl && (
+                      <a
+                        href={googleCalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: "5px 10px", borderRadius: 6, border: "1px solid var(--accent-border)",
+                          background: "var(--accent)", color: "#fff", cursor: "pointer",
+                          fontSize: "0.75rem", textDecoration: "none", fontWeight: 600,
+                          display: "flex", alignItems: "center", gap: 4,
+                        }}
+                      >
+                        <ExternalLink size={12} aria-hidden="true" />
+                        Google Calendar
+                      </a>
+                    )}
+                  </div>
+                  <code style={{
+                    fontSize: "0.65rem", color: "var(--app-faint)", wordBreak: "break-all",
+                    background: "var(--app-surface)", padding: "4px 8px", borderRadius: 4,
+                    maxWidth: 280, textAlign: "right",
+                  }}>
+                    {calendarUrl}
+                  </code>
+                </>
+              ) : (
+                <span style={{ fontSize: "0.78rem", color: "var(--app-faint)" }}>Generating URL...</span>
+              )}
+            </div>
+          </SettingRow>
         </div>
 
       </div>
