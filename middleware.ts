@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -50,40 +50,43 @@ export async function proxy(request: NextRequest) {
 
   // Profile-level validation logic for Dashboard access
   if (isDashboard && user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('plan, active, trial_ends_at, onboarding_complete, accepted_tos')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (profile) {
-      // 1. Check if billing/trial is expired
-      // A user is required to upgrade if `active = false` and their trial has expired.
-      const isTrialExpired = profile.trial_ends_at && new Date(profile.trial_ends_at) < new Date()
-      
-      // If plan is 'cancelled' but plan_expires_at is active, profile.active will still be boolean logic but we just check `active`
-      // For single-plan, if it's strictly null and trial expired, force pricing.
-      if (!profile.active && (!profile.plan || profile.plan === 'trial' || profile.plan === 'cancelled') && isTrialExpired) {
+    if (profileError) {
+      console.error('[middleware] profile query error:', profileError.message)
+      return supabaseResponse
+    }
+
+    if (!profile) {
+      console.warn(`[middleware] no profile found for user ${user.id} — allowing pass-through`)
+      return supabaseResponse
+    }
+
+    // 1. Check if billing/trial is expired
+    const isTrialExpired = profile.trial_ends_at && new Date(profile.trial_ends_at) < new Date()
+    if (!profile.active && (!profile.plan || profile.plan === 'trial' || profile.plan === 'cancelled') && isTrialExpired) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/pricing'
+      return NextResponse.redirect(url)
+    }
+
+    // 2. Check if T&C has been accepted (missing for Google OAuth first logins)
+    if (!profile.accepted_tos && request.nextUrl.pathname !== '/auth/terms') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/terms'
+      return NextResponse.redirect(url)
+    }
+
+    // 3. Check if onboarding is complete
+    if (!isOnboarding && request.nextUrl.pathname !== '/auth/terms') {
+      if (!profile.onboarding_complete) {
         const url = request.nextUrl.clone()
-        url.pathname = '/pricing'
+        url.pathname = '/dashboard/onboarding'
         return NextResponse.redirect(url)
-      }
-
-      // 2. Check if T&C has been accepted (missing for Google OAuth first logins)
-      // We will redirect them to a quick T&C acceptance page before anything else
-      if (!profile.accepted_tos && request.nextUrl.pathname !== '/auth/terms') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/auth/terms'
-        return NextResponse.redirect(url)
-      }
-
-      // 3. Check if onboarding is complete
-      if (!isOnboarding && request.nextUrl.pathname !== '/auth/terms') {
-        if (!profile.onboarding_complete) {
-          const url = request.nextUrl.clone()
-          url.pathname = '/dashboard/onboarding'
-          return NextResponse.redirect(url)
-        }
       }
     }
   }

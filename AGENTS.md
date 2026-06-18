@@ -45,7 +45,7 @@ This subtree owns:
 - **Import style:** `@import "tailwindcss";` (not `@tailwind base/components/utilities`).
 - **Fonts:** All self-hosted in `public/fonts/`. Uses `next/font/local` in `layout.tsx`. Never add Google Fonts CDN.
 - **Set-aside preferences:** 7 core codes (SB, 8A, WOSB, EDWOSB, SDVOSB, HUBZONE, VETERAN). Filter stored preferences on load against the valid list.
-- **Security:** Webhook handler validates HMAC before creating Supabase client. All API routes fail-fast if required env vars are missing. Internal key comparison uses `crypto.timingSafeEqual`.
+- **Security:** LemonSqueezy webhook handler validates HMAC signature, then forwards verified payload to backend internal API (`/api/internal/webhook/lemonsqueezy`) for database writes. No service key in Vercel deployment. All API routes fail-fast if required env vars are missing. Internal key comparison uses `crypto.timingSafeEqual`.
 
 ## Verification
 

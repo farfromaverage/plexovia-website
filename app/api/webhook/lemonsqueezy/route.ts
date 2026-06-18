@@ -1,47 +1,15 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
-
-// Helper to reliably ping the Python backend for emails
-async function triggerEngineEmail(endpoint: string, payload: any) {
-  const engineUrl = (process.env.RAILWAY_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-  const internalKey = process.env.INTERNAL_API_KEY;
-  if (!internalKey) {
-    console.error(`[webhook] INTERNAL_API_KEY not configured — cannot trigger engine email ${endpoint}`);
-    return;
-  }
-
-  try {
-    const res = await fetch(`${engineUrl}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': internalKey
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      console.error(`Engine email ${endpoint} failed with status: ${res.status}`);
-    }
-  } catch (err) {
-    console.error(`Failed to reach engine for ${endpoint}:`, err);
-  }
-}
 
 export async function POST(req: Request) {
   try {
     const secret = process.env.LS_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('LS_WEBHOOK_SECRET is not configured — rejecting webhook');
+      console.error('LS_WEBHOOK_SECRET is not configured');
       return new NextResponse('Webhook secret not configured', { status: 500 });
     }
 
-    // Initialize Supabase with service role key to bypass RLS in the webhook
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY! // Note: Vercel needs this for webhooks to update profiles safely
-    );
-    // 1. Get the raw body as text for HMAC verification
+    // 1. Read the raw body for HMAC verification
     const text = await req.text();
     const hmac = crypto.createHmac('sha256', secret);
     const digest = Buffer.from(hmac.update(text).digest('hex'), 'utf8');
@@ -56,155 +24,28 @@ export async function POST(req: Request) {
       return new NextResponse('Invalid signature', { status: 401 });
     }
 
-    // 4. Parse payload
-    const payload = JSON.parse(text);
-    const eventName = payload.meta.event_name;
-    const obj = payload.data.attributes;
-    const customData = payload.meta.custom_data || {};
-    
-    // Extracted from custom data or user email
-    const userId = customData.user_id; // Passed when creating the checkout session
-    const customerEmail = obj.user_email;
-    const subscriptionId = payload.data.id.toString();
-    const customerId = obj.customer_id.toString();
-    const status = obj.status; // active, past_due, unpaid, cancelled, expired, paused
-    const endsAt = obj.ends_at ? new Date(obj.ends_at).toISOString() : null;
-    const trialEndsAt = obj.trial_ends_at ? new Date(obj.trial_ends_at).toISOString() : null;
+    // 4. Forward the verified raw payload to the backend for processing
+    const engineUrl = (process.env.RAILWAY_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+    const internalKey = process.env.INTERNAL_API_KEY;
 
-    if (!userId && !customerEmail) {
-      return new NextResponse('Missing user identifier', { status: 400 });
+    if (!internalKey) {
+      console.error('[webhook] INTERNAL_API_KEY not configured');
+      return new NextResponse('Internal API key not configured', { status: 500 });
     }
 
-    console.log(`Processing LemonSqueezy event: ${eventName} for ${customerEmail}`);
+    const engineResponse = await fetch(`${engineUrl}/api/internal/webhook/lemonsqueezy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Key': internalKey,
+      },
+      body: JSON.stringify({ body_raw: text }),
+    });
 
-    // Resolve user ID if possible
-    let finalUserId = userId;
-    if (!finalUserId && customerEmail) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', customerEmail)
-        .single();
-      if (profile) finalUserId = profile.id;
-    }
-
-    if (!finalUserId) {
-      console.warn(`Webhook received for ${customerEmail} but no profile found.`);
-      // Depending on workflow, you could create a ghost profile here, but better to just acknowledge
-      return new NextResponse('No profile found. Ignored.', { status: 200 });
-    }
-
-    switch (eventName) {
-      case 'subscription_created': {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            plan: 'active',
-            active: status === 'active' || status === 'on_trial',
-            trial_ends_at: trialEndsAt,
-            plan_expires_at: endsAt,
-            payment_failed: false,
-            ls_customer_id: customerId,
-            ls_subscription_id: subscriptionId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', finalUserId);
-        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
-        
-        // Trigger welcome email
-        await triggerEngineEmail('/api/internal/welcome-email', {
-          user_email: customerEmail,
-          trial_ends_at: trialEndsAt || new Date(Date.now() + 14*24*60*60*1000).toISOString()
-        });
-        break;
-      }
-
-      case 'subscription_updated': {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            plan: 'active',
-            active: status === 'active' || status === 'on_trial',
-            trial_ends_at: trialEndsAt,
-            plan_expires_at: endsAt,
-            payment_failed: false,
-            ls_customer_id: customerId,
-            ls_subscription_id: subscriptionId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', finalUserId);
-        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
-        
-        if (status === 'active') {
-          // Send payment success if they converted
-          await triggerEngineEmail('/api/internal/payment-success', { user_email: customerEmail });
-        }
-        break;
-      }
-
-      case 'subscription_cancelled': {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            plan: 'cancelled',
-            plan_expires_at: endsAt,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', finalUserId);
-        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
-        
-        // Trigger cancelled email
-        await triggerEngineEmail('/api/internal/subscription-cancelled', { user_email: customerEmail });
-        break;
-      }
-
-      case 'subscription_resumed': {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            plan: 'active',
-            active: true,
-            plan_expires_at: null,
-            payment_failed: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', finalUserId);
-        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
-        
-        // Trigger payment/subscription resumed effectively as success
-        await triggerEngineEmail('/api/internal/payment-success', { user_email: customerEmail });
-        break;
-      }
-
-      case 'subscription_expired': {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            active: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', finalUserId);
-        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
-        break;
-      }
-
-      case 'subscription_payment_failed': {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            payment_failed: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', finalUserId);
-        if (error) throw new Error(`Supabase Update Error: ${error.message}`);
-
-        console.log(`Payment failed recorded for ${customerEmail}.`);
-        break;
-      }
-
-      default:
-        console.log(`Unhandled event type: ${eventName}`);
-        break;
+    if (!engineResponse.ok) {
+      const errorText = await engineResponse.text();
+      console.error(`Engine webhook processing failed: ${engineResponse.status} ${errorText}`);
+      return new NextResponse('Engine processing failed', { status: 502 });
     }
 
     return new NextResponse('OK', { status: 200 });

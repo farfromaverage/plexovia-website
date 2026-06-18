@@ -1,14 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-interface ExportQueryBuilder extends PromiseLike<{ data: ExportMatchRow[] | null; error: { message: string } | null }> {
-  eq(col: string, val: unknown): ExportQueryBuilder
-  gte(col: string, val: unknown): ExportQueryBuilder
-  or(filters: string, opts?: { referencedTable?: string }): ExportQueryBuilder
-  order(col: string, opts?: { ascending?: boolean }): ExportQueryBuilder
-  limit(n: number): ExportQueryBuilder
-}
-
 interface ExportMatchRow {
   score: number
   match_reasons: string[]
@@ -47,19 +39,21 @@ export async function GET(request: NextRequest) {
     const cutoffDate = new Date(today.getTime() - days * 86400000)
     const cutoffISO = cutoffDate.toISOString().split('T')[0]
     const todayISO = today.toISOString().split('T')[0]
-    const { data, error } = await (supabase
+    const query = supabase
       .from('matches')
       .select(
         'score, match_reasons, created_at, ' +
         'contracts!inner(title, agency, state, naics_code, psc_code, ' +
         'set_aside, deadline, posted_date, url)'
-      ) as unknown as ExportQueryBuilder)
+      )
       .eq('user_id', session.user.id)
       .gte('created_at', cutoffDate.toISOString())
       .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, { referencedTable: 'contracts' })
       .or(`deadline.gte.${todayISO},deadline.is.null`, { referencedTable: 'contracts' })
       .order('score', { ascending: false })
       .limit(EXPORT_LIMIT)
+
+    const { data, error } = await query as unknown as { data: ExportMatchRow[] | null; error: { message: string } | null }
 
     if (error) {
       console.error('[/api/export/csv] Supabase error:', error)
