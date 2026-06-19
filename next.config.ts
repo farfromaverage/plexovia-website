@@ -62,6 +62,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/user/pipeline/:path*", destination: `${engineUrl}/api/user/pipeline/:path*` },
       { source: "/api/user/pipeline",        destination: `${engineUrl}/api/user/pipeline` },
+      { source: "/api/user/matches/:path*",  destination: `${engineUrl}/api/user/matches/:path*` },
+      { source: "/api/user/profile",         destination: `${engineUrl}/api/user/profile` },
       { source: "/api/search",               destination: `${engineUrl}/api/search` },
       { source: "/api/user/competitors/:path*", destination: `${engineUrl}/api/user/competitors/:path*` },
       { source: "/api/calendar/:path*",      destination: `${engineUrl}/api/calendar/:path*` },

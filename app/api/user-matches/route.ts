@@ -28,6 +28,7 @@ interface MatchRowRaw {
   recency_window: number;
   match_reasons: string[];
   created_at: string;
+  saved: boolean | null;
   contracts: Array<{
     id: string | null;
     title: string | null;
@@ -60,7 +61,7 @@ function getDateBounds() {
 
 // ── Shared select clause ────────────────────────────────────────────────────
 const SELECT_CLAUSE =
-  "id, score, recency_window, match_reasons, created_at, " +
+  "id, score, recency_window, match_reasons, created_at, saved, " +
   "contracts!inner(id, title, url, state, agency, naics_code, psc_code, " +
   "fed_org_code, deadline, posted_date, set_aside)";
 
@@ -88,17 +89,21 @@ export async function GET(request: NextRequest) {
     parseInt(searchParams.get("min_score") || "0", 10)
   );
   const search = searchParams.get("search") || "";
+  const searchNaics = searchParams.get("naics") || "";
+  const searchPsc = searchParams.get("psc") || "";
+  const searchAgency = searchParams.get("agency") || "";
+  const searchState = searchParams.get("state") || "";
+  const searchSetAside = searchParams.get("set_aside") || "";
+  const savedFilter = searchParams.get("saved") === "true";
   const sort = searchParams.get("sort") || "recency";
 
   const offset = (page - 1) * per_page;
   const { todayISO, cutoffISO } = getDateBounds();
   const userId = session.user.id;
 
-  try {
-    // ── Build and execute the data query ───────────────────────────────────
-    let dataQuery = supabase
-      .from("matches")
-      .select(SELECT_CLAUSE)
+  /** Apply all shared filters to a matches query builder. Chaining is immutable. */
+  function applySharedFilters(q: any): any {
+    let result = q
       .eq("user_id", userId)
       .gte("score", min_score)
       .or(`deadline.gte.${todayISO},deadline.is.null`, {
@@ -108,9 +113,40 @@ export async function GET(request: NextRequest) {
         referencedTable: "contracts",
       });
 
-    if (search) {
-      dataQuery = dataQuery.ilike("contracts.title", `%${search}%`);
+    if (savedFilter) {
+      result = result.eq("saved", true);
     }
+    if (search) {
+      const escaped = search.replace(/\*/g, "\\*").replace(/_/g, "\\_");
+      result = result.or(
+        `title.ilike.*${escaped}*,naics_code.ilike.${escaped}*,psc_code.ilike.${escaped}*,agency.ilike.*${escaped}*,state.ilike.*${escaped}*,set_aside.ilike.*${escaped}*`,
+        { referencedTable: "contracts" },
+      );
+    }
+    if (searchNaics) {
+      result = result.ilike("contracts.naics_code", `${searchNaics}%`);
+    }
+    if (searchPsc) {
+      result = result.ilike("contracts.psc_code", `${searchPsc}%`);
+    }
+    if (searchAgency) {
+      result = result.ilike("contracts.agency", `%${searchAgency}%`);
+    }
+    if (searchState) {
+      result = result.ilike("contracts.state", `%${searchState}%`);
+    }
+    if (searchSetAside) {
+      result = result.ilike("contracts.set_aside", `%${searchSetAside}%`);
+    }
+
+    return result;
+  }
+
+  try {
+    // ── Build and execute the data query ───────────────────────────────────
+    let dataQuery = applySharedFilters(
+      supabase.from("matches").select(SELECT_CLAUSE),
+    );
 
     if (sort === "posted_date") {
       dataQuery = dataQuery.order("posted_date", {
@@ -160,24 +196,11 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Build and execute the count query ──────────────────────────────────
-    // FIX: Supabase JS v2 query builders are thenables — await directly.
-    // There is no `.execute()` method. The fake CountQueryBuilder interface
-    // that defined `.execute()` has been removed entirely.
-    let countQuery = supabase
-      .from("matches")
-      .select(COUNT_SELECT_CLAUSE, { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("score", min_score)
-      .or(`deadline.gte.${todayISO},deadline.is.null`, {
-        referencedTable: "contracts",
-      })
-      .or(`posted_date.gte.${cutoffISO},posted_date.is.null`, {
-        referencedTable: "contracts",
-      });
-
-    if (search) {
-      countQuery = countQuery.ilike("contracts.title", `%${search}%`);
-    }
+    const countQuery = applySharedFilters(
+      supabase
+        .from("matches")
+        .select(COUNT_SELECT_CLAUSE, { count: "exact", head: true }),
+    );
 
     const { count: totalCount, error: countError } = await countQuery;
 
@@ -224,6 +247,7 @@ export async function GET(request: NextRequest) {
       return {
         match_id: row.id,
         score: row.score ?? 0,
+        saved: row.saved ?? false,
         explanation: explanationParts.join(". ") || "Profile match",
         reasons,
         matched_at: row.created_at,

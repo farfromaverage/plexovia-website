@@ -166,22 +166,6 @@ export function useContractStatus() {
     }
   }, []);
 
-  /** Toggle bookmark on a contract */
-  const toggleBookmark = useCallback(
-    (id: string) => {
-      const map = loadMap(keyRef.current);
-      const entry = map[id] || {};
-      entry.bookmarked = !entry.bookmarked;
-      if (entry.bookmarked) {
-        entry.dismissed = false;
-        delete entry.dismissedAt;
-      }
-      map[id] = entry;
-      persist(map);
-    },
-    [persist]
-  );
-
   /** Dismiss a contract (returns the id for undo toast) */
   const dismiss = useCallback(
     (id: string): string => {
@@ -224,11 +208,6 @@ export function useContractStatus() {
     [persist]
   );
 
-  const isBookmarked = useCallback(
-    (id: string): boolean => statusMap[id]?.bookmarked === true,
-    [statusMap]
-  );
-
   const isDismissed = useCallback(
     (id: string): boolean => statusMap[id]?.dismissed === true,
     [statusMap]
@@ -239,20 +218,9 @@ export function useContractStatus() {
     [statusMap]
   );
 
-  const bookmarkedCount = useCallback(
-    (ids: string[]): number =>
-      ids.filter((id) => statusMap[id]?.bookmarked).length,
-    [statusMap]
-  );
-
   const dismissedCount = useCallback(
     (ids: string[]): number =>
       ids.filter((id) => statusMap[id]?.dismissed).length,
-    [statusMap]
-  );
-
-  const totalBookmarkedCount = useCallback(
-    (): number => Object.values(statusMap).filter((e) => e?.bookmarked).length,
     [statusMap]
   );
 
@@ -263,16 +231,12 @@ export function useContractStatus() {
 
   return {
     init,
-    toggleBookmark,
     dismiss,
     undoDismiss,
     markViewed,
-    isBookmarked,
     isDismissed,
     isViewed,
-    bookmarkedCount,
     dismissedCount,
-    totalBookmarkedCount,
     totalDismissedCount,
     UNDO_WINDOW_MS,
   };

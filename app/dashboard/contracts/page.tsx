@@ -93,8 +93,9 @@ import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import { useContractStatus } from "@/hooks/useContractStatus";
 import { supabase } from "@/lib/supabase";
+import { engineFetch } from "@/lib/engine";
 
-import SearchPanel from "./SearchPanel";
+import SearchPanel, { type SearchFilters } from "./SearchPanel";
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
 interface ContractRow {
@@ -116,6 +117,7 @@ interface ContractRow {
   matchLabel: string;
   url: string | null;
   matchedAt: string | null;
+  saved: boolean;
 }
 
 type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
@@ -160,6 +162,7 @@ interface MatchRow {
   contract: ContractPayload | null;
   reasons: string[];
   score: number;
+  saved: boolean;
   matched_at: string | null;
 }
 
@@ -194,6 +197,7 @@ function mapRow(m: MatchRow): ContractRow {
     matchLabel,
     url: c.url || null,
     matchedAt: m.matched_at || null,
+    saved: m.saved ?? false,
   };
 }
 
@@ -258,7 +262,9 @@ function ContractsPage() {
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
   const [staleData, setStaleData] = useState(false);
-  const [searchMode, setSearchMode] = useState(false);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
+  const [bookmarkUpdating, setBookmarkUpdating] = useState<Set<string>>(new Set());
+  const bookmarkAbortRef = useRef<AbortController | null>(null);
 
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -336,7 +342,9 @@ function ContractsPage() {
   const fetchMatches = async (
     p: number,
     pp: number,
-    signal: AbortSignal
+    signal: AbortSignal,
+    filters: SearchFilters | null,
+    filter: StatusFilter,
   ): Promise<{ matches: MatchRow[]; pagination: { total: number }; last_pipeline_completed_at?: string | null }> => {
     const params = new URLSearchParams({
       page: String(p),
@@ -344,6 +352,12 @@ function ContractsPage() {
       min_score: "0",
       sort: "recency",
     });
+    if (filters?.search) {
+      params.set("search", filters.search);
+    }
+    if (filter === "bookmarked") {
+      params.set("saved", "true");
+    }
     const timeoutSignal = AbortSignal.timeout(15000);
     const combined = AbortSignal.any([signal, timeoutSignal]);
     const res = await fetch(`/api/user-matches?${params.toString()}`, {
@@ -363,18 +377,18 @@ function ContractsPage() {
     setError(false);
 
     try {
-      const isFilterTab =
-        statusFilter === "bookmarked" ||
+      // "bookmarked" is now server-side via saved=true. Only "dismissed" and "new" need client-side.
+      const isClientFilterTab =
         statusFilter === "dismissed" ||
         statusFilter === "new";
-      if (isFilterTab) {
-        const firstPage = await fetchMatches(1, 100, controller.signal);
+      if (isClientFilterTab) {
+        const firstPage = await fetchMatches(1, 100, controller.signal, searchFilters, statusFilter);
         if (controller.signal.aborted) return;
         const allRows = [...(firstPage.matches || [])];
         const totalAvail = firstPage.pagination?.total || 0;
         const maxPages = Math.min(5, Math.ceil(totalAvail / 100));
         for (let p = 2; p <= maxPages; p++) {
-          const nextPage = await fetchMatches(p, 100, controller.signal);
+          const nextPage = await fetchMatches(p, 100, controller.signal, searchFilters, statusFilter);
           if (controller.signal.aborted) return;
           allRows.push(...(nextPage.matches || []));
         }
@@ -384,7 +398,7 @@ function ContractsPage() {
           lastPipelineAtRef.current = firstPage.last_pipeline_completed_at;
         }
       } else {
-        const json = await fetchMatches(page, PER_PAGE, controller.signal);
+        const json = await fetchMatches(page, PER_PAGE, controller.signal, searchFilters, statusFilter);
         if (controller.signal.aborted) return;
         const actualTotal = json.pagination?.total || 0;
         if ((json.matches || []).length === 0 && actualTotal > 0 && page > 1) {
@@ -414,7 +428,7 @@ function ContractsPage() {
     } finally {
       if (abortRef.current === controller) setLoading(false);
     }
-  }, [page, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, searchFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep loadRef current
   useEffect(() => {
@@ -456,11 +470,9 @@ function ContractsPage() {
   }, []);
 
   // ── Filtered view ─────────────────────────────────────────────────────────
-  // FIX (BUG 3 continuation): Only apply cs filters after csReady is true.
-  // Before that, render skeleton to avoid a flash of "0 new contracts".
+  // "bookmarked" is server-side (saved=true). "dismissed" / "new" are client-side (localStorage).
   const filteredContracts = csReady
     ? contracts.filter((c) => {
-        if (statusFilter === "bookmarked") return cs.isBookmarked(c.id);
         if (statusFilter === "dismissed") return cs.isDismissed(c.id);
         if (statusFilter === "new")
           return !cs.isViewed(c.id) && !cs.isDismissed(c.id);
@@ -468,17 +480,13 @@ function ContractsPage() {
       })
     : [];
 
-  // FIX (BUG 5): Pagination only applies to the "all" tab where the server
-  // pages results. Filter tabs fetch FILTER_BATCH and filter client-side —
-  // there is no meaningful "page 2" for those tabs.
   const isFilterTab =
-    statusFilter === "bookmarked" ||
     statusFilter === "dismissed" ||
     statusFilter === "new";
   const totalPages = isFilterTab ? 1 : Math.max(1, Math.ceil(total / PER_PAGE));
 
   // ── URL update (one direction only — state → URL, never URL → state) ────
-  function updateUrl(p: number, f: StatusFilter) {
+  const updateUrl = useCallback((p: number, f: StatusFilter) => {
     const params = new URLSearchParams();
     if (p > 1) params.set("page", String(p));
     if (f !== "all") params.set("filter", f);
@@ -486,7 +494,7 @@ function ContractsPage() {
     router.replace(`/dashboard/contracts${qs ? "?" + qs : ""}`, {
       scroll: false,
     });
-  }
+  }, [router]);
 
   function handlePageChange(np: number) {
     const clamped = Math.max(1, Math.min(totalPages, np));
@@ -499,6 +507,49 @@ function ContractsPage() {
     setPage(1);
     updateUrl(1, tab);
   }
+
+  // ── Search handlers ──────────────────────────────────────────────────────
+  const handleSearch = useCallback((filters: SearchFilters) => {
+    setSearchFilters(filters);
+    setPage(1);
+    updateUrl(1, statusFilter);
+  }, [statusFilter, updateUrl]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchFilters(null);
+    setPage(1);
+    updateUrl(1, statusFilter);
+  }, [statusFilter, updateUrl]);
+
+  // ── DB-backed bookmark toggle ────────────────────────────────────────────
+  const handleToggleBookmark = useCallback(async (matchId: string, currentlySaved: boolean) => {
+    bookmarkAbortRef.current?.abort();
+    const controller = new AbortController();
+    bookmarkAbortRef.current = controller;
+
+    setBookmarkUpdating((prev) => new Set(prev).add(matchId));
+    try {
+      const res = await engineFetch(`/api/user/matches/${matchId}/feedback`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saved: !currentlySaved }),
+        signal: controller.signal,
+      });
+      if (res.ok) {
+        setContracts((prev) =>
+          prev.map((c) => (c.id === matchId ? { ...c, saved: !currentlySaved } : c))
+        );
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+    } finally {
+      setBookmarkUpdating((prev) => {
+        const next = new Set(prev);
+        next.delete(matchId);
+        return next;
+      });
+    }
+  }, []);
 
   // ── Dismiss with undo ────────────────────────────────────────────────────
   function handleDismiss(c: ContractRow) {
@@ -633,10 +684,9 @@ function ContractsPage() {
       </div>
 
       {/* ── Search ── */}
-      <SearchPanel onSearchModeChange={setSearchMode} />
+      <SearchPanel onSearch={handleSearch} onClear={handleClearSearch} />
 
-      {/* Status filter tabs — hidden in search mode */}
-      {!searchMode && (
+      {/* Status filter tabs */}
       <div style={{ marginBottom: "var(--space-5)" }}>
         <div
           className="dash-status-tabs"
@@ -660,11 +710,6 @@ function ContractsPage() {
               onClick={() => handleTabChange(tab.key)}
             >
               {tab.label}
-              {tab.key === "bookmarked" && cs.totalBookmarkedCount() > 0 && (
-                <span className="dash-tab-count">
-                  {cs.totalBookmarkedCount()}
-                </span>
-              )}
               {tab.key === "dismissed" && cs.totalDismissedCount() > 0 && (
                 <span className="dash-tab-count">
                   {cs.totalDismissedCount()}
@@ -674,7 +719,6 @@ function ContractsPage() {
           ))}
         </div>
       </div>
-      )}
 
       {/* Stale data banner */}
       {staleData && (
@@ -777,9 +821,9 @@ function ContractsPage() {
                 key={c.id}
                 c={c}
                 index={i}
-                isBookmarked={cs.isBookmarked(c.id)}
                 isViewed={cs.isViewed(c.id)}
-                onToggleBookmark={() => cs.toggleBookmark(c.id)}
+                bookmarkPending={bookmarkUpdating.has(c.id)}
+                onToggleBookmark={() => handleToggleBookmark(c.id, c.saved)}
                 onDismiss={() => handleDismiss(c)}
                 onView={() => cs.markViewed(c.id)}
               />
@@ -864,20 +908,20 @@ function ContractsPage() {
 /* ─── Row Component ─────────────────────────────────────────────────────── */
 const ContractRowUI = memo(function ContractRowUI({
   c,
-  isBookmarked,
   isViewed,
   onToggleBookmark,
   onDismiss,
   onView,
   index,
+  bookmarkPending,
 }: {
   c: ContractRow;
-  isBookmarked: boolean;
   isViewed: boolean;
   onToggleBookmark: () => void;
   onDismiss: () => void;
   onView: () => void;
   index: number;
+  bookmarkPending: boolean;
 }) {
   const deadlineUrgency =
     c.deadlineDays === null
@@ -988,13 +1032,14 @@ const ContractRowUI = memo(function ContractRowUI({
       <div className="dash-contract-card-actions">
         <motion.button
           className="dash-action-bookmark"
-          data-active={isBookmarked ? "true" : undefined}
+          data-active={c.saved ? "true" : undefined}
           onClick={onToggleBookmark}
+          disabled={bookmarkPending}
           whileTap={{ scale: 0.85 }}
-          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark contract"}
-          title={isBookmarked ? "Saved" : "Save"}
+          aria-label={c.saved ? "Remove bookmark" : "Bookmark contract"}
+          title={c.saved ? "Saved" : "Save"}
         >
-          <Star size={16} fill={isBookmarked ? "currentColor" : "none"} />
+          <Star size={16} fill={c.saved ? "currentColor" : "none"} />
         </motion.button>
         <button
           className="dash-action-dismiss"
