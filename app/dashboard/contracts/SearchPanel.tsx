@@ -20,19 +20,23 @@ export default function SearchPanel({ onSearch, onClear }: Props) {
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
+
+    if (!query.trim()) {
+      onClear();
+      return;
+    }
+
     timerRef.current = setTimeout(() => {
-      if (query.trim()) {
-        onSearch({ search: query.trim() });
-      }
+      onSearch({ search: query.trim() });
     }, DEBOUNCE_MS);
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [query, onSearch]);
+  }, [query, onSearch, onClear]);
 
   const handleClear = () => {
     setQuery("");
-    onClear();
   };
 
   return (
