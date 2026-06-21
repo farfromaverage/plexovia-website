@@ -397,10 +397,18 @@ function ContractsPage() {
     setSearchResults([]);
     searchQueryRef.current = query;
     try {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 90);
+      const cutoffISO = cutoff.toISOString().split("T")[0];
+      const escaped = query.replace(/\*/g, "\\*").replace(/_/g, "\\_");
+
       const { data, error } = await supabase
         .from("contracts")
         .select("id, title, agency, naics_code, psc_code, fed_org_code, state, posted_date, deadline, set_aside, url, description, value_min, value_max")
-        .textSearch("text_search", query)
+        .or(
+          `title.ilike.*${escaped}*,description.ilike.*${escaped}*,naics_code.ilike.${escaped}*,psc_code.ilike.${escaped}*,agency.ilike.*${escaped}*,fed_org_code.ilike.*${escaped}*,state.ilike.*${escaped}*,set_aside.ilike.*${escaped}*`,
+        )
+        .gte("posted_date", cutoffISO)
         .order("posted_date", { ascending: false })
         .limit(200)
         .abortSignal(controller.signal);
