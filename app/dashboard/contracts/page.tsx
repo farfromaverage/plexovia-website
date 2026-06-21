@@ -415,7 +415,42 @@ function ContractsPage() {
 
       if (controller.signal.aborted) return;
       if (error) throw new Error(error.message);
-      setSearchResults((data || []) as SearchResult[]);
+
+      const rows = data || [];
+
+      // Enrich with match scores: query matches for contracts the user is matched to
+      const matchMap: Record<string, { score: number | null; reasons: string[] | null }> = {};
+      if (rows.length > 0) {
+        const contractIds = rows.map((r) => r.id).filter(Boolean);
+        if (contractIds.length > 0) {
+          try {
+            const { data: matchRows } = await supabase
+              .from("matches")
+              .select("contract_id, score, match_reasons")
+              .in("contract_id", contractIds)
+              .abortSignal(controller.signal);
+
+            if (!controller.signal.aborted && matchRows) {
+              for (const m of matchRows) {
+                const cid = m.contract_id as string;
+                if (cid) {
+                  matchMap[cid] = { score: m.score as number | null, reasons: m.match_reasons as string[] | null };
+                }
+              }
+            }
+          } catch {
+            // Match enrichment is best-effort — search results still valid without scores
+          }
+        }
+      }
+
+      if (controller.signal.aborted) return;
+      const enriched = rows.map((r) => ({
+        ...r,
+        match_score: matchMap[r.id as string]?.score ?? null,
+        match_reasons: matchMap[r.id as string]?.reasons ?? null,
+      })) as unknown as SearchResult[];
+      setSearchResults(enriched);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setSearchError(true);
