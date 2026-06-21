@@ -58,7 +58,7 @@ export default function SearchPanel({ onSearch, onClear }: Props) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by title, NAICS, PSC, agency, state, or set-aside..."
+          placeholder="Search by title, description, NAICS, PSC, agency, agency code, state, or set-aside..."
           aria-label="Search contracts"
           style={{
             flex: 1,
