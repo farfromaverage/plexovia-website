@@ -308,3 +308,37 @@ describe('search type coverage — unified OR search', () => {
   })
 
 })
+
+describe('search vs matched feed separation', () => {
+
+  it('search calls onSearch callback with the query', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('cyber')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: 'cyber' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('clear search triggers onClear (parent will set searchResults to null)', () => {
+    vi.useFakeTimers()
+    const { onSearch, onClear, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('cyber')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledTimes(1)
+
+    simulateQueryChange('')
+    expect(onClear).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+})
