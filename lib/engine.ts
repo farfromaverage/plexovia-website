@@ -23,7 +23,10 @@ export async function engineFetch(
     if (!headers.has("Content-Type") && options.body) {
       headers.set("Content-Type", "application/json");
     }
-    return fetch(path, { ...options, headers, signal: controller.signal });
+    // Preserve caller's signal if provided, otherwise use the internal timeout signal.
+    // Fetch API accepts only one signal; the caller can pass one for external cancel (e.g. search abort).
+    const fetchSignal = options.signal || controller.signal;
+    return fetch(path, { ...options, headers, signal: fetchSignal });
   } finally {
     clearTimeout(timer);
   }
