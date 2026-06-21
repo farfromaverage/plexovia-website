@@ -386,7 +386,7 @@ function ContractsPage() {
     return res.json();
   };
 
-  // ── Search all contracts via backend /api/search ────────────────────────
+  // ── Search all contracts via Supabase SSR directly ──────────────────────
   const fetchSearch = useCallback(async (query: string) => {
     searchAbortRef.current?.abort();
     const controller = new AbortController();
@@ -397,15 +397,17 @@ function ContractsPage() {
     setSearchResults([]);
     searchQueryRef.current = query;
     try {
-      const params = new URLSearchParams({ q: query });
-      const res = await engineFetch(`/api/search?${params.toString()}`, {
-        signal: controller.signal,
-      });
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("id, title, agency, naics_code, psc_code, fed_org_code, state, posted_date, deadline, set_aside, url, description, value_min, value_max")
+        .textSearch("text_search", query)
+        .order("posted_date", { ascending: false })
+        .limit(200)
+        .abortSignal(controller.signal);
+
       if (controller.signal.aborted) return;
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (controller.signal.aborted) return;
-      setSearchResults(json.results || []);
+      if (error) throw new Error(error.message);
+      setSearchResults((data || []) as SearchResult[]);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setSearchError(true);
