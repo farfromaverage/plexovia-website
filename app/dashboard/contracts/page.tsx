@@ -394,6 +394,7 @@ function ContractsPage() {
 
     setSearchLoading(true);
     setSearchError(false);
+    setSearchResults([]);
     searchQueryRef.current = query;
     try {
       const params = new URLSearchParams({ q: query });
@@ -408,7 +409,6 @@ function ContractsPage() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setSearchError(true);
-      setSearchResults(null);
     } finally {
       if (!controller.signal.aborted) setSearchLoading(false);
     }
