@@ -122,6 +122,25 @@ interface ContractRow {
 
 type StatusFilter = "all" | "new" | "bookmarked" | "dismissed";
 
+interface SearchResult {
+  id: string;
+  title: string;
+  agency: string;
+  naics_code: string;
+  psc_code: string;
+  fed_org_code: string;
+  state: string;
+  posted_date: string | null;
+  deadline: string | null;
+  set_aside: string;
+  url: string | null;
+  description: string;
+  value_min: number | null;
+  value_max: number | null;
+  match_score: number | null;
+  match_reasons: string[] | null;
+}
+
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 function fmtDate(d: string | null): string {
   if (!d) return "N/A";
@@ -264,9 +283,10 @@ function ContractsPage() {
   const [staleData, setStaleData] = useState(false);
   const [bookmarkUpdating, setBookmarkUpdating] = useState<Set<string>>(new Set());
   const bookmarkAbortRef = useRef<AbortController | null>(null);
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState(false);
+  const searchAbortRef = useRef<AbortController | null>(null);
   const searchQueryRef = useRef("");
 
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -346,7 +366,6 @@ function ContractsPage() {
     p: number,
     pp: number,
     signal: AbortSignal,
-    filters: SearchFilters | null,
     filter: StatusFilter,
   ): Promise<{ matches: MatchRow[]; pagination: { total: number }; last_pipeline_completed_at?: string | null }> => {
     const params = new URLSearchParams({
@@ -355,9 +374,6 @@ function ContractsPage() {
       min_score: "0",
       sort: "recency",
     });
-    if (filters?.search) {
-      params.set("search", filters.search);
-    }
     if (filter === "bookmarked") {
       params.set("saved", "true");
     }
@@ -372,20 +388,29 @@ function ContractsPage() {
 
   // ── Search all contracts via backend /api/search ────────────────────────
   const fetchSearch = useCallback(async (query: string) => {
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
     setSearchLoading(true);
     setSearchError(false);
     searchQueryRef.current = query;
     try {
       const params = new URLSearchParams({ q: query });
-      const res = await engineFetch(`/api/search?${params.toString()}`);
+      const res = await engineFetch(`/api/search?${params.toString()}`, {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
+      if (controller.signal.aborted) return;
       setSearchResults(json.results || []);
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setSearchError(true);
       setSearchResults(null);
     } finally {
-      setSearchLoading(false);
+      if (!controller.signal.aborted) setSearchLoading(false);
     }
   }, []);
 
@@ -404,13 +429,13 @@ function ContractsPage() {
         statusFilter === "dismissed" ||
         statusFilter === "new";
       if (isClientFilterTab) {
-        const firstPage = await fetchMatches(1, 100, controller.signal, null, statusFilter);
+        const firstPage = await fetchMatches(1, 100, controller.signal, statusFilter);
         if (controller.signal.aborted) return;
         const allRows = [...(firstPage.matches || [])];
         const totalAvail = firstPage.pagination?.total || 0;
         const maxPages = Math.min(5, Math.ceil(totalAvail / 100));
         for (let p = 2; p <= maxPages; p++) {
-          const nextPage = await fetchMatches(p, 100, controller.signal, null, statusFilter);
+          const nextPage = await fetchMatches(p, 100, controller.signal, statusFilter);
           if (controller.signal.aborted) return;
           allRows.push(...(nextPage.matches || []));
         }
@@ -420,7 +445,7 @@ function ContractsPage() {
           lastPipelineAtRef.current = firstPage.last_pipeline_completed_at;
         }
       } else {
-        const json = await fetchMatches(page, PER_PAGE, controller.signal, null, statusFilter);
+        const json = await fetchMatches(page, PER_PAGE, controller.signal, statusFilter);
         if (controller.signal.aborted) return;
         const actualTotal = json.pagination?.total || 0;
         if ((json.matches || []).length === 0 && actualTotal > 0 && page > 1) {
@@ -538,6 +563,7 @@ function ContractsPage() {
   }, [statusFilter, updateUrl, fetchSearch]);
 
   const handleClearSearch = useCallback(() => {
+    searchAbortRef.current?.abort();
     setSearchResults(null);
     setPage(1);
     updateUrl(1, statusFilter);
@@ -708,7 +734,8 @@ function ContractsPage() {
       {/* ── Search ── */}
       <SearchPanel onSearch={handleSearch} onClear={handleClearSearch} />
 
-      {/* Status filter tabs */}
+      {/* Status filter tabs — only relevant for matched feed */}
+      {searchResults === null && (
       <div style={{ marginBottom: "var(--space-5)" }}>
         <div
           className="dash-status-tabs"
@@ -741,6 +768,7 @@ function ContractsPage() {
           ))}
         </div>
       </div>
+      )}
 
       {/* Stale data banner */}
       {staleData && (
@@ -958,7 +986,7 @@ function ContractsPage() {
 const SearchResultRow = memo(function SearchResultRow({
   r, index,
 }: {
-  r: any;
+  r: SearchResult;
   index: number;
 }) {
   const dl = fmtDeadline(r.deadline ?? null);
