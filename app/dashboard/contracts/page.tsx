@@ -262,9 +262,12 @@ function ContractsPage() {
   const [undoId, setUndoId] = useState<string | null>(null);
   const [undoTitle, setUndoTitle] = useState("");
   const [staleData, setStaleData] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
   const [bookmarkUpdating, setBookmarkUpdating] = useState<Set<string>>(new Set());
   const bookmarkAbortRef = useRef<AbortController | null>(null);
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  const searchQueryRef = useRef("");
 
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -367,6 +370,25 @@ function ContractsPage() {
     return res.json();
   };
 
+  // ── Search all contracts via backend /api/search ────────────────────────
+  const fetchSearch = useCallback(async (query: string) => {
+    setSearchLoading(true);
+    setSearchError(false);
+    searchQueryRef.current = query;
+    try {
+      const params = new URLSearchParams({ q: query });
+      const res = await engineFetch(`/api/search?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setSearchResults(json.results || []);
+    } catch {
+      setSearchError(true);
+      setSearchResults(null);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
   // ── Load ─────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -382,13 +404,13 @@ function ContractsPage() {
         statusFilter === "dismissed" ||
         statusFilter === "new";
       if (isClientFilterTab) {
-        const firstPage = await fetchMatches(1, 100, controller.signal, searchFilters, statusFilter);
+        const firstPage = await fetchMatches(1, 100, controller.signal, null, statusFilter);
         if (controller.signal.aborted) return;
         const allRows = [...(firstPage.matches || [])];
         const totalAvail = firstPage.pagination?.total || 0;
         const maxPages = Math.min(5, Math.ceil(totalAvail / 100));
         for (let p = 2; p <= maxPages; p++) {
-          const nextPage = await fetchMatches(p, 100, controller.signal, searchFilters, statusFilter);
+          const nextPage = await fetchMatches(p, 100, controller.signal, null, statusFilter);
           if (controller.signal.aborted) return;
           allRows.push(...(nextPage.matches || []));
         }
@@ -398,7 +420,7 @@ function ContractsPage() {
           lastPipelineAtRef.current = firstPage.last_pipeline_completed_at;
         }
       } else {
-        const json = await fetchMatches(page, PER_PAGE, controller.signal, searchFilters, statusFilter);
+        const json = await fetchMatches(page, PER_PAGE, controller.signal, null, statusFilter);
         if (controller.signal.aborted) return;
         const actualTotal = json.pagination?.total || 0;
         if ((json.matches || []).length === 0 && actualTotal > 0 && page > 1) {
@@ -428,7 +450,7 @@ function ContractsPage() {
     } finally {
       if (abortRef.current === controller) setLoading(false);
     }
-  }, [page, statusFilter, searchFilters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep loadRef current
   useEffect(() => {
@@ -510,13 +532,13 @@ function ContractsPage() {
 
   // ── Search handlers ──────────────────────────────────────────────────────
   const handleSearch = useCallback((filters: SearchFilters) => {
-    setSearchFilters(filters);
+    fetchSearch(filters.search);
     setPage(1);
     updateUrl(1, statusFilter);
-  }, [statusFilter, updateUrl]);
+  }, [statusFilter, updateUrl, fetchSearch]);
 
   const handleClearSearch = useCallback(() => {
-    setSearchFilters(null);
+    setSearchResults(null);
     setPage(1);
     updateUrl(1, statusFilter);
   }, [statusFilter, updateUrl]);
@@ -771,9 +793,36 @@ function ContractsPage() {
           marginBottom: "var(--space-5)",
         }}
       >
-        {/* FIX (BUG 3): Show skeleton while csReady=false to avoid flash
-            of empty/wrong filtered state before localStorage key is scoped. */}
-        {loading || !csReady ? (
+        {searchResults !== null ? (
+          searchLoading ? (
+            <SkeletonRows rows={6} />
+          ) : searchError ? (
+            <ErrorState
+              message="Search failed. Please try again."
+              onRetry={() => handleSearch({ search: searchQueryRef.current })}
+            />
+          ) : searchResults.length === 0 ? (
+            <EmptyState
+              icon={<FileText size={28} />}
+              title="No contracts found"
+              message={`No contracts matching "${searchQueryRef.current}". Try different search terms.`}
+            />
+          ) : (
+            <>
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "var(--space-3) var(--space-6)", borderBottom: "1px solid var(--app-border)",
+              }}>
+                <span style={{ fontSize: "0.78rem", color: "var(--app-muted)" }}>
+                  {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} · last 90 days
+                </span>
+              </div>
+              {searchResults.map((r: any, i: number) => (
+                <SearchResultRow key={r.id} r={r} index={i} />
+              ))}
+            </>
+          )
+        ) : loading || !csReady ? (
           <SkeletonRows rows={6} />
         ) : error ? (
           <ErrorState
@@ -904,6 +953,63 @@ function ContractsPage() {
     </div>
   );
 }
+
+/* ─── Search Result Row ────────────────────────────────────────────────── */
+const SearchResultRow = memo(function SearchResultRow({
+  r, index,
+}: {
+  r: any;
+  index: number;
+}) {
+  const dl = fmtDeadline(r.deadline ?? null);
+  return (
+    <motion.div
+      className="dash-contract-card"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.6) }}
+    >
+      {/* Score column — show if match_score is available */}
+      <div className="dash-contract-card-left">
+        {r.match_score != null ? (
+          <MatchScoreBadge score={r.match_score} />
+        ) : (
+          <div style={{ width: 42 }} />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="dash-contract-card-center">
+        <p className="dash-contract-card-title">{r.title}</p>
+        <div className="dash-contract-card-tags">
+          {r.naics_code && (
+            <span className="dash-tag dash-tag-green">NAICS {r.naics_code}</span>
+          )}
+          {r.psc_code && (
+            <span className="dash-tag dash-tag-blue">PSC {r.psc_code}</span>
+          )}
+          {r.set_aside && r.set_aside !== "Full & Open" && (
+            <span className="dash-tag dash-tag-amber">{r.set_aside}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop metadata */}
+      <div className="dash-hide-mobile dash-contract-card-right">
+        <div className="dash-contract-card-meta-item">{r.state || "Nationwide"}</div>
+        <DeadlineBadge label={dl.label} urgency={dl.label === "Expired" ? "expired" : "normal"} />
+        <div className="dash-contract-card-meta-faint">
+          Posted {r.posted_date ? new Date(r.posted_date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "N/A"}
+        </div>
+        {r.url && /^https?:\/\//i.test(r.url) && (
+          <a href={r.url} target="_blank" rel="noopener noreferrer" className="dash-contract-card-sam-link">
+            View on SAM.gov <ExternalLink size={10} />
+          </a>
+        )}
+      </div>
+    </motion.div>
+  );
+});
 
 /* ─── Row Component ─────────────────────────────────────────────────────── */
 const ContractRowUI = memo(function ContractRowUI({
