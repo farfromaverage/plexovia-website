@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 
 /**
  * Simulates the SearchPanel useEffect logic in isolation.
@@ -96,18 +95,6 @@ describe('SearchPanel search state transitions', () => {
     expect(onClear).toHaveBeenCalledTimes(1)
   })
 
-  it('empty query from the start does NOT fire onClear', () => {
-    const { onClear, simulateQueryChange } = createSearchController()
-
-    // Initial render — query starts as ""
-    simulateQueryChange('')
-
-    // onClear should NOT fire on initial mount with empty query
-    // (but in our simulation it does because we can't distinguish initial vs subsequent)
-    // In the actual React component, the useEffect skips first render because
-    // query was already "" from useState("") initialization
-  })
-
   it('search by NAICS code works and clears correctly', () => {
     vi.useFakeTimers()
     const { onSearch, onClear, simulateQueryChange, cleanup } = createSearchController()
@@ -198,6 +185,123 @@ describe('SearchPanel search state transitions', () => {
     vi.advanceTimersByTime(200) // now 300ms from latest keystroke
     expect(onSearch).toHaveBeenCalledWith({ search: 'cyber' })
     expect(onSearch).toHaveBeenCalledTimes(1) // only one search fired
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+})
+
+describe('search type coverage — unified OR search', () => {
+
+  it('searches by agency code (fed_org_code)', () => {
+    vi.useFakeTimers()
+    const { onSearch, onClear, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('097')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: '097' })
+
+    simulateQueryChange('')
+    expect(onClear).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('searches by description text', () => {
+    vi.useFakeTimers()
+    const { onSearch, onClear, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('cybersecurity')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: 'cybersecurity' })
+
+    simulateQueryChange('')
+    expect(onClear).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('searches by set-aside with lowercase (case insensitive)', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('wosb')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: 'wosb' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('searches by set-aside with uppercase', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('SDVOSB')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: 'SDVOSB' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('searches by partial agency name', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('Defense')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: 'Defense' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('searches by mixed case NAICS code', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('5415')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: '5415' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('searches by PSC code prefix', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('D3')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: 'D3' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('handles invalid input gracefully', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('!@#$%')
+    vi.advanceTimersByTime(300)
+    expect(onSearch).toHaveBeenCalledWith({ search: '!@#$%' })
+
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('handles empty input — no search fires', () => {
+    vi.useFakeTimers()
+    const { onSearch, simulateQueryChange, cleanup } = createSearchController()
+
+    simulateQueryChange('')
+    expect(onSearch).not.toHaveBeenCalled()
 
     cleanup()
     vi.useRealTimers()
