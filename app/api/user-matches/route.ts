@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       const escaped = search.replace(/\*/g, "\\*").replace(/_/g, "\\_");
       result = result.or(
-        `title.ilike.*${escaped}*,naics_code.ilike.${escaped}*,psc_code.ilike.${escaped}*,agency.ilike.*${escaped}*,state.ilike.*${escaped}*,set_aside.ilike.*${escaped}*`,
+        `title.ilike.*${escaped}*,description.ilike.*${escaped}*,naics_code.ilike.${escaped}*,psc_code.ilike.${escaped}*,agency.ilike.*${escaped}*,fed_org_code.ilike.*${escaped}*,state.ilike.*${escaped}*,set_aside.ilike.*${escaped}*`,
         { referencedTable: "contracts" },
       );
     }
