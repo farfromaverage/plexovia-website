@@ -845,7 +845,7 @@ function ContractsPage() {
                   {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} · last 90 days
                 </span>
               </div>
-              {searchResults.map((r: any, i: number) => (
+              {searchResults.map((r, i) => (
                 <SearchResultRow key={r.id} r={r} index={i} />
               ))}
             </>
