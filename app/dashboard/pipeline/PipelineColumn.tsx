@@ -21,6 +21,8 @@ export interface PipelineItem {
   title: string;
   agency: string;
   naics_code: string;
+  psc_code: string;
+  fed_org_code: string;
   state: string;
   deadline: string | null;
   set_aside: string;
@@ -180,6 +182,16 @@ function PipelineCard({
             {item.naics_code && (
               <span style={{ fontSize: "0.625rem", color: "var(--app-faint)", display: "flex", alignItems: "center", gap: 2 }}>
                 <FileText size={9} aria-hidden="true" /> {item.naics_code}
+              </span>
+            )}
+            {item.psc_code && (
+              <span style={{ fontSize: "0.625rem", color: "var(--app-faint)", display: "flex", alignItems: "center", gap: 2 }}>
+                <FileText size={9} aria-hidden="true" /> PSC {item.psc_code}
+              </span>
+            )}
+            {item.fed_org_code && (
+              <span style={{ fontSize: "0.625rem", color: "var(--app-faint)", display: "flex", alignItems: "center", gap: 2 }}>
+                <FileText size={9} aria-hidden="true" /> {item.fed_org_code}
               </span>
             )}
             {item.density_label && (

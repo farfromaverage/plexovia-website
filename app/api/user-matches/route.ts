@@ -41,6 +41,8 @@ interface MatchRowRaw {
     deadline: string | null;
     posted_date: string | null;
     set_aside: string | null;
+    value_min: number | null;
+    value_max: number | null;
   }>;
 }
 
@@ -63,7 +65,7 @@ function getDateBounds() {
 const SELECT_CLAUSE =
   "id, score, recency_window, match_reasons, created_at, saved, " +
   "contracts!inner(id, title, url, state, agency, naics_code, psc_code, " +
-  "fed_org_code, deadline, posted_date, set_aside)";
+  "fed_org_code, deadline, posted_date, set_aside, value_min, value_max)";
 
 const COUNT_SELECT_CLAUSE = "id, contracts!inner(id, title)";
 
@@ -263,6 +265,8 @@ export async function GET(request: NextRequest) {
           deadline: contract.deadline ?? null,
           posted_date: contract.posted_date ?? null,
           set_aside: contract.set_aside ?? null,
+          value_min: contract.value_min ?? null,
+          value_max: contract.value_max ?? null,
         },
       };
     });

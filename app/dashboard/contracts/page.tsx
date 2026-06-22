@@ -116,6 +116,8 @@ interface ContractRow {
   matchedBy: "naics" | "keyword";
   matchLabel: string;
   url: string | null;
+  valueMin: number | null;
+  valueMax: number | null;
   matchedAt: string | null;
   saved: boolean;
 }
@@ -163,6 +165,21 @@ function fmtDeadline(d: string | null): { label: string; days: number | null } {
   return { label: `${days} days left`, days };
 }
 
+function fmtValue(min: number | null | undefined, max: number | null | undefined): string | null {
+  if (min == null && max == null) return null;
+  const lo = min ?? max ?? 0;
+  const hi = max ?? min ?? 0;
+  if (lo === 0 && hi === 0) return null;
+  const fmt = (n: number) =>
+    n >= 1_000_000
+      ? `$${(n / 1_000_000).toFixed(1)}M`
+      : n >= 1_000
+        ? `$${(n / 1_000).toFixed(0)}K`
+        : `$${n.toLocaleString()}`;
+  if (lo === hi) return fmt(lo);
+  return `${fmt(lo)} – ${fmt(hi)}`;
+}
+
 interface ContractPayload {
   title?: string;
   agency?: string;
@@ -174,6 +191,8 @@ interface ContractPayload {
   deadline?: string;
   set_aside?: string;
   url?: string;
+  value_min?: number | null;
+  value_max?: number | null;
 }
 
 interface MatchRow {
@@ -215,6 +234,8 @@ function mapRow(m: MatchRow): ContractRow {
     matchedBy,
     matchLabel,
     url: c.url || null,
+    valueMin: c.value_min ?? null,
+    valueMax: c.value_max ?? null,
     matchedAt: m.matched_at || null,
     saved: m.saved ?? false,
   };
@@ -1061,10 +1082,23 @@ const SearchResultRow = memo(function SearchResultRow({
           {r.psc_code && (
             <span className="dash-tag dash-tag-blue">PSC {r.psc_code}</span>
           )}
+          {r.fed_org_code && (
+            <span
+              className="dash-tag dash-tag-muted"
+              title={`Federal Org: ${r.fed_org_code}`}
+            >
+              {r.fed_org_code}
+            </span>
+          )}
           {r.set_aside && r.set_aside !== "Full & Open" && (
             <span className="dash-tag dash-tag-amber">{r.set_aside}</span>
           )}
         </div>
+        {r.value_min != null || r.value_max != null ? (
+          <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", marginTop: 4 }}>
+            {fmtValue(r.value_min, r.value_max)}
+          </div>
+        ) : null}
       </div>
 
       {/* Desktop metadata */}
@@ -1176,6 +1210,11 @@ const ContractRowUI = memo(function ContractRowUI({
             </span>
           )}
         </div>
+        {c.valueMin != null || c.valueMax != null ? (
+          <div style={{ fontSize: "0.7rem", color: "var(--app-muted)", marginTop: 4 }}>
+            {fmtValue(c.valueMin, c.valueMax)}
+          </div>
+        ) : null}
 
         <div className="dash-show-mobile dash-contract-card-mobile-meta">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
