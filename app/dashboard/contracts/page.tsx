@@ -574,7 +574,9 @@ function ContractsPage() {
           setStaleData(true);
         }
       } catch (err) {
-        console.error("[stale-poll] fetch failed:", err);
+        if (process.env.NODE_ENV === "development") {
+          console.error("[stale-poll] fetch failed:", err);
+        }
       }
     }, 60_000);
     return () => {
