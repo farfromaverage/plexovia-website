@@ -312,7 +312,7 @@ function ContractsPage() {
 
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
-  const stalePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const staleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   // FIX (BUG 6): loadRef always points to the current load function.
   // Retry timers call loadRef.current() instead of a captured stale closure.
@@ -558,7 +558,7 @@ function ContractsPage() {
   // count comparison which can drift due to pagination or timezone boundaries.
   const lastPipelineAtRef = useRef<string | null>(null);
   useEffect(() => {
-    stalePollRef.current = setInterval(async () => {
+    staleIntervalRef.current = setInterval(async () => {
       try {
         const signal = AbortSignal.timeout(10000);
         const res = await fetch("/api/user-matches?page=1&per_page=1&min_score=0", {
@@ -573,12 +573,12 @@ function ContractsPage() {
         } else if (pipelineAt !== lastPipelineAtRef.current) {
           setStaleData(true);
         }
-      } catch {
-        // best-effort; network errors are silent
+      } catch (err) {
+        console.error("[stale-poll] fetch failed:", err);
       }
     }, 60_000);
     return () => {
-      if (stalePollRef.current) clearInterval(stalePollRef.current);
+      if (staleIntervalRef.current) clearInterval(staleIntervalRef.current);
     };
   }, []);
 
