@@ -133,9 +133,15 @@ function Step2FederalOrgs({
   const LIMIT = 999;
 
   const trimmed = query.trim();
-  const filtered = fedOrgList.filter(
-    o => o.code.toLowerCase().startsWith(trimmed.toLowerCase()) || o.name.toLowerCase().includes(trimmed.toLowerCase())
-  ).slice(0, 10);
+  const q = trimmed.toLowerCase();
+  const filtered = fedOrgList.filter((o: any) => {
+    if (o.code.toLowerCase().includes(q)) return true;
+    if (o.name.toLowerCase().includes(q)) return true;
+    if (o.cgac && o.cgac.toLowerCase().includes(q)) return true;
+    if (o.parent && o.parent.toLowerCase().includes(q)) return true;
+    if (o.aliases?.some((a: string) => a.toLowerCase() === q)) return true;
+    return false;
+  }).slice(0, 12);
 
   function toggleOrg(code: string) {
     if (fedOrgs.includes(code)) setFedOrgs(fedOrgs.filter(c => c !== code));

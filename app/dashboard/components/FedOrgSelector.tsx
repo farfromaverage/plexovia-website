@@ -6,6 +6,10 @@ import { Search, CheckCircle } from "lucide-react";
 export interface FedOrg {
   code: string;
   name: string;
+  cgac?: string;
+  aliases?: string[];
+  parent?: string;
+  type?: string;
 }
 
 interface Props {
@@ -19,12 +23,16 @@ export default function FedOrgSelector({ selected, onToggle, orgList }: Props) {
   const trimmed = query.trim();
   const filtered = trimmed
     ? orgList
-        .filter(
-          (o) =>
-            o.code.toLowerCase().startsWith(trimmed.toLowerCase()) ||
-            o.name.toLowerCase().includes(trimmed.toLowerCase())
-        )
-        .slice(0, 10)
+        .filter((o) => {
+          const q = trimmed.toLowerCase();
+          if (o.code.toLowerCase().includes(q)) return true;
+          if (o.name.toLowerCase().includes(q)) return true;
+          if (o.cgac && o.cgac.toLowerCase().includes(q)) return true;
+          if (o.parent && o.parent.toLowerCase().includes(q)) return true;
+          if (o.aliases?.some((a) => a.toLowerCase() === q)) return true;
+          return false;
+        })
+        .slice(0, 12)
     : [];
 
   return (
@@ -35,7 +43,7 @@ export default function FedOrgSelector({ selected, onToggle, orgList }: Props) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by code or name (e.g. DOD or defense)"
+          placeholder="Search by code, name, or acronym (e.g. DOD, GSA, defense)"
           className="dash-input-lg"
           style={{ paddingLeft: 34 }}
           aria-label="Search federal organizations"
@@ -67,6 +75,11 @@ export default function FedOrgSelector({ selected, onToggle, orgList }: Props) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.8125rem", fontWeight: isSelected ? 600 : 400, color: isSelected ? "var(--accent)" : "var(--app-text)" }}>{o.code}</span>
                   <span style={{ fontSize: "0.75rem", color: isSelected ? "var(--accent)" : "var(--app-muted)", marginLeft: 8 }}>{o.name}</span>
+                  {o.parent && o.type !== "Department/Ind-agency" && (
+                    <span style={{ fontSize: "0.68rem", color: "var(--app-faint)", marginLeft: 6 }}>
+                      ({o.parent})
+                    </span>
+                  )}
                 </div>
                 {isSelected && <CheckCircle size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />}
               </button>
