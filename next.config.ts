@@ -58,7 +58,7 @@ const nextConfig: NextConfig = {
 
   async rewrites() {
     const engineUrl = process.env.INTERNAL_ENGINE_URL
-      || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://plexovia-engine.railway.app");
+      || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://engine.plexovia.com");
     return [
       { source: "/api/user/pipeline/:path*", destination: `${engineUrl}/api/user/pipeline/:path*` },
       { source: "/api/user/pipeline",        destination: `${engineUrl}/api/user/pipeline` },
