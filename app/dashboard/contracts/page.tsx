@@ -655,9 +655,12 @@ function ContractsPage() {
         setContracts((prev) =>
           prev.map((c) => (c.id === matchId ? { ...c, saved: !currentlySaved } : c))
         );
+      } else {
+        console.error(`[bookmark] server error: ${res.status}`, await res.text().catch(() => ""));
       }
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
+      console.error("[bookmark] fetch failed:", err);
     } finally {
       setBookmarkUpdating((prev) => {
         const next = new Set(prev);
