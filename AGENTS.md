@@ -18,7 +18,7 @@ This subtree owns:
 - Auth flow (login, signup, callback, password reset)
 - Supabase SSR client (anon key + user JWT, RLS-enforced)
 - UI components (shadcn/ui + custom)
-- Backend proxy layer (engine.ts JWT helper, next.config.ts rewrites)
+- Backend proxy layer (engine.ts JWT helper, api/engine proxy route, next.config.ts calendar rewrite)
 - Static data files (NAICS, PSC, federal organizations)
 - Public marketing pages (home, pricing, legal)
 
@@ -26,14 +26,14 @@ This subtree owns:
 
 | Module | Responsibility |
 |--------|---------------|
-| `app/api/` | Server-side route handlers. Auth via session or internal key. |
+| `app/api/` | Server-side route handlers. Auth via session or internal key. `api/engine/[...path]` proxies authenticated requests to Railway backend (Vercel strips Authorization from rewrites). |
 | `app/auth/` | Login, signup, callback (code exchange), password flows. |
 | `app/dashboard/` | Protected pages (pipeline, contracts/search, competitors, billing, onboarding, profile, settings/alerts). All use browser Supabase client. |
 | `components/` | Reusable UI. `ui/` = shadcn primitives. `home/` = marketing. |
 | `hooks/` | `useContractStatus` (localStorage bookmarks), `useLastVisit`. |
 | `lib/supabase.ts` | Browser client (`createBrowserClient`). |
-| `lib/engine.ts` | `engineFetch()` helper — attaches JWT to proxied backend API calls. |
-| `lib/engine-url.ts` | `getEngineUrl()` — single source of truth for backend URL resolution. Inlined copy in `next.config.ts` rewrites. |
+| `lib/engine.ts` | `engineFetch()` helper — attaches JWT and routes through `/api/engine/` proxy to reach Railway backend. |
+| `lib/engine-url.ts` | `getEngineUrl()` — single source of truth for backend URL resolution. Used by engine proxy route and inlined in `next.config.ts` calendar rewrite. |
 | `lib/supabase/server.ts` | Server client (`createServerClient` with cookie handling). |
 | `public/data/` | Reference JSON: `naics-2022.json` (2,193), `psc-codes.json` (966), `federal-organizations.json` (44 seed orgs, replaced by authoritative FH API dataset on deploy). |
 | `public/fonts/` | Self-hosted woff2/ttf. NO external font CDN. |

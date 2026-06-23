@@ -28,7 +28,11 @@ export async function engineFetch(
     const signals: AbortSignal[] = [controller.signal];
     if (options.signal) signals.push(options.signal);
     const fetchSignal = signals.length === 1 ? signals[0] : AbortSignal.any(signals);
-    return fetch(path, { ...options, headers, signal: fetchSignal });
+    // Route through the Next.js API proxy at /api/engine/[...path] instead of
+    // Vercel rewrites. Vercel strips the Authorization header from rewrite-proxied
+    // requests in production — the proxy explicitly forwards it to the backend.
+    const proxyPath = path.replace(/^\/api\//, "/api/engine/");
+    return fetch(proxyPath, { ...options, headers, signal: fetchSignal });
   } finally {
     clearTimeout(timer);
   }

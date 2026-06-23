@@ -57,21 +57,19 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   async rewrites() {
-    // Same resolution as lib/engine-url.ts — inlined because next.config.ts
-    // runs outside the app module system (no @/ aliases, no TS path resolution).
-    // If you change the env var chain, update lib/engine-url.ts to match.
+    // Authenticated endpoints (pipeline, matches, competitors, profile, search)
+    // are proxied through app/api/engine/[...path]/route.ts which explicitly
+    // forwards the Authorization header. Vercel strips it from rewrites.
+    //
+    // Calendar stays as a rewrite because external calendar apps (Google Calendar,
+    // Apple Calendar) subscribe to the URL directly — no Authorization header,
+    // auth is via token embedded in the URL path.
     const engineUrl = process.env.INTERNAL_ENGINE_URL
       || process.env.RAILWAY_API_URL
       || process.env.NEXT_PUBLIC_RAILWAY_API_URL
       || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://engine.plexovia.com");
     return [
-      { source: "/api/user/pipeline",        destination: `${engineUrl}/api/user/pipeline` },
-      { source: "/api/user/pipeline/:path*", destination: `${engineUrl}/api/user/pipeline/:path*` },
-      { source: "/api/user/matches/:path*",  destination: `${engineUrl}/api/user/matches/:path*` },
-      { source: "/api/user/profile",         destination: `${engineUrl}/api/user/profile` },
-      { source: "/api/search",               destination: `${engineUrl}/api/search` },
-      { source: "/api/user/competitors/:path*", destination: `${engineUrl}/api/user/competitors/:path*` },
-      { source: "/api/calendar/:path*",      destination: `${engineUrl}/api/calendar/:path*` },
+      { source: "/api/calendar/:path*", destination: `${engineUrl}/api/calendar/:path*` },
     ];
   },
 
