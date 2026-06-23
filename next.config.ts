@@ -57,13 +57,13 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   async rewrites() {
-    // Must match the URL resolution in first-login/route.ts and engine-stats/route.ts.
-    // INTERNAL_ENGINE_URL: legacy override (kept for backward compat)
-    // RAILWAY_API_URL: primary Railway URL (set by Vercel + Railway integration)
-    const engineUrl = process.env.INTERNAL_ENGINE_URL
-      || process.env.RAILWAY_API_URL
+    // Same resolution as lib/engine-url.ts — inlined because next.config.ts
+    // runs outside the app module system (no @/ aliases, no TS path resolution).
+    // If you change the env var chain, update lib/engine-url.ts to match.
+    const engineUrl = process.env.RAILWAY_API_URL
+      || process.env.INTERNAL_ENGINE_URL
       || process.env.NEXT_PUBLIC_RAILWAY_API_URL
-      || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://plexovia-engine-production.up.railway.app");
+      || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://engine.plexovia.com");
     return [
       { source: "/api/user/pipeline",        destination: `${engineUrl}/api/user/pipeline` },
       { source: "/api/user/pipeline/:path*", destination: `${engineUrl}/api/user/pipeline/:path*` },
