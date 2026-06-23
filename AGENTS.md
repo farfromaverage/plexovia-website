@@ -34,7 +34,7 @@ This subtree owns:
 | `lib/supabase.ts` | Browser client (`createBrowserClient`). |
 | `lib/engine.ts` | `engineFetch()` helper — attaches JWT to proxied backend API calls. |
 | `lib/supabase/server.ts` | Server client (`createServerClient` with cookie handling). |
-| `public/data/` | Reference JSON: `naics-2022.json` (2,193), `psc-codes.json` (966), `federal-organizations.json` (42). |
+| `public/data/` | Reference JSON: `naics-2022.json` (2,193), `psc-codes.json` (966), `federal-organizations.json` (44 seed orgs, replaced by authoritative FH API dataset on deploy). |
 | `public/fonts/` | Self-hosted woff2/ttf. NO external font CDN. |
 
 ## Work Guidance
