@@ -11,6 +11,7 @@
 
 import crypto from 'crypto'
 import { NextResponse } from 'next/server'
+import { getEngineUrl } from '@/lib/engine-url'
 
 // Force dynamic rendering to bypass Vercel static cache sticking on stale data
 export const dynamic = 'force-dynamic'
@@ -28,9 +29,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const engineUrl = process.env.RAILWAY_API_URL
-    || process.env.NEXT_PUBLIC_RAILWAY_API_URL
-    || 'https://plexovia-engine-production.up.railway.app'
+  const engineUrl = getEngineUrl()
 
   try {
     const res = await fetch(`${engineUrl}/api/stats`, {

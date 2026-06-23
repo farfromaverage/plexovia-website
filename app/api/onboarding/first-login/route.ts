@@ -20,12 +20,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getEngineUrl } from '@/lib/engine-url'
 
 export async function GET() {
   try {
-    const engineUrl = process.env.RAILWAY_API_URL
-      || process.env.NEXT_PUBLIC_RAILWAY_API_URL
-      || 'https://plexovia-engine-production.up.railway.app'
+    const engineUrl = getEngineUrl()
     const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY
     if (!internalKey) {
       console.error('[first-login] INTERNAL_API_KEY not configured — cannot proxy to engine')
@@ -56,9 +55,7 @@ export async function POST(request: NextRequest) {
 
   const payload = await request.json()
 
-  const engineUrl = process.env.RAILWAY_API_URL
-    || process.env.NEXT_PUBLIC_RAILWAY_API_URL
-    || 'https://plexovia-engine-production.up.railway.app'
+  const engineUrl = getEngineUrl()
   const internalKey = process.env.INTERNAL_API_KEY || process.env.X_INTERNAL_KEY
   if (!internalKey) {
     console.error('[first-login] INTERNAL_API_KEY not configured — cannot trigger pipeline')
