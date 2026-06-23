@@ -139,7 +139,7 @@ function PipelineCard({
 
   const addUrl = () => {
     const trimmed = urlInput.trim();
-    if (trimmed && trimmed.startsWith("http")) {
+    if (trimmed && /^https?:\/\/\S+$/.test(trimmed)) {
       onUrlAdd(item.match_id, trimmed);
       setUrlInput("");
     }
@@ -344,6 +344,7 @@ function PipelineCard({
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
+                      maxLength={10000}
                       rows={4}
                       style={{
                         width: "100%", padding: "8px", borderRadius: 6,

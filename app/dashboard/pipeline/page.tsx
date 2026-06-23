@@ -205,7 +205,7 @@ export default function PipelinePage() {
         method: "PATCH",
         body: JSON.stringify({ pipeline_notes: notes }),
       });
-    } catch { /* revert on next fetch */ }
+    } catch { fetchPipeline(); }
   };
 
   const handleUrlAdd = async (matchId: string, url: string) => {
@@ -226,7 +226,7 @@ export default function PipelinePage() {
         method: "PATCH",
         body: JSON.stringify({ reference_urls: newUrls }),
       });
-    } catch { /* revert on next fetch */ }
+    } catch { fetchPipeline(); }
   };
 
   const handleUrlRemove = async (matchId: string, url: string) => {
@@ -247,7 +247,7 @@ export default function PipelinePage() {
         method: "PATCH",
         body: JSON.stringify({ reference_urls: newUrls }),
       });
-    } catch { /* revert on next fetch */ }
+    } catch { fetchPipeline(); }
   };
 
   if (loading) {
