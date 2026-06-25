@@ -3,7 +3,6 @@ import DashboardNav from "./components/DashboardNav";
 import "./dashboard.css";
 
 import PaymentFailedBanner from "./components/PaymentFailedBanner";
-import DashboardDiagnostic from "./DashboardDiagnostic";
 
 export const metadata: Metadata = {
   title: {
@@ -61,8 +60,6 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
-
-      <DashboardDiagnostic />
 
       {/*
        * Mobile responsive utilities are now in dashboard.css:
