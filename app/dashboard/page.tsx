@@ -270,10 +270,10 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Redirect onboarded users to pipeline ── */
+  /* ── Redirect onboarded users to contracts discovery ── */
   useEffect(() => {
     if (profile && profile.onboarding_complete && (profile.naics_codes?.length ?? 0) > 0) {
-      router.replace("/dashboard/pipeline");
+      router.replace("/dashboard/contracts");
     }
   }, [profile, router]);
 

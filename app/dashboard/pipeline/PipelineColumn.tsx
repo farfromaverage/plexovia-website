@@ -17,6 +17,8 @@ export interface PipelineItem {
   score: number;
   match_reasons: string[];
   density_label: string;
+  naics_title: string;
+  psc_title: string;
   award_count: number;
   title: string;
   agency: string;
@@ -41,7 +43,7 @@ export interface StageColumn {
 
 interface Props {
   column: StageColumn;
-  onStageChange: (matchId: string, newStage: string) => void;
+  onStageChange: (matchId: string, newStage: string) => Promise<void>;
   onNotesUpdate: (matchId: string, notes: string) => void;
   onUrlAdd: (matchId: string, url: string) => void;
   onUrlRemove: (matchId: string, url: string) => void;
@@ -54,13 +56,12 @@ function scoreColor(s: number): string {
 }
 
 const STAGE_ORDER = [
-  "identified", "qualifying", "pursuing",
+  "qualifying", "pursuing",
   "proposal_in_progress", "submitted", "awarded",
   "not_awarded", "no_bid",
 ];
 
 const STAGE_LABEL: Record<string, string> = {
-  identified: "Identified",
   qualifying: "Qualifying",
   pursuing: "Pursuing",
   proposal_in_progress: "Proposal In Progress",
@@ -97,7 +98,7 @@ function PipelineCard({
   item, onStageChange, onNotesUpdate, onUrlAdd, onUrlRemove,
 }: {
   item: PipelineItem;
-  onStageChange: (matchId: string, newStage: string) => void;
+  onStageChange: (matchId: string, newStage: string) => Promise<void>;
   onNotesUpdate: (matchId: string, notes: string) => void;
   onUrlAdd: (matchId: string, url: string) => void;
   onUrlRemove: (matchId: string, url: string) => void;
@@ -106,6 +107,9 @@ function PipelineCard({
   const [editing, setEditing] = useState(false);
   const [notes, setNotes] = useState(item.pipeline_notes || "");
   const [urlInput, setUrlInput] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [addingUrl, setAddingUrl] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
   const [incumbent, setIncumbent] = useState<{
     awardee_name: string;
     award_amount: number | null;
@@ -126,22 +130,31 @@ function PipelineCard({
   }, [expanded, incumbent, item.naics_code, item.agency]);
   const deadline = fmtDeadline(item.deadline);
 
-  const advance = () => {
-    if (currentIdx < STAGE_ORDER.length - 1) {
-      onStageChange(item.match_id, STAGE_ORDER[currentIdx + 1]);
+  const advance = async () => {
+    if (currentIdx < STAGE_ORDER.length - 1 && !advancing) {
+      setAdvancing(true);
+      try {
+        await onStageChange(item.match_id, STAGE_ORDER[currentIdx + 1]);
+      } finally {
+        setAdvancing(false);
+      }
     }
   };
 
   const saveNotes = () => {
+    setSavingNotes(true);
     onNotesUpdate(item.match_id, notes);
     setEditing(false);
+    setTimeout(() => setSavingNotes(false), 2000);
   };
 
   const addUrl = () => {
     const trimmed = urlInput.trim();
     if (trimmed && /^https?:\/\/\S+$/.test(trimmed)) {
+      setAddingUrl(true);
       onUrlAdd(item.match_id, trimmed);
       setUrlInput("");
+      setTimeout(() => setAddingUrl(false), 2000);
     }
   };
 
@@ -207,7 +220,12 @@ function PipelineCard({
                 <Users size={9} aria-hidden="true" /> {item.density_label}
               </span>
             )}
-            {item.pipeline_stage === "identified" && item.award_count > 0 && (
+            {item.naics_title && (
+              <span style={{ fontSize: "0.6rem", color: "var(--app-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }} title={item.naics_title}>
+                {item.naics_title}
+              </span>
+            )}
+            {!TERMINAL_STAGES.includes(item.pipeline_stage) && item.award_count > 0 && (
               <span style={{
                 fontSize: "0.625rem", fontWeight: 600, padding: "1px 6px",
                 borderRadius: 999,
@@ -254,11 +272,20 @@ function PipelineCard({
           {!TERMINAL_STAGES.includes(item.pipeline_stage) && (
             <button
               onClick={(e) => { e.stopPropagation(); advance(); }}
+              disabled={advancing}
               title="Advance to next stage"
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--accent)" }}
+              style={{
+                background: "none", border: "none", cursor: advancing ? "wait" : "pointer",
+                padding: 2, color: advancing ? "var(--app-faint)" : "var(--accent)",
+                opacity: advancing ? 0.5 : 1,
+              }}
               aria-label="Advance stage"
             >
-              <ChevronRight size={14} />
+              {advancing ? (
+                <span style={{ fontSize: "0.6rem", fontStyle: "italic" }}>...</span>
+              ) : (
+                <ChevronRight size={14} />
+              )}
             </button>
           )}
           {!expanded && item.pipeline_notes && (
@@ -357,13 +384,15 @@ function PipelineCard({
                     <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                       <button
                         onClick={saveNotes}
+                        disabled={savingNotes}
                         style={{
                           padding: "4px 12px", borderRadius: 6, border: "none",
-                          background: "var(--accent)", color: "#fff",
-                          fontWeight: 600, fontSize: "0.75rem", cursor: "pointer",
+                          background: savingNotes ? "var(--app-muted)" : "var(--accent)",
+                          color: "#fff",
+                          fontWeight: 600, fontSize: "0.75rem", cursor: savingNotes ? "wait" : "pointer",
                         }}
                       >
-                        Save
+                        {savingNotes ? "Saving..." : "Save"}
                       </button>
                       <button
                         onClick={() => { setNotes(item.pipeline_notes || ""); setEditing(false); }}
@@ -432,13 +461,16 @@ function PipelineCard({
                   />
                   <button
                     onClick={addUrl}
+                    disabled={addingUrl || !urlInput.trim()}
                     style={{
                       padding: "4px 8px", borderRadius: 6, border: "none",
-                      background: "var(--app-surface)", color: "var(--accent)",
-                      fontWeight: 600, fontSize: "0.7rem", cursor: "pointer",
+                      background: addingUrl ? "var(--app-muted)" : "var(--app-surface)",
+                      color: addingUrl ? "var(--app-faint)" : "var(--accent)",
+                      fontWeight: 600, fontSize: "0.7rem", cursor: addingUrl ? "wait" : "pointer",
+                      opacity: addingUrl ? 0.5 : 1,
                     }}
                   >
-                    <Plus size={14} />
+                    {addingUrl ? "..." : <Plus size={14} />}
                   </button>
                 </div>
               </div>

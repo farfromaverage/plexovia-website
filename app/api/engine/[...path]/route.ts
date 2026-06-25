@@ -71,9 +71,11 @@ async function proxy(
   // Override host to match the backend (not the Vercel deployment)
   headers.set("host", new URL(engineUrl).host);
 
-  // Preserve client IP for backend rate limiting (slowapi reads X-Forwarded-For)
+  // Preserve client IP for backend rate limiting.
+  // Use x-vercel-forwarded-for (set by Vercel infrastructure, cannot be spoofed)
+  // over x-forwarded-for (which clients can pre-populate to bypass rate limits).
   const clientIp =
-    request.headers.get("x-forwarded-for") ||
+    request.headers.get("x-vercel-forwarded-for") ||
     request.headers.get("x-real-ip") ||
     "127.0.0.1";
   headers.set("x-forwarded-for", clientIp);

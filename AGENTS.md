@@ -28,7 +28,7 @@ This subtree owns:
 |--------|---------------|
 | `app/api/` | Server-side route handlers. Auth via session or internal key. `api/engine/[...path]` proxies authenticated requests to Railway backend (Vercel strips Authorization from rewrites). |
 | `app/auth/` | Login, signup, callback (code exchange), password flows. |
-| `app/dashboard/` | Protected pages (pipeline, contracts/search, competitors, billing, onboarding, profile, settings/alerts). All use browser Supabase client. |
+| `app/dashboard/` | Protected pages (pipeline with 7-stage kanban, bookmark-gated; contracts/search; competitors; billing; onboarding; profile; settings/alerts). All use browser Supabase client. |
 | `components/` | Reusable UI. `ui/` = shadcn primitives. `home/` = marketing. |
 | `hooks/` | `useContractStatus` (localStorage bookmarks), `useLastVisit`. |
 | `lib/supabase.ts` | Browser client (`createBrowserClient`). |
@@ -45,6 +45,7 @@ This subtree owns:
 - **Tailwind v4 CSS-first config.** Tokens in `globals.css` under `@theme inline { }`. NO `tailwind.config.ts`.
 - **Import style:** `@import "tailwindcss";` (not `@tailwind base/components/utilities`).
 - **Fonts:** All self-hosted in `public/fonts/`. Uses `next/font/local` in `layout.tsx`. Never add Google Fonts CDN.
+- **Pipeline page:** Bookmark-gated (shows only saved=true matches). 7-stage model: qualifying, pursuing, proposal_in_progress, submitted (active) + awarded, not_awarded, no_bid (terminal). No "identified" stage. Empty pipeline shows "Your Pipeline is Waiting" with link to Discover page. Post-onboarding redirects to `/dashboard/contracts` (not pipeline).
 - **Set-aside preferences:** 7 core codes (SB, 8A, WOSB, EDWOSB, SDVOSB, HUBZONE, VETERAN). Filter stored preferences on load against the valid list.
 - **Security:** LemonSqueezy webhook handler validates HMAC signature, then forwards verified payload to backend internal API (`/api/internal/webhook/lemonsqueezy`) for database writes. No service key in Vercel deployment. All API routes fail-fast if required env vars are missing. Internal key comparison uses `crypto.timingSafeEqual`.
 
