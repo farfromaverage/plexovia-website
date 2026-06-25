@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -105,16 +104,14 @@ export default function DashboardNav() {
       <aside className="dash-sidebar dash-hide-mobile" aria-label="Sidebar navigation">
         {/* Header: Wordmark + Trial badge */}
         <div className="dash-sidebar-header">
-          <Link href="/">
-            <span className="dash-wordmark">
-              <span style={{ color: "var(--accent)" }}>P</span>
-              <span style={{ color: "var(--app-text)" }}>lexovia</span>
-            </span>
-          </Link>
+          <a href="/" className="dash-wordmark" style={{ textDecoration: "none" }}>
+            <span style={{ color: "var(--accent)" }}>P</span>
+            <span style={{ color: "var(--app-text)" }}>lexovia</span>
+          </a>
           {trialDaysLeft !== null && (
             <div className="dash-trial-badge">
               Trial · {trialDaysLeft}d left ·{" "}
-              <Link href="/dashboard/billing">Upgrade</Link>
+              <a href="/dashboard/billing" style={{ color: "inherit" }}>Upgrade</a>
             </div>
           )}
         </div>
@@ -126,7 +123,7 @@ export default function DashboardNav() {
               const active = isActive(href);
               return (
                 <li key={href}>
-                  <Link
+                  <a
                     href={href}
                     className="dash-nav-link"
                     data-active={active ? "true" : undefined}
@@ -141,7 +138,7 @@ export default function DashboardNav() {
                       </span>
                     )}
                     {active && <ChevronRight size={11} style={{ marginLeft: "auto", opacity: 0.35 }} aria-hidden="true" />}
-                  </Link>
+                  </a>
                 </li>
               );
             })}
@@ -174,7 +171,7 @@ export default function DashboardNav() {
         {BOTTOM_TABS.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
-            <Link
+            <a
               key={href}
               href={href}
               className="dash-bottom-tab"
@@ -189,7 +186,7 @@ export default function DashboardNav() {
                   {newMatchCount > 99 ? "99+" : newMatchCount}
                 </span>
               )}
-            </Link>
+            </a>
           );
         })}
       </nav>
