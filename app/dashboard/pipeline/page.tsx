@@ -124,7 +124,7 @@ export default function PipelinePage() {
   const [_pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
   const [firstSession, setFirstSession] = useState(false);
   const [advanceCount, setAdvanceCount] = useState(0);
   const [sortBy, setSortBy] = useState<"updated" | "score" | "deadline" | "value">("updated");
@@ -192,20 +192,33 @@ export default function PipelinePage() {
       const itemsInQualifying = (json.stages || []).find((s: StageColumn) => s.stage === "qualifying")?.items?.length || 0;
       const itemsInOther = (json.stages || []).filter((s: StageColumn) => s.stage !== "qualifying").reduce((a: number, s: StageColumn) => a + (s.items?.length || 0), 0);
       setFirstSession(itemsInQualifying > 0 && itemsInOther === 0);
-      setError(false);
+      setErrorCode(null);
       retryCountRef.current = 0;
-    } catch {
-      setError(true);
-      if (retryCountRef.current < 3) {
-        const delays = [3000, 6000, 12000];
-        const delay = delays[retryCountRef.current];
-        retryCountRef.current++;
-        retryTimerRef.current = setTimeout(() => fetchPipeline(), delay);
+    } catch (err: unknown) {
+      const status = err instanceof Error && /^HTTP (\d+)$/.test(err.message)
+        ? parseInt(err.message.match(/^HTTP (\d+)$/)![1])
+        : null;
+
+      // Redirect to login on 401 (session expired) — don't set error state
+      if (status === 401) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      setErrorCode(status ?? 0);
+      // Retry on server errors or network failures (not 4xx)
+      if (!status || status >= 500) {
+        if (retryCountRef.current < 3) {
+          const delays = [3000, 6000, 12000];
+          const delay = delays[retryCountRef.current];
+          retryCountRef.current++;
+          retryTimerRef.current = setTimeout(() => fetchPipeline(), delay);
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -345,7 +358,7 @@ export default function PipelinePage() {
   const hasItems = stages.some((s) => s.count > 0);
 
   /* ── Unrecoverable error (no cached data to fall back on) ── */
-  if (error && !hasItems) {
+  if (errorCode !== null && !hasItems) {
     return (
       <div className="dash-main" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
         <motion.div
@@ -357,13 +370,17 @@ export default function PipelinePage() {
             <XCircle size={22} style={{ color: "var(--danger)" }} aria-hidden="true" />
           </div>
           <p style={{ fontWeight: 600, color: "var(--app-text)", margin: "0 0 0.5rem" }}>
-            Could not load pipeline
+            Could not load pipeline {errorCode !== 0 ? `(${errorCode})` : ""}
           </p>
           <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 1.25rem" }}>
-            The server is temporarily unavailable. Your data is safe — please try again.
+            {errorCode === 500
+              ? "The server encountered an error. This may be a temporary issue — please try again."
+              : errorCode === 429
+              ? "Too many requests. Please wait a moment and try again."
+              : "The server is temporarily unavailable. Your data is safe — please try again."}
           </p>
           <button
-            onClick={() => { setLoading(true); setError(false); retryCountRef.current = 0; fetchPipeline(); }}
+            onClick={() => { setLoading(true); setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }}
             style={{
               padding: "8px 20px", borderRadius: 8, border: "none",
               background: "var(--accent)", color: "#fff",
@@ -381,7 +398,7 @@ export default function PipelinePage() {
   if (!hasItems) {
     return (
       <div className="dash-main">
-        <WaitingState onRetry={() => { setLoading(true); setError(false); retryCountRef.current = 0; fetchPipeline(); }} />
+        <WaitingState onRetry={() => { setLoading(true); setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }} />
       </div>
     );
   }
@@ -458,7 +475,7 @@ export default function PipelinePage() {
       )}
 
       {/* Recoverable error banner (cached data still shown) */}
-      {error && (
+      {errorCode !== null && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
@@ -471,9 +488,9 @@ export default function PipelinePage() {
         >
           <XCircle size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
           <span style={{ flex: 1 }}>
-            Could not refresh. Showing previously loaded data.{" "}
+            Could not refresh {errorCode !== 0 ? `(${errorCode})` : ""}. Showing previously loaded data.{" "}
             <button
-              onClick={() => { setLoading(true); setError(false); retryCountRef.current = 0; fetchPipeline(); }}
+              onClick={() => { setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }}
               style={{ color: "var(--danger)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}
             >
               Retry
