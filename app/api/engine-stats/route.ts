@@ -9,7 +9,6 @@
  * - Falls back gracefully if engine is unreachable.
  */
 
-import crypto from 'crypto'
 import { NextResponse } from 'next/server'
 import { getEngineUrl } from '@/lib/engine-url'
 
@@ -17,25 +16,19 @@ import { getEngineUrl } from '@/lib/engine-url'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export async function GET(request: Request) {
-  const internalKey = process.env.INTERNAL_API_KEY
-  if (!internalKey) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-  const providedKey = request.headers.get('x-internal-key') || ''
-  const a = Buffer.from(providedKey, 'utf8')
-  const b = Buffer.from(internalKey, 'utf8')
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
+export async function GET() {
   const engineUrl = getEngineUrl()
 
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    const internalKey = process.env.INTERNAL_API_KEY
+    if (internalKey) {
+      headers['x-internal-key'] = internalKey
+    }
+
     const res = await fetch(`${engineUrl}/api/stats`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       cache: 'no-store',
-      // 5s timeout via AbortController
       signal: AbortSignal.timeout(5000),
     })
 
