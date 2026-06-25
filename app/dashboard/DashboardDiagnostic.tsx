@@ -77,6 +77,17 @@ export default function DashboardDiagnostic() {
       <div style={{ marginBottom: 4 }}>
         <strong>Auth:</strong> {authState} {userId ? `(${userId}...)` : ""}
       </div>
+      <div style={{ marginBottom: 4 }}>
+        <a
+          href="/dashboard/pipeline"
+          style={{ color: "#0ff", textDecoration: "underline", cursor: "pointer" }}
+          onClick={(e) => {
+            console.log("[DIAG] native <a> click fired", e.target);
+          }}
+        >
+          Test: href="/dashboard/pipeline"
+        </a>
+      </div>
       <div>
         <strong>Last Clicks:</strong>
         <ul style={{ margin: 0, padding: "0 0 0 12px", listStyle: "none" }}>
