@@ -53,8 +53,13 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Turbopack (default in Next.js 16) — empty config silences the webpack conflict warning
-  turbopack: {},
+  // Turbopack (default in Next.js 16)
+  // root: prevents Next.js from inferring the wrong workspace root when a
+  // package-lock.json exists in a parent directory. Wrong root → wrong dependency
+  // resolution → broken client-side router. See commit f4e34f3.
+  turbopack: {
+    root: process.cwd(),
+  },
 
   async rewrites() {
     // Authenticated endpoints (pipeline, matches, competitors, profile, search)
