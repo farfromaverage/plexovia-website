@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { RouterContext } from "next/dist/shared/lib/router-context.shared-runtime";
+
+function RouterContextIndicator() {
+  const ctx = useContext(RouterContext);
+  const [available, setAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    setAvailable(ctx !== null && ctx !== undefined);
+  }, [ctx]);
+  return <span>{available === null ? "?" : available ? "YES" : "NO"}</span>;
+}
 
 export default function DashboardDiagnostic() {
   const [show, setShow] = useState(false);
@@ -73,6 +83,7 @@ export default function DashboardDiagnostic() {
     }}>
       <div style={{ marginBottom: 4 }}><strong>Route:</strong> {pathname}</div>
       <div style={{ marginBottom: 4 }}><strong>Auth:</strong> {authState} {userId ? `(${userId})` : ""}</div>
+      <div style={{ marginBottom: 4 }}><strong>RouterContext (next/link):</strong> <RouterContextIndicator /></div>
       <div style={{ display: "flex", gap: "6px", marginBottom: 4 }}>
         <button onClick={testNative} style={{ background: "#0f0", color: "#000", border: "none", borderRadius: 3, padding: "2px 6px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}>
           Test: window.location
