@@ -199,12 +199,6 @@ export default function PipelinePage() {
         ? parseInt(err.message.match(/^HTTP (\d+)$/)![1])
         : null;
 
-      // Redirect to login on 401 (session expired) — don't set error state
-      if (status === 401) {
-        router.replace("/auth/login");
-        return;
-      }
-
       setErrorCode(status ?? 0);
       // Retry on server errors or network failures (not 4xx)
       if (!status || status >= 500) {
@@ -373,12 +367,28 @@ export default function PipelinePage() {
             Could not load pipeline {errorCode !== 0 ? `(${errorCode})` : ""}
           </p>
           <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 1.25rem" }}>
-            {errorCode === 500
+            {errorCode === 401
+              ? "Your session has expired. Sign out and sign back in to continue."
+              : errorCode === 500
               ? "The server encountered an error. This may be a temporary issue — please try again."
               : errorCode === 429
               ? "Too many requests. Please wait a moment and try again."
               : "The server is temporarily unavailable. Your data is safe — please try again."}
           </p>
+          {errorCode === 401 ? (
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                onClick={async () => { await supabase.auth.signOut(); router.replace("/auth/login"); }}
+                style={{
+                  padding: "8px 20px", borderRadius: 8, border: "none",
+                  background: "var(--danger)", color: "#fff",
+                  fontWeight: 600, fontSize: "0.875rem", cursor: "pointer",
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
           <button
             onClick={() => { setLoading(true); setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }}
             style={{
@@ -389,6 +399,7 @@ export default function PipelinePage() {
           >
             Retry
           </button>
+          )}
         </motion.div>
       </div>
     );
