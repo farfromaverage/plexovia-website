@@ -1,5 +1,12 @@
 "use client";
 
+// next/link is intentionally not used because it requires RouterContext which
+// Next.js 16.2.1 does not provide in the App Router — useContext returns null
+// and clicks silently fail. Native <a> tags with full page loads are the
+// reliable replacement. See commit 58605b8.
+
+/* eslint-disable @next/next/no-html-link-for-pages */
+
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -104,7 +111,7 @@ export default function DashboardNav() {
       <aside className="dash-sidebar dash-hide-mobile" aria-label="Sidebar navigation">
         {/* Header: Wordmark + Trial badge */}
         <div className="dash-sidebar-header">
-          <a href="/" className="dash-wordmark" style={{ textDecoration: "none" }}>
+          <a href="/" className="dash-wordmark" style={{ textDecoration: "none" }} aria-label="Go to home page">
             <span style={{ color: "var(--accent)" }}>P</span>
             <span style={{ color: "var(--app-text)" }}>lexovia</span>
           </a>
