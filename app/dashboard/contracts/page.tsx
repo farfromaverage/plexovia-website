@@ -651,11 +651,14 @@ function ContractsPage() {
         signal: controller.signal,
       });
       if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.log(`[bookmark] OK: match=${matchId} saved=${!currentlySaved} stage=${data.pipeline_stage}`);
         setContracts((prev) =>
           prev.map((c) => (c.id === matchId ? { ...c, saved: !currentlySaved } : c))
         );
       } else {
-        console.error(`[bookmark] server error: ${res.status}`, await res.text().catch(() => ""));
+        const text = await res.text().catch(() => "");
+        console.error(`[bookmark] server error: ${res.status}`, text);
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;

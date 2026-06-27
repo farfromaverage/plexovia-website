@@ -112,101 +112,6 @@ function WaitingState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/* ─── Fallback: Direct Supabase pipeline builder ────────────────── */
-const STAGE_ORDER_FALLBACK = [
-  "qualifying", "pursuing", "proposal_in_progress",
-  "submitted", "awarded", "not_awarded", "no_bid",
-];
-const STAGE_LABEL_FALLBACK: Record<string, string> = {
-  qualifying: "Qualifying", pursuing: "Pursuing",
-  proposal_in_progress: "Proposal In Progress", submitted: "Submitted",
-  awarded: "Awarded", not_awarded: "Not Awarded", no_bid: "No Bid",
-};
-
-interface MatchRowRaw {
-  id: string; pipeline_stage: string | null; pipeline_notes: string | null;
-  reference_urls: string[] | null; pipeline_updated_at: string | null;
-  score: number | null; match_reasons: string[] | null;
-  contracts: Array<{ id: string | null; title: string | null; agency: string | null;
-    naics_code: string | null; psc_code: string | null; fed_org_code: string | null;
-    state: string | null; deadline: string | null; set_aside: string | null;
-    url: string | null; posted_date: string | null;
-    value_min: number | null; value_max: number | null; }>;
-}
-
-function buildPipelineFromRows(rows: MatchRowRaw[]) {
-  const columns: Record<string, StageColumn> = {};
-  for (const s of STAGE_ORDER_FALLBACK) {
-    columns[s] = { stage: s, label: STAGE_LABEL_FALLBACK[s], count: 0, items: [] };
-  }
-
-  for (const row of rows) {
-    const stage = row.pipeline_stage || "qualifying";
-    if (!columns[stage]) continue;
-    const c = (row.contracts || [])[0] || {};
-    columns[stage].items.push({
-      match_id: row.id,
-      pipeline_stage: stage,
-      pipeline_notes: row.pipeline_notes || "",
-      reference_urls: row.reference_urls || [],
-      pipeline_updated_at: row.pipeline_updated_at,
-      score: row.score || 0,
-      match_reasons: row.match_reasons || [],
-      density_label: "",
-      naics_title: "",
-      psc_title: "",
-      award_count: 0,
-      title: c.title || "Untitled",
-      agency: c.agency || "",
-      naics_code: c.naics_code || "",
-      psc_code: c.psc_code || "",
-      fed_org_code: c.fed_org_code || "",
-      state: c.state || "",
-      deadline: c.deadline,
-      set_aside: c.set_aside || "",
-      url: c.url,
-      posted_date: c.posted_date,
-      value_min: c.value_min,
-      value_max: c.value_max,
-    });
-  }
-
-  for (const col of Object.values(columns)) {
-    col.count = col.items.length;
-  }
-
-  const total = rows.length;
-  const qualifying = columns["qualifying"].count;
-  const pursuing = columns["pursuing"].count;
-  const proposal = columns["proposal_in_progress"].count;
-  const submitted = columns["submitted"].count;
-  const awarded = columns["awarded"].count;
-  const not_awarded = columns["not_awarded"].count;
-  const no_bid_count = columns["no_bid"].count;
-  const active = qualifying + pursuing + proposal;
-  const denom = awarded + not_awarded;
-
-  const lastUpdated = rows
-    .map(r => r.pipeline_updated_at)
-    .filter(Boolean as unknown as <T>(x: T | null | undefined) => x is T)
-    .sort()
-    .pop() || null;
-
-  return {
-    stages: STAGE_ORDER_FALLBACK.map(s => columns[s]),
-    scorecard: {
-      total_tracked: total,
-      active_pursuits: active,
-      proposals_submitted: submitted,
-      wins: awarded,
-      not_awarded: not_awarded,
-      no_bid: no_bid_count,
-      win_rate: denom > 0 ? Math.round((awarded / denom) * 100 * 10) / 10 : null,
-    },
-    last_updated: lastUpdated,
-  };
-}
-
 /* ─── Page ────────────────────────────────────────────────────── */
 export default function PipelinePage() {
   const router = useRouter();
@@ -251,24 +156,14 @@ export default function PipelinePage() {
       const res = await engineFetch("/api/user/pipeline");
       if (!res.ok) {
         // Railway backend is unreachable (JWT mismatch, network, etc.).
-        // Fall back to direct Supabase query — same DB, same RLS policy.
+        // Fall back to server-side Supabase query (cookie auth, same path as bookmark).
         if (res.status === 401 || res.status >= 500) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) throw new Error("No session");
-
-          const { data: matchRows, error: dbError } = await supabase
-            .from("matches")
-            .select("id, pipeline_stage, pipeline_notes, reference_urls, pipeline_updated_at, score, match_reasons, saved, contracts(id, title, agency, naics_code, psc_code, fed_org_code, state, deadline, set_aside, url, posted_date, value_min, value_max)")
-            .eq("user_id", session.user.id)
-            .eq("saved", true)
-            .order("pipeline_updated_at", { ascending: false })
-            .limit(500);
-
-          if (dbError) throw new Error(`DB error: ${dbError.message}`);
-
-          const fallbackOps = buildPipelineFromRows(matchRows || []);
-          setStages(fallbackOps.stages);
-          setScorecard(fallbackOps.scorecard);
+          const fallbackRes = await fetch("/api/user-pipeline-data");
+          if (!fallbackRes.ok) throw new Error(`Fallback HTTP ${fallbackRes.status}`);
+          const fallbackJson = await fallbackRes.json();
+          setStages(fallbackJson.stages || []);
+          setScorecard(fallbackJson.scorecard || null);
+          setLastUpdated(fallbackJson.last_updated || null);
           setErrorCode(null);
           retryCountRef.current = 0;
           setLoading(false);
