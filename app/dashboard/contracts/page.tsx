@@ -93,7 +93,6 @@ import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import { useContractStatus } from "@/hooks/useContractStatus";
 import { supabase } from "@/lib/supabase";
-import { engineFetch } from "@/lib/engine";
 
 import SearchPanel, { type SearchFilters } from "./SearchPanel";
 
@@ -645,10 +644,10 @@ function ContractsPage() {
 
     setBookmarkUpdating((prev) => new Set(prev).add(matchId));
     try {
-      const res = await engineFetch(`/api/user/matches/${matchId}/feedback`, {
-        method: "PATCH",
+      const res = await fetch("/api/bookmark", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ saved: !currentlySaved }),
+        body: JSON.stringify({ match_id: matchId, saved: !currentlySaved }),
         signal: controller.signal,
       });
       if (res.ok) {
