@@ -45,13 +45,12 @@ export async function engineFetch(
 ): Promise<Response> {
   let res = await _rawFetch(path, options, timeoutMs);
 
-  // 401 means the access token may have expired. getSession() returns the
-  // in-cookie session without validating token freshness. getUser() validates
-  // the token against Supabase's server and triggers an automatic refresh if
-  // the refresh token is still valid. Retry once with the refreshed session.
+  // 401 means the access token may have expired. Explicitly refresh
+  // the session, then retry once. getUser() side-effect refresh is not
+  // reliable — call refreshSession() directly.
   if (res.status === 401) {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (!error && user) {
+    const { data: { session: refreshed }, error: refreshErr } = await supabase.auth.refreshSession();
+    if (!refreshErr && refreshed?.access_token) {
       res = await _rawFetch(path, options, timeoutMs);
     }
   }
