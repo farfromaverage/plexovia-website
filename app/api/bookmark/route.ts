@@ -48,8 +48,9 @@ export async function POST(request: NextRequest) {
       feedback_at: new Date().toISOString(),
     };
 
-    // 3. Auto-advance: when saving a match without a stage, set to qualifying
-    if (saved && !matchRow.pipeline_stage) {
+    // 3. Auto-advance: when saving a match without a stage or with the legacy
+    //    "identified" stage (old DB default), set to qualifying.
+    if (saved && (!matchRow.pipeline_stage || matchRow.pipeline_stage === "identified")) {
       updateFields.pipeline_stage = "qualifying";
       updateFields.pipeline_updated_at = updateFields.feedback_at;
     }

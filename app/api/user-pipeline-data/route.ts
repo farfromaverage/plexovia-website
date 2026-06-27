@@ -67,7 +67,9 @@ export async function GET() {
     }
 
     for (const row of rows) {
-      const stage = row.pipeline_stage || "qualifying";
+      let stage = row.pipeline_stage || "qualifying";
+      // Legacy "identified" stage no longer exists — map to qualifying.
+      if (stage === "identified") stage = "qualifying";
       if (!columns[stage]) continue;
       const c = (Array.isArray(row.contracts) ? row.contracts[0] : row.contracts) || {};
 
