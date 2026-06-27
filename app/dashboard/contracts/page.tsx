@@ -302,6 +302,7 @@ function ContractsPage() {
   const [undoTitle, setUndoTitle] = useState("");
   const [staleData, setStaleData] = useState(false);
   const [bookmarkUpdating, setBookmarkUpdating] = useState<Set<string>>(new Set());
+  const [bookmarkError, setBookmarkError] = useState<string | null>(null);
   const bookmarkAbortRef = useRef<AbortController | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -653,12 +654,16 @@ function ContractsPage() {
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         console.log(`[bookmark] OK: match=${matchId} saved=${!currentlySaved} stage=${data.pipeline_stage}`);
+        setBookmarkError(null);
         setContracts((prev) =>
           prev.map((c) => (c.id === matchId ? { ...c, saved: !currentlySaved } : c))
         );
       } else {
-        const text = await res.text().catch(() => "");
-        console.error(`[bookmark] server error: ${res.status}`, text);
+        const text = await res.text().catch(() => "no body");
+        const msg = `Bookmark failed (${res.status}): ${text}`;
+        console.error(msg);
+        setBookmarkError(msg);
+        setTimeout(() => setBookmarkError(null), 5000);
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -806,6 +811,12 @@ function ContractsPage() {
 
       {/* ── Search ── */}
       <SearchPanel onSearch={handleSearch} onClear={handleClearSearch} />
+
+      {bookmarkError && (
+        <div style={{ padding: "6px 12px", marginBottom: "var(--space-3)", background: "var(--danger-subtle)", border: "1px solid var(--danger-border)", borderRadius: 6, fontSize: "0.75rem", color: "var(--danger)" }}>
+          {bookmarkError}
+        </div>
+      )}
 
       {/* Status filter tabs — only relevant for matched feed */}
       {searchResults === null && (
