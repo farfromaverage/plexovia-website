@@ -245,6 +245,10 @@ export default function PipelinePage() {
   }, []);
 
   const handleStageChange = async (matchId: string, newStage: string) => {
+    // Skip no-op stage changes (selecting the same stage from dropdown)
+    const currentItem = stages.flatMap((s) => s.items).find((i) => i.match_id === matchId);
+    if (currentItem?.pipeline_stage === newStage) return;
+
     setStages((prev) => {
       const updated = prev.map((col) => ({ ...col, items: [...col.items] }));
       let moved: PipelineItem | null = null;
@@ -268,16 +272,18 @@ export default function PipelinePage() {
     });
 
     try {
-      await engineFetch(`/api/user/pipeline/${matchId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ pipeline_stage: newStage }),
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: matchId, pipeline_stage: newStage }),
       });
-      const res = await engineFetch("/api/user/pipeline");
-      if (res.ok) {
-        const json = await res.json();
-        setScorecard(json.scorecard || null);
-        setLastUpdated(json.last_updated || null);
+      if (!res.ok) {
+        fetchPipeline();
+        return;
       }
+      // Refetch full pipeline to refresh scorecard, last_updated, and stage counts.
+      // Uses the primary fetch path (engineFetch with SSR fallback) for resilience.
+      await fetchPipeline();
       setAdvanceCount((c) => c + 1);
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       advanceTimerRef.current = setTimeout(() => setAdvanceCount(0), 4000);
@@ -296,10 +302,12 @@ export default function PipelinePage() {
       }))
     );
     try {
-      await engineFetch(`/api/user/pipeline/${matchId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ pipeline_notes: notes }),
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: matchId, pipeline_notes: notes }),
       });
+      if (!res.ok) fetchPipeline();
     } catch { fetchPipeline(); }
   };
 
@@ -319,10 +327,12 @@ export default function PipelinePage() {
       return updated;
     });
     try {
-      await engineFetch(`/api/user/pipeline/${matchId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ reference_urls: newUrls }),
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: matchId, reference_urls: newUrls }),
       });
+      if (!res.ok) fetchPipeline();
     } catch { fetchPipeline(); }
   };
 
@@ -342,10 +352,12 @@ export default function PipelinePage() {
       return updated;
     });
     try {
-      await engineFetch(`/api/user/pipeline/${matchId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ reference_urls: newUrls }),
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: matchId, reference_urls: newUrls }),
       });
+      if (!res.ok) fetchPipeline();
     } catch { fetchPipeline(); }
   };
 

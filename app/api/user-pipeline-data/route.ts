@@ -9,6 +9,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+function formatValueRange(vmin: number | null, vmax: number | null): string {
+  const fmt = (n: number | null): string | null => {
+    if (n == null) return null;
+    if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${n}`;
+  };
+  const a = fmt(vmin);
+  const b = fmt(vmax);
+  if (a && b && a !== b) return `${a}\u2013${b}`;
+  return a || b || "";
+}
+
 const VALID_STAGES = [
   "qualifying", "pursuing", "proposal_in_progress",
   "submitted", "awarded", "not_awarded", "no_bid",
@@ -48,7 +62,7 @@ export async function GET() {
       .select(
         "id, pipeline_stage, pipeline_notes, reference_urls, " +
         "pipeline_updated_at, score, match_reasons, saved, " +
-        "contracts(id, title, agency, naics_code, psc_code, fed_org_code, " +
+        "contracts(id, external_id, title, agency, naics_code, psc_code, fed_org_code, " +
         "state, deadline, set_aside, url, posted_date, value_min, value_max)"
       )
       .eq("user_id", session.user.id)
@@ -72,6 +86,9 @@ export async function GET() {
       if (stage === "identified") stage = "qualifying";
       if (!columns[stage]) continue;
       const c = (Array.isArray(row.contracts) ? row.contracts[0] : row.contracts) || {};
+      const vmin = (c as any).value_min ?? null;
+      const vmax = (c as any).value_max ?? null;
+      const valueRange = formatValueRange(vmin, vmax);
 
       columns[stage].items.push({
         match_id: row.id,
@@ -84,6 +101,7 @@ export async function GET() {
         density_label: "",
         naics_title: "",
         psc_title: "",
+        solicitation_number: (c as any).external_id || "",
         title: (c as any).title || "Untitled",
         agency: (c as any).agency || "",
         naics_code: (c as any).naics_code || "",
@@ -94,8 +112,9 @@ export async function GET() {
         set_aside: (c as any).set_aside || "",
         url: (c as any).url || null,
         posted_date: (c as any).posted_date || null,
-        value_min: (c as any).value_min || null,
-        value_max: (c as any).value_max || null,
+        value_min: vmin,
+        value_max: vmax,
+        value_range: valueRange,
       });
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  FileText, Shield, ChevronRight, Plus, X, ExternalLink, Clock, Users, BarChart3,
+  Shield, ChevronRight, Plus, X, ExternalLink, Clock, Users, BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { engineFetch } from "@/lib/engine";
@@ -19,6 +19,7 @@ export interface PipelineItem {
   density_label: string;
   naics_title: string;
   psc_title: string;
+  solicitation_number: string;
   award_count: number;
   title: string;
   agency: string;
@@ -32,6 +33,7 @@ export interface PipelineItem {
   posted_date: string | null;
   value_min: number | null;
   value_max: number | null;
+  value_range: string;
 }
 
 export interface StageColumn {
@@ -93,6 +95,36 @@ const expandVariants = {
   collapsed: { height: 0, opacity: 0, overflow: "hidden" },
   expanded:  { height: "auto", opacity: 1, overflow: "visible" },
 };
+
+function fmtUpdated(ts: string | null): string {
+  if (!ts) return "";
+  const dt = new Date(ts);
+  if (isNaN(dt.getTime())) return "";
+  const diff = Date.now() - dt.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fmtSetAside(raw: string): string {
+  const map: Record<string, string> = {
+    SB: "Small Business",
+    "8A": "8(a)",
+    WOSB: "WOSB",
+    EDWOSB: "EDWOSB",
+    SDVOSB: "SDVOSB",
+    HUBZONE: "HUBZone",
+    VETERAN: "Veteran",
+    UNRESTRICTED: "Full & Open",
+  };
+  const upper = (raw || "").toUpperCase();
+  return map[upper] || raw || "";
+}
 
 function PipelineCard({
   item, onStageChange, onNotesUpdate, onUrlAdd, onUrlRemove,
@@ -184,7 +216,13 @@ function PipelineCard({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(!expanded); } }}
         style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Row 1: Solicitation + Score + Density */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+            {item.solicitation_number && (
+              <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "var(--app-muted)", letterSpacing: "0.02em" }}>
+                {item.solicitation_number}
+              </span>
+            )}
             <span style={{
               fontSize: "0.625rem", fontWeight: 700, padding: "1px 6px",
               borderRadius: 999, background: scoreColor(item.score) + "1a",
@@ -192,37 +230,88 @@ function PipelineCard({
             }}>
               {item.score}%
             </span>
-            {item.naics_code && (
-              <span style={{ fontSize: "0.625rem", color: "var(--app-faint)", display: "flex", alignItems: "center", gap: 2 }}>
-                <FileText size={9} aria-hidden="true" /> {item.naics_code}
-              </span>
-            )}
-            {item.psc_code && (
-              <span style={{ fontSize: "0.625rem", color: "var(--app-faint)", display: "flex", alignItems: "center", gap: 2 }}>
-                <FileText size={9} aria-hidden="true" /> PSC {item.psc_code}
-              </span>
-            )}
-            {item.fed_org_code && (
-              <span style={{ fontSize: "0.625rem", color: "var(--app-faint)", display: "flex", alignItems: "center", gap: 2 }}>
-                <FileText size={9} aria-hidden="true" /> {item.fed_org_code}
-              </span>
-            )}
             {item.density_label && (
               <span style={{
                 fontSize: "0.625rem", fontWeight: 600, padding: "1px 6px",
                 borderRadius: 999,
                 background: item.density_label === "Low Competition"
-                  ? "var(--success-subtle)" : "var(--warning-subtle)",
+                  ? "var(--success-subtle)"
+                  : item.density_label === "High Competition"
+                  ? "var(--danger-subtle)"
+                  : "var(--warning-subtle)",
                 color: item.density_label === "Low Competition"
-                  ? "var(--success)" : "var(--warning)",
+                  ? "var(--success)"
+                  : item.density_label === "High Competition"
+                  ? "var(--danger)"
+                  : "var(--warning)",
                 display: "flex", alignItems: "center", gap: 3,
               }}>
                 <Users size={9} aria-hidden="true" /> {item.density_label}
               </span>
             )}
-            {item.naics_title && (
-              <span style={{ fontSize: "0.6rem", color: "var(--app-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }} title={item.naics_title}>
-                {item.naics_title}
+            {deadline.expired && (
+              <span style={{
+                fontSize: "0.625rem", fontWeight: 600, padding: "1px 6px",
+                borderRadius: 999, background: "var(--danger-subtle)",
+                color: "var(--danger)", display: "flex", alignItems: "center", gap: 3,
+              }}>
+                <Clock size={9} aria-hidden="true" /> Expired
+              </span>
+            )}
+          </div>
+          {/* Row 2: Title */}
+          <p style={{
+            fontWeight: 600, fontSize: "0.8rem", color: "var(--app-text)",
+            margin: "0 0 3px", lineHeight: 1.3, overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {item.title}
+          </p>
+          {/* Row 3: Agency + NAICS + PSC */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+            <span style={{ fontSize: "0.65rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 2 }}>
+              <Shield size={9} aria-hidden="true" /> {item.agency}
+            </span>
+            {item.naics_code && (
+              <span style={{ fontSize: "0.6rem", color: "var(--app-faint)" }} title={item.naics_title}>
+                {item.naics_code}{item.naics_title ? ` \u2014 ${item.naics_title}` : ""}
+              </span>
+            )}
+            {item.psc_code && (
+              <span style={{ fontSize: "0.6rem", color: "var(--app-faint)" }} title={item.psc_title}>
+                PSC {item.psc_code}{item.psc_title ? ` \u2014 ${item.psc_title}` : ""}
+              </span>
+            )}
+          </div>
+          {/* Row 4: Deadline + Value + Set Aside + Last Updated */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {item.deadline && (
+              <span style={{
+                fontSize: "0.65rem", fontWeight: deadline.urgent ? 600 : 400,
+                color: deadline.expired ? "var(--app-faint)" :
+                       deadline.urgent ? "var(--danger)" : "var(--app-muted)",
+                display: "flex", alignItems: "center", gap: 3,
+              }}>
+                <Clock size={10} aria-hidden="true" />
+                {deadline.label}{deadline.daysLeft !== null && deadline.daysLeft > 0 ? ` (${deadline.daysLeft}d)` : ""}
+              </span>
+            )}
+            {item.value_range && (
+              <span style={{ fontSize: "0.65rem", color: "var(--app-muted)", fontWeight: 500 }}>
+                {item.value_range}
+              </span>
+            )}
+            {item.set_aside && (
+              <span style={{
+                fontSize: "0.6rem", padding: "0px 5px", borderRadius: 4,
+                background: "var(--app-border)", color: "var(--app-muted)",
+              }}>
+                {fmtSetAside(item.set_aside)}
+              </span>
+            )}
+            {item.pipeline_updated_at && (
+              <span style={{ fontSize: "0.58rem", color: "var(--app-faint)" }}>
+                {fmtUpdated(item.pipeline_updated_at)}
               </span>
             )}
             {!TERMINAL_STAGES.includes(item.pipeline_stage) && item.award_count > 0 && (
@@ -236,38 +325,9 @@ function PipelineCard({
                 <BarChart3 size={9} aria-hidden="true" /> {item.award_count} awards
               </span>
             )}
-            {deadline.expired && (
-              <span style={{
-                fontSize: "0.625rem", fontWeight: 600, padding: "1px 6px",
-                borderRadius: 999, background: "var(--danger-subtle)",
-                color: "var(--danger)", display: "flex", alignItems: "center", gap: 3,
-              }}>
-                <Clock size={9} aria-hidden="true" /> Expired
-              </span>
-            )}
-          </div>
-          <p style={{
-            fontWeight: 600, fontSize: "0.8rem", color: "var(--app-text)",
-            margin: "0 0 3px", lineHeight: 1.3, overflow: "hidden",
-            textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {item.title}
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.65rem", color: "var(--app-muted)", display: "flex", alignItems: "center", gap: 2 }}>
-              <Shield size={9} aria-hidden="true" /> {item.agency}
-            </span>
-            {item.deadline && (
-              <span style={{
-                fontSize: "0.65rem", fontWeight: deadline.urgent ? 600 : 400,
-                color: deadline.expired ? "var(--app-faint)" :
-                       deadline.urgent ? "var(--danger)" : "var(--app-muted)",
-              }}>
-                {deadline.label}
-              </span>
-            )}
           </div>
         </div>
+        {/* Advance button + Notes indicator */}
         <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
           {!TERMINAL_STAGES.includes(item.pipeline_stage) && (
             <button
@@ -307,24 +367,43 @@ function PipelineCard({
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <div style={{ marginTop: 10, borderTop: "1px solid var(--app-border)", paddingTop: 10 }}>
-              {/* Stage selector */}
+              {/* Solicitation + Stage selector */}
               <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--app-muted)", display: "block", marginBottom: 4 }}>
-                  Stage
-                </label>
-                <select
-                  value={item.pipeline_stage}
-                  onChange={(e) => onStageChange(item.match_id, e.target.value)}
-                  style={{
-                    width: "100%", padding: "6px 8px", borderRadius: 6,
-                    border: "1px solid var(--app-border)", fontSize: "0.8rem",
-                    color: "var(--app-text)", background: "var(--app-surface)",
-                  }}
-                >
-                  {STAGE_ORDER.map((s) => (
-                    <option key={s} value={s}>{STAGE_LABEL[s]}</option>
-                  ))}
-                </select>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {item.solicitation_number && (
+                    <div style={{ flex: 1, minWidth: 140 }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--app-muted)", display: "block", marginBottom: 4 }}>
+                        Solicitation
+                      </label>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--app-text)", letterSpacing: "0.02em" }}>
+                        {item.solicitation_number}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ minWidth: 140 }}>
+                    <label style={{ fontSize: "0.7rem", color: "var(--app-muted)", display: "block", marginBottom: 4 }}>
+                      Stage
+                    </label>
+                    <select
+                      value={item.pipeline_stage}
+                      onChange={(e) => onStageChange(item.match_id, e.target.value)}
+                      style={{
+                        width: "100%", padding: "6px 8px", borderRadius: 6,
+                        border: "1px solid var(--app-border)", fontSize: "0.8rem",
+                        color: "var(--app-text)", background: "var(--app-surface)",
+                      }}
+                    >
+                      {STAGE_ORDER.map((s) => (
+                        <option key={s} value={s}>{STAGE_LABEL[s]}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {item.pipeline_updated_at && (
+                  <span style={{ fontSize: "0.6rem", color: "var(--app-faint)", display: "block", marginTop: 4 }}>
+                    Last updated {fmtUpdated(item.pipeline_updated_at)} &middot; {new Date(item.pipeline_updated_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
+                )}
               </div>
 
               {/* Incumbent Intelligence */}
