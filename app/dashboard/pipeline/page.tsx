@@ -5,158 +5,259 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { engineFetch } from "@/lib/engine";
-import { LayoutList, XCircle, ArrowUpDown, Bookmark, ArrowRight } from "lucide-react";
+import {
+  LayoutList, XCircle, Bookmark, ArrowRight, Search, X,
+  ChevronDown, ChevronUp, AlertTriangle, Clock, TrendingUp,
+  RefreshCw, SearchX,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import PipelineColumn, { type PipelineItem, type StageColumn } from "./PipelineColumn";
+import PipelineColumn from "./PipelineColumn";
+import PipelineDrawer from "./PipelineDrawer";
+import PipeSkeleton from "./PipeSkeleton";
+import {
+  type PipelineItem,
+  type StageColumn,
+  type ScorecardData,
+  ACTIVE_STAGES,
+  TERMINAL_STAGES,
+  fmtDeadline,
+} from "./pipeline-helpers";
 
-/* ─── Types ───────────────────────────────────────────────────── */
-interface PipelineStatus {
-  has_bookmarks: boolean;
-  bookmark_count: number;
-  last_pipeline_completed_at: string | null;
-}
-
-interface ScorecardData {
-  total_tracked: number;
-  active_pursuits: number;
-  proposals_submitted: number;
-  wins: number;
-  not_awarded: number;
-  no_bid: number;
-  win_rate: number | null;
-}
-
-/* ─── Scorecard Component ─────────────────────────────────────── */
+/* ─── Scorecard ─────────────────────────────────────────────── */
 function Scorecard({ data }: { data: ScorecardData }) {
   const items = [
     { label: "Total Tracked", value: data.total_tracked, color: "var(--app-text)" },
     { label: "Active Pursuits", value: data.active_pursuits, color: data.active_pursuits > 0 ? "var(--accent)" : "var(--app-muted)" },
     { label: "Submitted", value: data.proposals_submitted, color: "var(--app-text)" },
-    { label: "Wins", value: data.wins, color: "var(--success)" },
+    { label: "Wins", value: data.wins, color: data.wins > 0 ? "var(--success)" : "var(--app-muted)" },
     { label: "Not Awarded", value: data.not_awarded, color: data.not_awarded > 0 ? "var(--danger)" : "var(--app-muted)" },
-    { label: "Win Rate", value: data.win_rate !== null ? `${data.win_rate}%` : "N/A", color: data.win_rate !== null ? (data.win_rate >= 30 ? "var(--success)" : "var(--warning)") : "var(--app-muted)" },
+    { label: "Win Rate", value: data.win_rate !== null ? `${data.win_rate}%` : "—", color: data.win_rate !== null ? (data.win_rate >= 30 ? "var(--success)" : "var(--warning-text)") : "var(--app-muted)" },
   ];
 
   return (
     <motion.div
+      className="pipe-scorecard"
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
-      style={{
-        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-        gap: "var(--space-3)", marginBottom: "var(--space-5)",
-      }}
     >
       {items.map((item, i) => (
         <motion.div
           key={item.label}
-          className="dash-stat-card"
+          className="pipe-stat"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 + i * 0.06 }}
+          transition={{ duration: 0.3, delay: 0.15 + i * 0.05 }}
+          aria-label={`${item.label}: ${item.value}`}
         >
-          <span className="dash-label">{item.label}</span>
-          <p className="dash-mono" style={{ fontSize: "1.5rem", fontWeight: 700, color: item.color, margin: "4px 0 0" }}>
-            {item.value}
-          </p>
+          <span className="pipe-stat-value" style={{ color: item.color }}>{item.value}</span>
+          <span className="pipe-stat-label">{item.label}</span>
         </motion.div>
       ))}
     </motion.div>
   );
 }
 
-/* ─── Waiting State Component ──────────────────────────────────── */
+/* ─── Intelligence Strip ────────────────────────────────────── */
+function IntelligenceStrip({ stages }: { stages: StageColumn[] }) {
+  const activeItems = useMemo(() => {
+    const items: PipelineItem[] = [];
+    for (const col of stages) {
+      if (ACTIVE_STAGES.includes(col.stage as typeof ACTIVE_STAGES[number])) {
+        items.push(...col.items);
+      }
+    }
+    return items;
+  }, [stages]);
+
+  const intel = useMemo(() => {
+    let danger = 0;
+    let warning = 0;
+    let noNotes = 0;
+    let highValue = 0;
+
+    for (const item of activeItems) {
+      const d = fmtDeadline(item.deadline);
+      if (d.urgency === "danger") danger++;
+      else if (d.urgency === "warning") warning++;
+      if (!item.pipeline_notes) noNotes++;
+      const val = Math.max(item.value_min || 0, item.value_max || 0);
+      if (val >= 100000) highValue++;
+    }
+
+    const items: { label: string; count: number; urgency: "danger" | "warning" | "accent"; icon: React.ReactNode }[] = [];
+
+    if (danger > 0) {
+      items.push({
+        label: danger === 1 ? "deadline within 3 days" : "deadlines within 3 days",
+        count: danger, urgency: "danger",
+        icon: <AlertTriangle size={14} aria-hidden="true" />,
+      });
+    }
+    if (warning > 0) {
+      items.push({
+        label: warning === 1 ? "deadline this week" : "deadlines this week",
+        count: warning, urgency: "warning",
+        icon: <Clock size={14} aria-hidden="true" />,
+      });
+    }
+    if (noNotes > 0) {
+      items.push({
+        label: noNotes === 1 ? "opportunity without notes" : "opportunities without notes",
+        count: noNotes, urgency: "accent",
+        icon: <TrendingUp size={14} aria-hidden="true" />,
+      });
+    }
+    if (highValue > 0) {
+      items.push({
+        label: highValue === 1 ? "high-value pursuit" : "high-value pursuits",
+        count: highValue, urgency: "accent",
+        icon: <TrendingUp size={14} aria-hidden="true" />,
+      });
+    }
+
+    return items;
+  }, [activeItems]);
+
+  if (intel.length === 0) return null;
+
+  return (
+    <motion.div
+      className="pipe-intelligence"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.08 }}
+      role="status"
+      aria-label="Pipeline status alerts"
+    >
+      {intel.map((item, i) => (
+        <div key={i} className="pipe-intel-item" data-urgency={item.urgency}>
+          {item.icon}
+          <span className="pipe-intel-count">{item.count}</span>
+          <span>{item.label}</span>
+          <span className="sr-only"> — {item.urgency}</span>
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
+/* ─── Waiting State ─────────────────────────────────────────── */
 function WaitingState({ onRetry }: { onRetry: () => void }) {
   return (
     <motion.div
+      className="pipe-empty-state"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.3 }}
-      style={{ padding: "4rem 2rem", textAlign: "center", maxWidth: 420, margin: "0 auto" }}
     >
-      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--accent-subtle)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
+      <div className="pipe-empty-icon">
         <Bookmark size={24} style={{ color: "var(--accent)" }} aria-hidden="true" />
       </div>
-      <h2 style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--app-text)", margin: "0 0 0.5rem" }}>
+      <h2 className="pipe-empty-title">
         Your Pipeline is Waiting
       </h2>
-      <p style={{ fontSize: "0.875rem", color: "var(--app-muted)", lineHeight: 1.6, margin: "0 0 1.5rem" }}>
+      <p className="pipe-empty-msg">
         Bookmark contracts you want to pursue from the Discover page. Each bookmarked contract enters your pipeline so you can track it from qualifying to award.
       </p>
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-        <Link
-          href="/dashboard/contracts"
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "10px 20px", borderRadius: 8,
-            background: "var(--accent)", color: "#fff",
-            fontWeight: 600, fontSize: "0.875rem", textDecoration: "none",
-          }}
-        >
+      <div className="pipe-empty-actions">
+        <Link href="/dashboard/contracts" className="dash-btn dash-btn-primary">
           Discover Contracts <ArrowRight size={14} aria-hidden="true" />
         </Link>
-        <button
-          onClick={onRetry}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "10px 20px", borderRadius: 8,
-            border: "1px solid var(--app-border)", background: "transparent",
-            color: "var(--app-muted)", fontWeight: 600, fontSize: "0.875rem",
-            cursor: "pointer",
-          }}
-        >
-          Retry
-        </button>
+        <button onClick={onRetry} className="dash-btn">Retry</button>
       </div>
     </motion.div>
   );
 }
 
-/* ─── Page ────────────────────────────────────────────────────── */
+/* ─── Page ──────────────────────────────────────────────────── */
 export default function PipelinePage() {
   const router = useRouter();
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
+
   const [stages, setStages] = useState<StageColumn[]>([]);
   const [scorecard, setScorecard] = useState<ScorecardData | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [_pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorCode, setErrorCode] = useState<number | null>(null);
   const [firstSession, setFirstSession] = useState(false);
-  const [advanceCount, setAdvanceCount] = useState(0);
   const [sortBy, setSortBy] = useState<"updated" | "score" | "deadline" | "value">("updated");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [drawerItem, setDrawerItem] = useState<PipelineItem | null>(null);
+  const [terminalExpanded, setTerminalExpanded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  const sortedStages = useMemo(() => {
-    if (sortBy === "updated") return stages;
+  /* ── Search debounce (150ms) ── */
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 150);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  /* ── Sort + filter ── */
+  const processedStages = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return stages.map((col) => {
-      const sorted = [...col.items].sort((a, b) => {
-        if (sortBy === "score") return (b.score || 0) - (a.score || 0);
-        if (sortBy === "deadline") {
-          if (!a.deadline && !b.deadline) return 0;
-          if (!a.deadline) return 1;
-          if (!b.deadline) return -1;
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-        }
-        if (sortBy === "value") {
-          const va = Math.max(a.value_min || 0, a.value_max || 0);
-          const vb = Math.max(b.value_min || 0, b.value_max || 0);
-          return vb - va;
-        }
-        return 0;
-      });
-      return { ...col, items: sorted };
-    });
-  }, [stages, sortBy]);
+      let items = col.items;
 
+      if (q) {
+        items = items.filter((i: PipelineItem) => {
+          const haystack = [
+            i.title, i.agency, i.naics_code, i.naics_title,
+            i.psc_code, i.solicitation_number, i.set_aside,
+          ].join(" ").toLowerCase();
+          return haystack.includes(q);
+        });
+      }
+
+      if (sortBy !== "updated") {
+        items = [...items].sort((a, b) => {
+          if (sortBy === "score") return (b.score || 0) - (a.score || 0);
+          if (sortBy === "deadline") {
+            if (!a.deadline && !b.deadline) return 0;
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+          }
+          if (sortBy === "value") {
+            const va = Math.max(a.value_min || 0, a.value_max || 0);
+            const vb = Math.max(b.value_min || 0, b.value_max || 0);
+            return vb - va;
+          }
+          return 0;
+        });
+      }
+
+      return { ...col, items, count: items.length };
+    });
+  }, [stages, sortBy, searchQuery]);
+
+  const activeStages = processedStages.filter((s) =>
+    ACTIVE_STAGES.includes(s.stage as typeof ACTIVE_STAGES[number])
+  );
+  const terminalStages = processedStages.filter((s) =>
+    TERMINAL_STAGES.includes(s.stage as typeof TERMINAL_STAGES[number])
+  );
+
+  const totalFiltered = useMemo(() =>
+    processedStages.reduce((a, s) => a + s.count, 0), [processedStages]
+  );
+
+  const terminalCounts = useMemo(() => {
+    const awarded = terminalStages.find((s) => s.stage === "awarded")?.count || 0;
+    const notAwarded = terminalStages.find((s) => s.stage === "not_awarded")?.count || 0;
+    const noBid = terminalStages.find((s) => s.stage === "no_bid")?.count || 0;
+    return { awarded, notAwarded, noBid, total: awarded + notAwarded + noBid };
+  }, [terminalStages]);
+
+  /* ── Data fetching ── */
   const fetchPipeline = useCallback(async () => {
     try {
       const res = await engineFetch("/api/user/pipeline");
       if (!res.ok) {
-        // Railway backend is unreachable (JWT mismatch, network, etc.).
-        // Fall back to server-side Supabase query (cookie auth, same path as bookmark).
         if (res.status === 401 || res.status >= 500) {
           const fallbackRes = await fetch("/api/user-pipeline-data");
           if (!fallbackRes.ok) throw new Error(`Fallback HTTP ${fallbackRes.status}`);
@@ -202,9 +303,7 @@ export default function PipelinePage() {
       setStages(json.stages || []);
       setScorecard(json.scorecard || null);
       setLastUpdated(json.last_updated || null);
-      setPipelineStatus(json.pipeline_status || null);
       setDiagnostics(json.diagnostics || []);
-      // First session: items in qualifying only, nothing in other stages
       const itemsInQualifying = (json.stages || []).find((s: StageColumn) => s.stage === "qualifying")?.items?.length || 0;
       const itemsInOther = (json.stages || []).filter((s: StageColumn) => s.stage !== "qualifying").reduce((a: number, s: StageColumn) => a + (s.items?.length || 0), 0);
       setFirstSession(itemsInQualifying > 0 && itemsInOther === 0);
@@ -214,9 +313,7 @@ export default function PipelinePage() {
       const status = err instanceof Error && /^HTTP (\d+)$/.test(err.message)
         ? parseInt(err.message.match(/^HTTP (\d+)$/)![1])
         : null;
-
       setErrorCode(status ?? 0);
-      // Retry on server errors or network failures (not 4xx)
       if (!status || status >= 500) {
         if (retryCountRef.current < 3) {
           const delays = [3000, 6000, 12000];
@@ -227,6 +324,7 @@ export default function PipelinePage() {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -238,14 +336,37 @@ export default function PipelinePage() {
   }, [router, fetchPipeline]);
 
   useEffect(() => {
+    const retryTimer = retryTimerRef.current;
     return () => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, []);
 
+  /* ── Mutation helper — optimistic update, refetch only on failure ── */
+  const mutate = useCallback(async (matchId: string, body: Record<string, unknown>) => {
+    try {
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: matchId, ...body }),
+      });
+      if (!res.ok) {
+        setMutationError(`Update failed (${res.status}). Reverting...`);
+        await fetchPipeline();
+        setTimeout(() => setMutationError(null), 4000);
+        return false;
+      }
+      return true;
+    } catch {
+      setMutationError("Network error. Reverting...");
+      await fetchPipeline();
+      setTimeout(() => setMutationError(null), 4000);
+      return false;
+    }
+  }, [fetchPipeline]);
+
+  /* ── Mutations ── */
   const handleStageChange = async (matchId: string, newStage: string) => {
-    // Skip no-op stage changes (selecting the same stage from dropdown)
     const currentItem = stages.flatMap((s) => s.items).find((i) => i.match_id === matchId);
     if (currentItem?.pipeline_stage === newStage) return;
 
@@ -271,25 +392,11 @@ export default function PipelinePage() {
       return updated;
     });
 
-    try {
-      const res = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ match_id: matchId, pipeline_stage: newStage }),
-      });
-      if (!res.ok) {
-        fetchPipeline();
-        return;
-      }
-      // Refetch full pipeline to refresh scorecard, last_updated, and stage counts.
-      // Uses the primary fetch path (engineFetch with SSR fallback) for resilience.
-      await fetchPipeline();
-      setAdvanceCount((c) => c + 1);
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-      advanceTimerRef.current = setTimeout(() => setAdvanceCount(0), 4000);
-    } catch {
-      fetchPipeline();
+    if (drawerItem?.match_id === matchId) {
+      setDrawerItem({ ...drawerItem, pipeline_stage: newStage });
     }
+
+    await mutate(matchId, { pipeline_stage: newStage });
   };
 
   const handleNotesUpdate = async (matchId: string, notes: string) => {
@@ -301,14 +408,10 @@ export default function PipelinePage() {
         ),
       }))
     );
-    try {
-      const res = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ match_id: matchId, pipeline_notes: notes }),
-      });
-      if (!res.ok) fetchPipeline();
-    } catch { fetchPipeline(); }
+    if (drawerItem?.match_id === matchId) {
+      setDrawerItem({ ...drawerItem, pipeline_notes: notes });
+    }
+    await mutate(matchId, { pipeline_notes: notes });
   };
 
   const handleUrlAdd = async (matchId: string, url: string) => {
@@ -326,14 +429,10 @@ export default function PipelinePage() {
       newUrls = item?.reference_urls || [];
       return updated;
     });
-    try {
-      const res = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ match_id: matchId, reference_urls: newUrls }),
-      });
-      if (!res.ok) fetchPipeline();
-    } catch { fetchPipeline(); }
+    if (drawerItem?.match_id === matchId) {
+      setDrawerItem({ ...drawerItem, reference_urls: [...(drawerItem.reference_urls || []), url] });
+    }
+    await mutate(matchId, { reference_urls: newUrls });
   };
 
   const handleUrlRemove = async (matchId: string, url: string) => {
@@ -351,50 +450,47 @@ export default function PipelinePage() {
       newUrls = item?.reference_urls || [];
       return updated;
     });
-    try {
-      const res = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ match_id: matchId, reference_urls: newUrls }),
-      });
-      if (!res.ok) fetchPipeline();
-    } catch { fetchPipeline(); }
+    if (drawerItem?.match_id === matchId) {
+      setDrawerItem({ ...drawerItem, reference_urls: (drawerItem.reference_urls || []).filter((u) => u !== url) });
+    }
+    await mutate(matchId, { reference_urls: newUrls });
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchPipeline();
+  };
+
+  const handleManualRetry = () => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    retryCountRef.current = 0;
+    setErrorCode(null);
+    setLoading(true);
+    fetchPipeline();
   };
 
   /* ── Loading state ── */
   if (loading) {
-    return (
-      <div className="dash-main" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-        <div className="dash-spin" style={{ width: 36, height: 36, borderWidth: "2.5px", marginBottom: "var(--space-4)" }} aria-label="Loading pipeline" role="status" />
-        <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--app-text)", margin: "0 0 4px" }}>
-          Loading your pipeline...
-        </p>
-        <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: 0 }}>
-          Gathering your tracked opportunities
-        </p>
-      </div>
-    );
+    return <PipeSkeleton />;
   }
 
-  /* ── Has cached data? Determines error treatment ── */
   const hasItems = stages.some((s) => s.count > 0);
 
-  /* ── Unrecoverable error (no cached data to fall back on) ── */
+  /* ── Unrecoverable error ── */
   if (errorCode !== null && !hasItems) {
     return (
-      <div className="dash-main" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ textAlign: "center", maxWidth: 400 }}
-        >
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--danger-subtle)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+      <div className="dash-main pipe-error-state">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center", maxWidth: 400 }}>
+          <div className="pipe-error-icon">
             <XCircle size={22} style={{ color: "var(--danger)" }} aria-hidden="true" />
           </div>
-          <p style={{ fontWeight: 600, color: "var(--app-text)", margin: "0 0 0.5rem" }}>
+          <p className="pipe-error-title">
             Could not load pipeline {errorCode !== 0 ? `(${errorCode})` : ""}
           </p>
-          <p style={{ fontSize: "0.8125rem", color: "var(--app-muted)", margin: "0 0 1.25rem" }}>
+          <p className="pipe-error-msg">
             {errorCode === 401
               ? "Your session has expired. Sign out and sign back in to continue."
               : errorCode === 500
@@ -404,65 +500,54 @@ export default function PipelinePage() {
               : "The server is temporarily unavailable. Your data is safe — please try again."}
           </p>
           {errorCode === 401 ? (
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              <button
-                onClick={async () => { await supabase.auth.signOut(); router.replace("/auth/login"); }}
-                style={{
-                  padding: "8px 20px", borderRadius: 8, border: "none",
-                  background: "var(--danger)", color: "#fff",
-                  fontWeight: 600, fontSize: "0.875rem", cursor: "pointer",
-                }}
-              >
-                Sign Out
-              </button>
-            </div>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); router.replace("/auth/login"); }}
+              className="dash-btn dash-btn-danger"
+            >
+              Sign Out
+            </button>
           ) : (
-          <button
-            onClick={() => { setLoading(true); setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }}
-            style={{
-              padding: "8px 20px", borderRadius: 8, border: "none",
-              background: "var(--accent)", color: "#fff",
-              fontWeight: 600, fontSize: "0.875rem", cursor: "pointer",
-            }}
-          >
-            Retry
-          </button>
+            <button onClick={handleManualRetry} className="dash-btn dash-btn-primary">
+              Retry
+            </button>
           )}
         </motion.div>
       </div>
     );
   }
 
-  /* ── Unified waiting state (no bookmarked contracts) ── */
+  /* ── Empty state ── */
   if (!hasItems) {
     return (
       <div className="dash-main">
-        <WaitingState onRetry={() => { setLoading(true); setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }} />
+        <WaitingState onRetry={handleManualRetry} />
       </div>
     );
   }
 
-  /* ── Populated kanban (error banner shown inline if stale) ── */
+  /* ── Populated pipeline ── */
   return (
+    <>
     <motion.div
       className="dash-main"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
+      aria-hidden={!!drawerItem}
     >
       {/* Header */}
       <motion.div
+        className="dash-page-header"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
-        style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-5)", flexWrap: "wrap", gap: "var(--space-4)" }}
       >
         <div>
-          <h1 style={{ fontWeight: 700, fontSize: "1.5rem", color: "var(--app-text)", margin: 0, letterSpacing: "-0.03em", display: "flex", alignItems: "center", gap: 10 }}>
+          <h1 className="dash-page-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <LayoutList size={22} color="var(--accent)" aria-hidden="true" />
-            Your Pipeline
+            Pipeline
           </h1>
-          <p style={{ color: "var(--app-muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
+          <p className="dash-page-sub">
             {scorecard ? (
               <>
                 {scorecard.active_pursuits > 0
@@ -477,59 +562,60 @@ export default function PipelinePage() {
             ) : "Track every opportunity from discovery to award"}
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          <ArrowUpDown size={12} style={{ color: "var(--app-faint)" }} aria-hidden="true" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            style={{
-              padding: "4px 8px", borderRadius: 6, border: "1px solid var(--app-border)",
-              fontSize: "0.72rem", color: "var(--app-text)", background: "var(--app-surface)",
-              cursor: "pointer", fontWeight: 500,
-            }}
-            aria-label="Sort pipeline by"
-          >
-            <option value="updated">Last Updated</option>
-            <option value="score">Match Score</option>
-            <option value="deadline">Deadline</option>
-            <option value="value">Value</option>
-          </select>
-        </div>
+        <button
+          onClick={handleRefresh}
+          className="dash-btn"
+          disabled={refreshing}
+          aria-label="Refresh pipeline"
+        >
+          <RefreshCw size={14} className={refreshing ? "dash-spin" : ""} aria-hidden="true" />
+          Refresh
+        </button>
       </motion.div>
 
       {/* First-session hint */}
       {firstSession && (
         <motion.div
+          className="pipe-first-session"
+          role="status"
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          style={{
-            padding: "10px 14px", marginBottom: "var(--space-4)",
-            background: "var(--accent-subtle)", border: "1px solid var(--accent-border)",
-            borderRadius: 8, fontSize: "0.8rem", color: "var(--accent)",
-          }}
         >
           Click any card to review it, add research notes, then advance it to the next stage. Your pipeline tracks every step from qualifying to award.
         </motion.div>
       )}
 
-      {/* Recoverable error banner (cached data still shown) */}
+      {/* Mutation error toast */}
+      <AnimatePresence>
+        {mutationError && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="dash-alert-error"
+            style={{ marginBottom: "var(--space-4)" }}
+            role="alert"
+          >
+            <XCircle size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
+            <span>{mutationError}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Recoverable error banner */}
       {errorCode !== null && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{
-            padding: "8px 14px", marginBottom: "var(--space-4)",
-            background: "var(--danger-subtle)", border: "1px solid var(--danger-border)",
-            borderRadius: 8, display: "flex", alignItems: "center", gap: 8,
-            fontSize: "0.8rem", color: "var(--danger)",
-          }}
+          className="dash-alert-error"
+          style={{ marginBottom: "var(--space-4)" }}
         >
           <XCircle size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
           <span style={{ flex: 1 }}>
             Could not refresh {errorCode !== 0 ? `(${errorCode})` : ""}. Showing previously loaded data.{" "}
             <button
-              onClick={() => { setErrorCode(null); retryCountRef.current = 0; fetchPipeline(); }}
+              onClick={handleManualRetry}
               style={{ color: "var(--danger)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}
             >
               Retry
@@ -540,73 +626,172 @@ export default function PipelinePage() {
 
       {/* Diagnostics */}
       {diagnostics.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ marginBottom: "var(--space-4)" }}
-        >
+        <div style={{ marginBottom: "var(--space-4)" }}>
           {diagnostics.map((msg, i) => (
-            <div
-              key={i}
-              style={{
-                padding: "8px 12px", marginBottom: 6,
-                background: "var(--app-surface)", border: "1px solid var(--app-border)",
-                borderRadius: 6, fontSize: "0.75rem", color: "var(--app-muted)",
-              }}
-            >
+            <div key={i} className="dash-alert-warning" style={{ marginBottom: 6, fontSize: "0.75rem" }}>
               {msg}
             </div>
           ))}
-        </motion.div>
+        </div>
       )}
 
-      {/* Advance counter */}
-      <AnimatePresence>
-        {advanceCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            style={{
-              padding: "6px 12px", marginBottom: "var(--space-3)",
-              background: "var(--success-subtle)", border: "1px solid var(--success-border)",
-              borderRadius: 6, fontSize: "0.75rem", color: "var(--success)",
-              fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6,
-            }}
+      {/* Intelligence strip */}
+      <IntelligenceStrip stages={stages} />
+
+      {/* Command bar */}
+      <div className="pipe-command-bar">
+        <div className="pipe-search">
+          <Search size={14} aria-hidden="true" />
+          <input
+            type="text"
+            placeholder="Search by title, agency, NAICS, solicitation..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            aria-label="Search pipeline by title, agency, NAICS, or solicitation number"
+          />
+          {searchInput && (
+            <button
+              className="pipe-search-clear"
+              onClick={() => setSearchInput("")}
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="pipe-sort">
+          <label htmlFor="pipe-sort-select">Sort:</label>
+          <select
+            id="pipe-sort-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            aria-label="Sort pipeline by"
           >
-            Advanced {advanceCount} {advanceCount === 1 ? "card" : "cards"} ·
-            {scorecard?.active_pursuits && scorecard.active_pursuits > 0
-              ? `${scorecard.active_pursuits} now in active pursuit`
-              : "Pipeline updated"}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <option value="updated">Last Updated</option>
+            <option value="score">Match Score</option>
+            <option value="deadline">Deadline</option>
+            <option value="value">Value</option>
+          </select>
+        </div>
+      </div>
+
+      {/* aria-live: search results announcement */}
+      <div aria-live="polite" className="sr-only">
+        {searchQuery ? `${totalFiltered} result${totalFiltered === 1 ? "" : "s"} for "${searchQuery}"` : ""}
+      </div>
 
       {/* Scorecard */}
       {scorecard && <Scorecard data={scorecard} />}
 
-      {/* Kanban columns */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
-        style={{
-          display: "flex", gap: "var(--space-3)", overflowX: "auto",
-          paddingBottom: "var(--space-4)",
-          scrollbarWidth: "thin",
-        }}
-      >
-        {sortedStages.map((col) => (
-          <PipelineColumn
-            key={col.stage}
-            column={col}
-            onStageChange={handleStageChange}
-            onNotesUpdate={handleNotesUpdate}
-            onUrlAdd={handleUrlAdd}
-            onUrlRemove={handleUrlRemove}
-          />
-        ))}
-      </motion.div>
+      {/* Empty search results */}
+      {searchQuery && totalFiltered === 0 ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", padding: "3rem 1rem", textAlign: "center",
+          }}
+        >
+          <SearchX size={32} style={{ color: "var(--app-faint)", marginBottom: "var(--space-3)" }} aria-hidden="true" />
+          <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--app-text)", margin: "0 0 4px" }}>
+            No opportunities match "{searchQuery}"
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "var(--app-muted)", margin: "0 0 1rem" }}>
+            Try a different search term or clear the search.
+          </p>
+          <button onClick={() => setSearchInput("")} className="dash-btn">
+            Clear Search
+          </button>
+        </motion.div>
+      ) : (
+        <>
+          {/* Active pipeline board */}
+          <motion.div
+            className="pipe-board"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+          >
+            {activeStages.map((col) => (
+              <PipelineColumn
+                key={col.stage}
+                column={col}
+                onAdvance={handleStageChange}
+                onOpen={setDrawerItem}
+              />
+            ))}
+          </motion.div>
+
+          {/* Terminal section */}
+          {terminalCounts.total > 0 && (
+            <div className="pipe-terminal-section">
+              <button
+                className="pipe-terminal-header"
+                onClick={() => setTerminalExpanded(!terminalExpanded)}
+                aria-expanded={terminalExpanded}
+                aria-controls="pipe-terminal-board"
+                aria-label="Toggle completed opportunities"
+              >
+                <span className="pipe-terminal-title">
+                  {terminalExpanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+                  Completed
+                </span>
+                <span className="pipe-terminal-counts">
+                  {terminalCounts.awarded > 0 && (
+                    <span style={{ color: "var(--success)" }}>
+                      <b>{terminalCounts.awarded}</b> Won
+                    </span>
+                  )}
+                  {terminalCounts.notAwarded > 0 && (
+                    <span style={{ color: "var(--danger)" }}>
+                      <b>{terminalCounts.notAwarded}</b> Lost
+                    </span>
+                  )}
+                  {terminalCounts.noBid > 0 && (
+                    <span style={{ color: "var(--app-muted)" }}>
+                      <b>{terminalCounts.noBid}</b> No Bid
+                    </span>
+                  )}
+                </span>
+              </button>
+              <AnimatePresence>
+                {terminalExpanded && (
+                  <motion.div
+                    id="pipe-terminal-board"
+                    className="pipe-terminal-board"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    {terminalStages.map((col) => (
+                      <PipelineColumn
+                        key={col.stage}
+                        column={col}
+                        onAdvance={handleStageChange}
+                        onOpen={setDrawerItem}
+                        compact
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Detail drawer — outside aria-hidden so role="dialog" is visible to AT */}
+      <PipelineDrawer
+        item={drawerItem}
+        onClose={() => setDrawerItem(null)}
+        onStageChange={handleStageChange}
+        onNotesUpdate={handleNotesUpdate}
+        onUrlAdd={handleUrlAdd}
+        onUrlRemove={handleUrlRemove}
+      />
     </motion.div>
+    </>
   );
 }
