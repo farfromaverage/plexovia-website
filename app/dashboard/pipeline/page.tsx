@@ -174,6 +174,7 @@ function WaitingState({ onRetry }: { onRetry: () => void }) {
 export default function PipelinePage() {
   const router = useRouter();
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
 
   const [stages, setStages] = useState<StageColumn[]>([]);
@@ -190,6 +191,8 @@ export default function PipelinePage() {
   const [terminalExpanded, setTerminalExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryIn, setRetryIn] = useState<number | null>(null);
 
   /* ── Search debounce (150ms) ── */
   useEffect(() => {
@@ -319,7 +322,21 @@ export default function PipelinePage() {
           const delays = [3000, 6000, 12000];
           const delay = delays[retryCountRef.current];
           retryCountRef.current++;
-          retryTimerRef.current = setTimeout(() => fetchPipeline(), delay);
+          setRetrying(true);
+          setRetryIn(Math.round(delay / 1000));
+          if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+          retryIntervalRef.current = setInterval(() => {
+            setRetryIn((prev) => (prev !== null && prev > 1 ? prev - 1 : null));
+          }, 1000);
+          retryTimerRef.current = setTimeout(() => {
+            setRetrying(false);
+            setRetryIn(null);
+            if (retryIntervalRef.current) {
+              clearInterval(retryIntervalRef.current);
+              retryIntervalRef.current = null;
+            }
+            fetchPipeline();
+          }, delay);
         }
       }
     } finally {
@@ -337,8 +354,10 @@ export default function PipelinePage() {
 
   useEffect(() => {
     const retryTimer = retryTimerRef.current;
+    const retryInterval = retryIntervalRef.current;
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
+      if (retryInterval) clearInterval(retryInterval);
     };
   }, []);
 
@@ -457,6 +476,16 @@ export default function PipelinePage() {
   };
 
   const handleRefresh = () => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    if (retryIntervalRef.current) {
+      clearInterval(retryIntervalRef.current);
+      retryIntervalRef.current = null;
+    }
+    setRetrying(false);
+    setRetryIn(null);
     setRefreshing(true);
     fetchPipeline();
   };
@@ -466,7 +495,13 @@ export default function PipelinePage() {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
+    if (retryIntervalRef.current) {
+      clearInterval(retryIntervalRef.current);
+      retryIntervalRef.current = null;
+    }
     retryCountRef.current = 0;
+    setRetrying(false);
+    setRetryIn(null);
     setErrorCode(null);
     setLoading(true);
     fetchPipeline();
@@ -499,6 +534,23 @@ export default function PipelinePage() {
               ? "Too many requests. Please wait a moment and try again."
               : "The server is temporarily unavailable. Your data is safe — please try again."}
           </p>
+          {retrying && retryIn !== null && (
+            <p
+              style={{
+                margin: "0 0 1rem",
+                fontSize: "0.8rem",
+                color: "var(--app-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                justifyContent: "center",
+              }}
+              role="status"
+            >
+              <RefreshCw size={13} className="dash-spin" aria-hidden="true" />
+              Retrying in {retryIn}s…
+            </p>
+          )}
           {errorCode === 401 ? (
             <button
               onClick={async () => { await supabase.auth.signOut(); router.replace("/auth/login"); }}
@@ -620,6 +672,15 @@ export default function PipelinePage() {
             >
               Retry
             </button>
+            {retrying && retryIn !== null && (
+              <span
+                style={{ marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4 }}
+                role="status"
+              >
+                <RefreshCw size={12} className="dash-spin" aria-hidden="true" />
+                Retrying in {retryIn}s…
+              </span>
+            )}
           </span>
         </motion.div>
       )}
